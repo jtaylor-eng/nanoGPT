@@ -15,6 +15,39 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
+# --- Stieltjes / NAPE / adaptive-scale additions (fork: jtaylor-eng/nanoGPT, branch stieltjes_lm) ---
+# Semantics match jtaylor-eng/asentmax synthetic/src/models/architectures/sparse_gemma.py:
+#   NAPE: first n_head//2 heads ALiBi with linear slopes 1/(1..H/2), the rest NoPE (no positional signal).
+#   Stieltjes: w_j = [(lam - s_j)^-q - d^-q]_+ with lam solved per row (window d=0 -> dense).
+#   AS ('adapt-softplus-tanh'): NoPE-head queries scaled by 1 + softplus(Wb x) * log(pos+2)^(2 tanh(Wg x)).
+from stieltjes.stieltjes_eager import stieltjes_normalize
+try:
+    from stieltjes.triton_stieltjes import stieltjes_attention as _triton_stieltjes
+except Exception:  # no triton (CPU-only box)
+    _triton_stieltjes = None
+
+
+def nape_slopes(n_head):
+    n_alibi = n_head // 2
+    return torch.cat((1.0 / torch.arange(1, n_alibi + 1, dtype=torch.float32),
+                      torch.zeros(n_head - n_alibi)))
+
+
+def nape_bias(slopes, T, device, dtype, causal_fill=None):
+    """(1, H, T, T) additive bias: slope_h * min(j - i, 0); optionally causal_fill above the diagonal."""
+    i = torch.arange(T, device=device)
+    diff = (i[None, :] - i[:, None])
+    bias = slopes.to(device=device, dtype=torch.float32).view(1, -1, 1, 1) * diff.clamp(max=0).to(torch.float32)
+    if causal_fill is not None:
+        bias = bias.masked_fill((diff > 0).view(1, 1, T, T), causal_fill)
+    return bias.to(dtype)
+
+
+@torch.compiler.disable
+def _stieltjes_fused(q, k, v, sm_scale, sq, num_iter, window, slopes):
+    return _triton_stieltjes(q.contiguous(), k.contiguous(), v.contiguous(), causal=True, sm_scale=sm_scale,
+                             stieltjes_q=sq, num_iter=num_iter, window=window, alibi_slopes=slopes)
+
 class LayerNorm(nn.Module):
     """ LayerNorm but with an optional bias. PyTorch doesn't support simply bias=False """
 
@@ -43,11 +76,81 @@ class CausalSelfAttention(nn.Module):
         self.dropout = config.dropout
         # flash attention make GPU go brrrrr but support is only in PyTorch >= 2.0
         self.flash = hasattr(torch.nn.functional, 'scaled_dot_product_attention')
+        self.attn_type = config.attn_type
+        self.pos_emb = config.pos_emb
+        self.head_dim = config.n_embd // config.n_head
+        if self.attn_type not in ('softmax', 'stieltjes'):
+            raise ValueError(f"attn_type {self.attn_type!r}")
+        if self.pos_emb not in ('learned', 'nape'):
+            raise ValueError(f"pos_emb {self.pos_emb!r}")
+        if self.pos_emb == 'nape':
+            self.register_buffer('nape_slopes', nape_slopes(config.n_head), persistent=False)
+        self.stieltjes_q = float(config.stieltjes_q)
+        self.stieltjes_window = None if config.stieltjes_window <= 0 else float(config.stieltjes_window)
+        self.stieltjes_num_iter = int(config.stieltjes_num_iter)
+        self.stieltjes_impl = config.stieltjes_impl
+        # adaptive length scale on the NoPE heads (all heads if no NAPE)
+        self.attn_scale = config.attn_scale
+        if self.attn_scale not in ('none', 'as'):
+            raise ValueError(f"attn_scale {self.attn_scale!r}")
+        if self.attn_scale == 'as':
+            self.n_scaled = config.n_head - config.n_head // 2 if self.pos_emb == 'nape' else config.n_head
+            self.scale_beta = nn.Linear(config.n_embd, self.n_scaled, bias=True)
+            self.scale_gamma = nn.Linear(config.n_embd, self.n_scaled, bias=True)
+            self.attn_scale_zero_init = float(config.attn_scale_zero_init)
+        self.collect_stats = False   # set by eval_lengths.py: materialise P and record entropy/support
+        self.last_stats = None
+        self.capture_qk = False      # set by residual_probe.py: keep the (scaled) q, k of the last forward
+        self.last_qk = None
         if not self.flash:
             print("WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0")
             # causal mask to ensure that attention is only applied to the left in the input sequence
             self.register_buffer("bias", torch.tril(torch.ones(config.block_size, config.block_size))
                                         .view(1, 1, config.block_size, config.block_size))
+
+    def reset_scale_params(self):
+        """AS zero-init (asentmax attn_scale_zero_init): scaler = 1 + eps for every query at step 0."""
+        if self.attn_scale != 'as' or self.attn_scale_zero_init <= 0:
+            return
+        eps = self.attn_scale_zero_init
+        with torch.no_grad():
+            self.scale_beta.weight.zero_(); self.scale_gamma.weight.zero_(); self.scale_gamma.bias.zero_()
+            self.scale_beta.bias.fill_(math.log(math.expm1(eps)))
+
+    def _apply_scale(self, q, x):
+        B, H, T, D = q.shape
+        log_pos = torch.log(torch.arange(2, T + 2, device=q.device, dtype=torch.float32)).view(1, 1, T, 1)
+        beta = F.softplus(self.scale_beta(x).float()).view(B, T, self.n_scaled, 1).transpose(1, 2)
+        gamma = 2.0 * torch.tanh(self.scale_gamma(x).float()).view(B, T, self.n_scaled, 1).transpose(1, 2)
+        scaler = (1.0 + beta * log_pos ** gamma).to(q.dtype)
+        return torch.cat((q[:, :H - self.n_scaled], q[:, H - self.n_scaled:] * scaler), dim=1)
+
+    def _scores(self, q, k):
+        T = q.shape[2]
+        s = (q.float() @ k.float().transpose(-2, -1)) * (1.0 / math.sqrt(self.head_dim))
+        if self.pos_emb == 'nape':
+            s = s + nape_bias(self.nape_slopes, T, q.device, torch.float32)
+        causal = torch.ones(T, T, dtype=torch.bool, device=q.device).tril()
+        return s.masked_fill(~causal, float('-inf') if self.attn_type == 'softmax' else -1e30)
+
+    def _probs(self, q, k):
+        s = self._scores(q, k)
+        if self.attn_type == 'softmax':
+            return F.softmax(s, dim=-1)
+        return stieltjes_normalize(s, q=self.stieltjes_q, num_iter=self.stieltjes_num_iter, window=self.stieltjes_window)
+
+    def _record_stats(self, p):
+        # p: (B, H, T, T) fp32, causal. Per head: mean entropy, mean nnz support, mean max prob over all rows,
+        # plus last-quarter rows (long-context behaviour).
+        T = p.shape[-1]
+        ent = -(p * torch.log(p.clamp_min(1e-30))).sum(-1)              # (B,H,T)
+        nnz = (p > 0).sum(-1).float()
+        pmax = p.amax(-1)
+        tail = slice(3 * T // 4, T)
+        self.last_stats = {k: v.mean(dim=(0, 2)).cpu() for k, v in
+                           (('entropy', ent), ('support', nnz), ('pmax', pmax))}
+        self.last_stats.update({k + '_tail': v[:, :, tail].mean(dim=(0, 2)).cpu() for k, v in
+                                (('entropy', ent), ('support', nnz), ('pmax', pmax))})
 
     def forward(self, x):
         B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
@@ -57,13 +160,29 @@ class CausalSelfAttention(nn.Module):
         k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
         q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
         v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        if self.attn_scale == 'as':
+            q = self._apply_scale(q, x)
+        if self.capture_qk:
+            self.last_qk = (q.detach(), k.detach())
 
-        # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
-        if self.flash:
+        if self.collect_stats or (self.attn_type == 'stieltjes' and (self.stieltjes_impl == 'eager' or not q.is_cuda)):
+            att = self._probs(q, k)
+            if self.collect_stats:
+                self._record_stats(att.detach())
+            y = self.attn_dropout(att).to(v.dtype) @ v
+        elif self.attn_type == 'stieltjes':
+            slopes = self.nape_slopes if self.pos_emb == 'nape' else None
+            y = _stieltjes_fused(q, k, v, 1.0 / math.sqrt(self.head_dim), self.stieltjes_q,
+                                 self.stieltjes_num_iter, self.stieltjes_window, slopes)
+        elif self.pos_emb == 'nape':
+            # softmax + NAPE: additive bias with the causal -inf folded in (mem-efficient SDPA backend)
+            mask = nape_bias(self.nape_slopes, T, q.device, q.dtype, causal_fill=float('-inf'))
+            y = F.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=self.dropout if self.training else 0)
+        elif self.flash:
             # efficient attention using Flash Attention CUDA kernels
             y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=self.dropout if self.training else 0, is_causal=True)
         else:
-            # manual implementation of attention
+            # manual implementation of attention (stock nanoGPT path, learned positions + softmax only)
             att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
             att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
             att = F.softmax(att, dim=-1)
@@ -114,6 +233,14 @@ class GPTConfig:
     n_embd: int = 768
     dropout: float = 0.0
     bias: bool = True # True: bias in Linears and LayerNorms, like GPT-2. False: a bit better and faster
+    attn_type: str = 'softmax'      # 'softmax' | 'stieltjes'
+    pos_emb: str = 'learned'        # 'learned' (GPT-2 wpe) | 'nape' (half ALiBi / half NoPE heads, no wpe)
+    stieltjes_q: float = 4.0
+    stieltjes_window: float = 0.0   # d; 0 = dense
+    stieltjes_num_iter: int = 30
+    stieltjes_impl: str = 'triton'  # 'triton' | 'eager'
+    attn_scale: str = 'none'        # 'none' | 'as' (adapt-softplus-tanh on NoPE heads)
+    attn_scale_zero_init: float = 0.0  # >0: zero-init the AS projections, scaler = 1 + eps at step 0
 
 class GPT(nn.Module):
 
@@ -123,9 +250,11 @@ class GPT(nn.Module):
         assert config.block_size is not None
         self.config = config
 
+        mods = dict(wte = nn.Embedding(config.vocab_size, config.n_embd))
+        if config.pos_emb == 'learned':
+            mods['wpe'] = nn.Embedding(config.block_size, config.n_embd)
         self.transformer = nn.ModuleDict(dict(
-            wte = nn.Embedding(config.vocab_size, config.n_embd),
-            wpe = nn.Embedding(config.block_size, config.n_embd),
+            **mods,
             drop = nn.Dropout(config.dropout),
             h = nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
             ln_f = LayerNorm(config.n_embd, bias=config.bias),
@@ -143,6 +272,8 @@ class GPT(nn.Module):
         for pn, p in self.named_parameters():
             if pn.endswith('c_proj.weight'):
                 torch.nn.init.normal_(p, mean=0.0, std=0.02/math.sqrt(2 * config.n_layer))
+        for block in self.transformer.h:
+            block.attn.reset_scale_params()
 
         # report number of parameters
         print("number of parameters: %.2fM" % (self.get_num_params()/1e6,))
@@ -155,7 +286,7 @@ class GPT(nn.Module):
         params are actually used as weights in the final layer, so we include them.
         """
         n_params = sum(p.numel() for p in self.parameters())
-        if non_embedding:
+        if non_embedding and 'wpe' in self.transformer:
             n_params -= self.transformer.wpe.weight.numel()
         return n_params
 
@@ -167,16 +298,16 @@ class GPT(nn.Module):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-    def forward(self, idx, targets=None):
+    def forward(self, idx, targets=None, return_all_logits=False):
         device = idx.device
         b, t = idx.size()
-        assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
-        pos = torch.arange(0, t, dtype=torch.long, device=device) # shape (t)
-
-        # forward the GPT model itself
         tok_emb = self.transformer.wte(idx) # token embeddings of shape (b, t, n_embd)
-        pos_emb = self.transformer.wpe(pos) # position embeddings of shape (t, n_embd)
-        x = self.transformer.drop(tok_emb + pos_emb)
+        if self.config.pos_emb == 'learned':
+            assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
+            pos = torch.arange(0, t, dtype=torch.long, device=device) # shape (t)
+            tok_emb = tok_emb + self.transformer.wpe(pos) # position embeddings of shape (t, n_embd)
+        # NAPE: no absolute positions, so t may exceed block_size (length-extrapolation eval)
+        x = self.transformer.drop(tok_emb)
         for block in self.transformer.h:
             x = block(x)
         x = self.transformer.ln_f(x)
@@ -185,6 +316,9 @@ class GPT(nn.Module):
             # if we are given some desired targets also calculate the loss
             logits = self.lm_head(x)
             loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+        elif return_all_logits:
+            logits = self.lm_head(x)
+            loss = None
         else:
             # inference-time mini-optimization: only forward the lm_head on the very last position
             logits = self.lm_head(x[:, [-1], :]) # note: using list [-1] to preserve the time dim
@@ -198,6 +332,8 @@ class GPT(nn.Module):
         # but want to use a smaller block size for some smaller, simpler model
         assert block_size <= self.config.block_size
         self.config.block_size = block_size
+        if 'wpe' not in self.transformer:
+            return
         self.transformer.wpe.weight = nn.Parameter(self.transformer.wpe.weight[:block_size])
         for block in self.transformer.h:
             if hasattr(block.attn, 'bias'):

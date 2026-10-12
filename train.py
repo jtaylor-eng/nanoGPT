@@ -54,6 +54,19 @@ n_head = 12
 n_embd = 768
 dropout = 0.0 # for pretraining 0 is good, for finetuning try 0.1+
 bias = False # do we use bias inside LayerNorm and Linear layers?
+# attention map / positions (fork additions; see model.GPTConfig)
+attn_type = 'softmax'
+pos_emb = 'learned'
+stieltjes_q = 4.0
+stieltjes_window = 0.0
+stieltjes_num_iter = 30
+stieltjes_impl = 'triton'
+attn_scale = 'none'
+attn_scale_zero_init = 0.0
+# run control (fork additions)
+seed = 1337
+wall_limit_s = 0       # >0: checkpoint and exit cleanly once this many seconds have elapsed (resume later)
+final_eval_iters = 0   # >0: extra val-loss estimate with this many batches after training -> final.json
 # adamw optimizer
 learning_rate = 6e-4 # max learning rate
 max_iters = 600000 # total number of training iterations
@@ -72,6 +85,7 @@ backend = 'nccl' # 'nccl', 'gloo', etc.
 device = 'cuda' # examples: 'cpu', 'cuda', 'cuda:0', 'cuda:1' etc., or try 'mps' on macbooks
 dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16' # 'float32', 'bfloat16', or 'float16', the latter will auto implement a GradScaler
 compile = True # use PyTorch 2.0 to compile the model to be faster
+_t_start = __import__('time').time()
 # -----------------------------------------------------------------------------
 config_keys = [k for k,v in globals().items() if not k.startswith('_') and isinstance(v, (int, float, bool, str))]
 exec(open('configurator.py').read()) # overrides from command line or config file
@@ -103,7 +117,7 @@ print(f"tokens per iteration will be: {tokens_per_iter:,}")
 
 if master_process:
     os.makedirs(out_dir, exist_ok=True)
-torch.manual_seed(1337 + seed_offset)
+torch.manual_seed(seed + seed_offset)
 torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
 torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
 device_type = 'cuda' if 'cuda' in device else 'cpu' # for later use in torch.autocast
@@ -145,7 +159,11 @@ if os.path.exists(meta_path):
 
 # model init
 model_args = dict(n_layer=n_layer, n_head=n_head, n_embd=n_embd, block_size=block_size,
-                  bias=bias, vocab_size=None, dropout=dropout) # start with model_args from command line
+                  bias=bias, vocab_size=None, dropout=dropout,
+                  attn_type=attn_type, pos_emb=pos_emb, stieltjes_q=stieltjes_q,
+                  stieltjes_window=stieltjes_window, stieltjes_num_iter=stieltjes_num_iter,
+                  stieltjes_impl=stieltjes_impl, attn_scale=attn_scale,
+                  attn_scale_zero_init=attn_scale_zero_init) # start with model_args from command line
 if init_from == 'scratch':
     # init a new model from scratch
     print("Initializing a new model from scratch")
@@ -163,7 +181,8 @@ elif init_from == 'resume':
     checkpoint_model_args = checkpoint['model_args']
     # force these config attributes to be equal otherwise we can't even resume training
     # the rest of the attributes (e.g. dropout) can stay as desired from command line
-    for k in ['n_layer', 'n_head', 'n_embd', 'block_size', 'bias', 'vocab_size']:
+    for k in ['n_layer', 'n_head', 'n_embd', 'block_size', 'bias', 'vocab_size',
+              'attn_type', 'pos_emb', 'stieltjes_q', 'stieltjes_window', 'attn_scale']:
         model_args[k] = checkpoint_model_args[k]
     # create the model
     gptconf = GPTConfig(**model_args)
@@ -241,6 +260,18 @@ def get_lr(it):
     coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio)) # coeff ranges 0..1
     return min_lr + coeff * (learning_rate - min_lr)
 
+# metrics log (jsonl, append; survives resume)
+import json
+def log_metrics(**kw):
+    if master_process:
+        with open(os.path.join(out_dir, 'metrics.jsonl'), 'a') as f:
+            f.write(json.dumps({k: (float(v) if torch.is_tensor(v) else v) for k, v in kw.items()}) + '\n')
+
+def save_ckpt(tag='ckpt.pt'):
+    torch.save({'model': raw_model.state_dict(), 'optimizer': optimizer.state_dict(), 'model_args': model_args,
+                'iter_num': iter_num, 'best_val_loss': best_val_loss, 'config': config},
+               os.path.join(out_dir, tag))
+
 # logging
 if wandb_log and master_process:
     import wandb
@@ -263,6 +294,8 @@ while True:
     if iter_num % eval_interval == 0 and master_process:
         losses = estimate_loss()
         print(f"step {iter_num}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
+        log_metrics(kind='eval', iter=iter_num, train_loss=losses['train'], val_loss=losses['val'], lr=lr,
+                    elapsed_s=time.time() - _t_start)
         if wandb_log:
             wandb.log({
                 "iter": iter_num,
@@ -325,12 +358,37 @@ while True:
             mfu = raw_model.estimate_mfu(batch_size * gradient_accumulation_steps, dt)
             running_mfu = mfu if running_mfu == -1.0 else 0.9*running_mfu + 0.1*mfu
         print(f"iter {iter_num}: loss {lossf:.4f}, time {dt*1000:.2f}ms, mfu {running_mfu*100:.2f}%")
+        log_metrics(kind='train', iter=iter_num, loss=lossf, dt_ms=dt * 1000, tok_per_s=tokens_per_iter / dt, lr=lr)
+        if not math.isfinite(lossf):
+            print("non-finite loss: diverged")
+            log_metrics(kind='diverged', iter=iter_num)
+            open(os.path.join(out_dir, 'DIVERGED'), 'w').close()
+            if ddp:
+                destroy_process_group()
+            raise SystemExit(3)
     iter_num += 1
     local_iter_num += 1
 
     # termination conditions
     if iter_num > max_iters:
         break
+    if wall_limit_s > 0 and master_process and time.time() - _t_start > wall_limit_s:
+        print(f"wall limit reached at iter {iter_num}; checkpointing for resume")
+        save_ckpt()
+        log_metrics(kind='wall_stop', iter=iter_num)
+        raise SystemExit(4)
+
+# final: checkpoint + a larger val-loss estimate at the training length
+if master_process:
+    save_ckpt()
+    if final_eval_iters > 0:
+        eval_iters = final_eval_iters
+        losses = estimate_loss()
+        print(f"final: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
+        with open(os.path.join(out_dir, 'final.json'), 'w') as f:
+            json.dump({'iter': iter_num, 'train_loss': float(losses['train']), 'val_loss': float(losses['val']),
+                       'elapsed_s': time.time() - _t_start, 'model_args': model_args, 'config': config}, f, indent=1)
+    open(os.path.join(out_dir, 'TRAIN_DONE'), 'w').close()
 
 if ddp:
     destroy_process_group()
