@@ -19,7 +19,7 @@ RUNDIR=$TMPDIR/run; mkdir -p $RUNDIR; stage_data; cd $RUNDIR; ln -sfn $REPO/conf
 echo "commit $(git -C $REPO rev-parse --short HEAD) $(nvidia-smi --query-gpu=name --format=csv,noheader)"
 speed() {  # name extra-args...
   local n=$1; shift
-  python $REPO/train.py config/lm_stieltjes.py "$@" --out_dir=$P/speed_$n --max_iters=120 --lr_decay_iters=7630 \
+  python $REPO/train.py $REPO/config/lm_stieltjes.py --data_root=$DATA_DIR "$@" --out_dir=$P/speed_$n --max_iters=120 --lr_decay_iters=7630 \
      --eval_interval=100000 --final_eval_iters=0 --log_interval=10 > $P/speed_$n.log 2>&1
   echo "$n rc=$? $(python -c "
 import json;r=[json.loads(l) for l in open('$P/speed_$n/metrics.jsonl') if '\"train\"' in l]
@@ -32,7 +32,7 @@ for row in softmax stieltjes_q4 wstieltjes_q4_d2 aswstieltjes_q2_d4_zi; do
   is_stieltjes $row && speed ${row}_it15 $(row_args $row) --learning_rate=1.5e-3 --stieltjes_num_iter=15
 done
 for row in stieltjes_q4 wstieltjes_q4_d2 aswstieltjes_q2_d4_zi; do
-  python $REPO/train.py config/lm_stieltjes.py $(row_args $row) --out_dir=$P/res_$row --max_iters=800 --lr_decay_iters=7630 \
+  python $REPO/train.py $REPO/config/lm_stieltjes.py --data_root=$DATA_DIR $(row_args $row) --out_dir=$P/res_$row --max_iters=800 --lr_decay_iters=7630 \
      --learning_rate=1.5e-3 --eval_interval=400 --eval_iters=20 --final_eval_iters=0 --log_interval=100 > $P/res_$row.log 2>&1
   grep "^step" $P/res_$row.log | tail -1 | sed "s/^/$row /"
   python $REPO/residual_probe.py --out_dir=$P/res_$row --data_dir=$DATA_DIR --lengths=512,4096 --iters=10,15,30 --n_seqs=4 2>&1 | grep -E "^L=" | sed "s/^/$row /"

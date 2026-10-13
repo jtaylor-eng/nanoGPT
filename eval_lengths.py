@@ -21,7 +21,7 @@ out_dir = 'out'
 data_dir = 'data/fineweb10B'
 lengths = '512,1024,2048,4096'
 tokens_per_length = 2 * 1024 * 1024
-batch_tokens = 32768          # tokens per forward batch
+batch_tokens = 8192           # tokens per forward batch (logits are 50k-wide: 8k tok = 1.6 GB fp32)
 stats_lengths = '512,4096'
 stats_seqs = 4
 num_iter_override = 0         # >0: evaluate with a different Stieltjes Newton-sweep count

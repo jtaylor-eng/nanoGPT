@@ -14,12 +14,12 @@ cd $RUNDIR; ln -sfn $REPO/config config
 minlr=$(python -c "print($lr/10)")
 if [ ! -f $OUT/TRAIN_DONE ]; then
   INIT=scratch; [ -f $OUT/ckpt.pt ] && INIT=resume
-  python $REPO/train.py config/lm_stieltjes.py $(row_args $row) --stieltjes_num_iter=$NI \
+  python $REPO/train.py $REPO/config/lm_stieltjes.py --data_root=$DATA_DIR $(row_args $row) --stieltjes_num_iter=$NI \
     --learning_rate=$lr --min_lr=$minlr --out_dir=$OUT --init_from=$INIT --wall_limit_s=${WALL_LIMIT_S:-46800} >> $LOG 2>&1
   rc=$?; echo "[$(date '+%m-%d %H:%M:%S')] train exit $rc" | tee -a $LOG
   [ -f $OUT/TRAIN_DONE ] || exit $rc
 fi
 if [ ! -f $OUT/lengths.json ]; then
-  python $REPO/eval_lengths.py --out_dir=$OUT --data_dir=$DATA_DIR --batch_tokens=16384 >> $LOG 2>&1
+  python $REPO/eval_lengths.py --out_dir=$OUT --data_dir=$DATA_DIR --batch_tokens=8192 >> $LOG 2>&1
   echo "[$(date '+%m-%d %H:%M:%S')] eval exit $?" | tee -a $LOG
 fi
