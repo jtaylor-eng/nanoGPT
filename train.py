@@ -271,9 +271,11 @@ def log_metrics(**kw):
             f.write(json.dumps({k: (float(v) if torch.is_tensor(v) else v) for k, v in kw.items()}) + '\n')
 
 def save_ckpt(tag='ckpt.pt'):
+    # atomic: write to a temp name, then rename, so a stalled/killed write never leaves a truncated ckpt.pt
+    path = os.path.join(out_dir, tag); tmp = path + '.tmp'
     torch.save({'model': raw_model.state_dict(), 'optimizer': optimizer.state_dict(), 'model_args': model_args,
-                'iter_num': iter_num, 'best_val_loss': best_val_loss, 'config': config},
-               os.path.join(out_dir, tag))
+                'iter_num': iter_num, 'best_val_loss': best_val_loss, 'config': config}, tmp)
+    os.replace(tmp, path)
 
 # logging
 if wandb_log and master_process:
@@ -319,7 +321,7 @@ while True:
                     'config': config,
                 }
                 print(f"saving checkpoint to {out_dir}")
-                torch.save(checkpoint, os.path.join(out_dir, 'ckpt.pt'))
+                save_ckpt()
     if iter_num == 0 and eval_only:
         break
 

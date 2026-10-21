@@ -13,7 +13,14 @@ RUNDIR=$TMPDIR/run; mkdir -p $RUNDIR; stage_data
 cd $RUNDIR; ln -sfn $REPO/config config
 minlr=$(python -c "print($lr/10)")
 if [ ! -f $OUT/TRAIN_DONE ]; then
-  INIT=scratch; [ -f $OUT/ckpt.pt ] && INIT=resume
+  INIT=scratch
+  # resume only from a checkpoint that is plausibly complete (a stalled GPFS write leaves 0 B / partial files)
+  if [ -f $OUT/ckpt.pt ] && [ $(stat -c %s $OUT/ckpt.pt) -gt 100000000 ] && python -c "import torch,sys;torch.load('$OUT/ckpt.pt',map_location='cpu',weights_only=False)" 2>/dev/null; then
+    INIT=resume
+  elif [ -f $OUT/ckpt.pt ]; then
+    echo "[$(date '+%m-%d %H:%M:%S')] discarding unusable ckpt.pt ($(stat -c %s $OUT/ckpt.pt) B); restarting from scratch" | tee -a $LOG
+    rm -f $OUT/ckpt.pt $OUT/ckpt.pt.tmp $OUT/metrics.jsonl
+  fi
   python $REPO/train.py $REPO/config/lm_stieltjes.py --data_root=$DATA_DIR $(row_args $row) --stieltjes_num_iter=$NI \
     --learning_rate=$lr --min_lr=$minlr --out_dir=$OUT --init_from=$INIT --wall_limit_s=${WALL_LIMIT_S:-9000} >> $LOG 2>&1
   rc=$?; echo "[$(date '+%m-%d %H:%M:%S')] train exit $rc" | tee -a $LOG
