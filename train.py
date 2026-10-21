@@ -61,6 +61,8 @@ stieltjes_q = 4.0
 stieltjes_window = 0.0
 stieltjes_num_iter = 30
 stieltjes_impl = 'triton'
+entmax_alpha = 1.5
+entmax_niter = 10
 attn_scale = 'none'
 attn_scale_zero_init = 0.0
 # run control (fork additions)
@@ -163,7 +165,7 @@ model_args = dict(n_layer=n_layer, n_head=n_head, n_embd=n_embd, block_size=bloc
                   bias=bias, vocab_size=None, dropout=dropout,
                   attn_type=attn_type, pos_emb=pos_emb, stieltjes_q=stieltjes_q,
                   stieltjes_window=stieltjes_window, stieltjes_num_iter=stieltjes_num_iter,
-                  stieltjes_impl=stieltjes_impl, attn_scale=attn_scale,
+                  stieltjes_impl=stieltjes_impl, attn_scale=attn_scale, entmax_alpha=entmax_alpha, entmax_niter=entmax_niter,
                   attn_scale_zero_init=attn_scale_zero_init) # start with model_args from command line
 if init_from == 'scratch':
     # init a new model from scratch
@@ -183,7 +185,7 @@ elif init_from == 'resume':
     # force these config attributes to be equal otherwise we can't even resume training
     # the rest of the attributes (e.g. dropout) can stay as desired from command line
     for k in ['n_layer', 'n_head', 'n_embd', 'block_size', 'bias', 'vocab_size',
-              'attn_type', 'pos_emb', 'stieltjes_q', 'stieltjes_window', 'attn_scale']:
+              'attn_type', 'pos_emb', 'stieltjes_q', 'stieltjes_window', 'attn_scale', 'entmax_alpha']:
         model_args[k] = checkpoint_model_args[k]
     # create the model
     gptconf = GPTConfig(**model_args)

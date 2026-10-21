@@ -25,6 +25,14 @@ try:
     from stieltjes.triton_stieltjes import stieltjes_attention as _triton_stieltjes
 except Exception:  # no triton (CPU-only box)
     _triton_stieltjes = None
+try:
+    from stieltjes.adasplash_entmax import sparse_attn as _adasplash_entmax   # AdaSplash alpha-entmax (NAPE slopes)
+except Exception:
+    _adasplash_entmax = None
+try:
+    from entmax import entmax_bisect as _entmax_bisect                        # eager reference (pip entmax)
+except Exception:
+    _entmax_bisect = None
 
 
 def nape_slopes(n_head):
@@ -41,6 +49,15 @@ def nape_bias(slopes, T, device, dtype, causal_fill=None):
     if causal_fill is not None:
         bias = bias.masked_fill((diff > 0).view(1, 1, T, T), causal_fill)
     return bias.to(dtype)
+
+
+@torch.compiler.disable
+def _entmax_fused(q, k, v, alpha, niter, slopes):
+    # AdaSplash applies 1/sqrt(D) internally; slopes are added to the scaled scores as in make_bias_window.
+    B, _, T, _ = q.shape
+    varlen = torch.full((B,), T, dtype=torch.long, device=q.device)   # kernel needs varlen unless T is a power of 2
+    return _adasplash_entmax(q.contiguous(), k.contiguous(), v.contiguous(), alpha=alpha, is_causal=True, varlen=varlen,
+                             niter=niter, alibi_slopes=None if slopes is None else slopes.to(q.device, q.dtype))
 
 
 @torch.compiler.disable
@@ -79,8 +96,10 @@ class CausalSelfAttention(nn.Module):
         self.attn_type = config.attn_type
         self.pos_emb = config.pos_emb
         self.head_dim = config.n_embd // config.n_head
-        if self.attn_type not in ('softmax', 'stieltjes'):
+        if self.attn_type not in ('softmax', 'stieltjes', 'entmax'):
             raise ValueError(f"attn_type {self.attn_type!r}")
+        self.entmax_alpha = float(config.entmax_alpha)
+        self.entmax_niter = int(config.entmax_niter)
         if self.pos_emb not in ('learned', 'nape'):
             raise ValueError(f"pos_emb {self.pos_emb!r}")
         if self.pos_emb == 'nape':
@@ -131,12 +150,14 @@ class CausalSelfAttention(nn.Module):
         if self.pos_emb == 'nape':
             s = s + nape_bias(self.nape_slopes, T, q.device, torch.float32)
         causal = torch.ones(T, T, dtype=torch.bool, device=q.device).tril()
-        return s.masked_fill(~causal, float('-inf') if self.attn_type == 'softmax' else -1e30)
+        return s.masked_fill(~causal, float('-inf') if self.attn_type in ('softmax', 'entmax') else -1e30)
 
     def _probs(self, q, k):
         s = self._scores(q, k)
         if self.attn_type == 'softmax':
             return F.softmax(s, dim=-1)
+        if self.attn_type == 'entmax':
+            return _entmax_bisect(s, alpha=self.entmax_alpha, dim=-1, n_iter=50)
         return stieltjes_normalize(s, q=self.stieltjes_q, num_iter=self.stieltjes_num_iter, window=self.stieltjes_window)
 
     def _record_stats(self, p):
@@ -165,11 +186,14 @@ class CausalSelfAttention(nn.Module):
         if self.capture_qk:
             self.last_qk = (q.detach(), k.detach())
 
-        if self.collect_stats or (self.attn_type == 'stieltjes' and (self.stieltjes_impl == 'eager' or not q.is_cuda)):
+        if self.collect_stats or (self.attn_type in ('stieltjes', 'entmax') and (self.stieltjes_impl == 'eager' or not q.is_cuda)):
             att = self._probs(q, k)
             if self.collect_stats:
                 self._record_stats(att.detach())
             y = self.attn_dropout(att).to(v.dtype) @ v
+        elif self.attn_type == 'entmax':
+            slopes = self.nape_slopes if self.pos_emb == 'nape' else None
+            y = _entmax_fused(q, k, v, self.entmax_alpha, self.entmax_niter, slopes)
         elif self.attn_type == 'stieltjes':
             slopes = self.nape_slopes if self.pos_emb == 'nape' else None
             y = _stieltjes_fused(q, k, v, 1.0 / math.sqrt(self.head_dim), self.stieltjes_q,
@@ -233,7 +257,9 @@ class GPTConfig:
     n_embd: int = 768
     dropout: float = 0.0
     bias: bool = True # True: bias in Linears and LayerNorms, like GPT-2. False: a bit better and faster
-    attn_type: str = 'softmax'      # 'softmax' | 'stieltjes'
+    attn_type: str = 'softmax'      # 'softmax' | 'stieltjes' | 'entmax'
+    entmax_alpha: float = 1.5       # alpha-entmax (AdaSplash kernel; eager entmax_bisect for stats)
+    entmax_niter: int = 10          # AdaSplash Halley-bisection iterations for tau
     pos_emb: str = 'learned'        # 'learned' (GPT-2 wpe) | 'nape' (half ALiBi / half NoPE heads, no wpe)
     stieltjes_q: float = 4.0
     stieltjes_window: float = 0.0   # d; 0 = dense

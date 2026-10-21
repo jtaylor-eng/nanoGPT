@@ -11,6 +11,8 @@ from model import GPTConfig, CausalSelfAttention
 ROWS = {
     'softmax':              dict(attn_type='softmax'),
     'softmax_as':           dict(attn_type='softmax', attn_scale='as', attn_scale_zero_init=0.05),
+    'entmax':               dict(attn_type='entmax', entmax_alpha=1.5),
+    'asentmax_zi':          dict(attn_type='entmax', entmax_alpha=1.5, attn_scale='as', attn_scale_zero_init=0.05),
     'stieltjes_q4':         dict(attn_type='stieltjes', stieltjes_q=4.0),
     'wstieltjes_q4_d2':     dict(attn_type='stieltjes', stieltjes_q=4.0, stieltjes_window=2.0),
     'aswstieltjes_q2_d4_zi': dict(attn_type='stieltjes', stieltjes_q=2.0, stieltjes_window=4.0,
