@@ -9,6 +9,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROWS = [  # (dir, label, color, linestyle)
     ('softmax',               'softmax',                              '#000000', '-'),
     ('softmax_as_zi',         'softmax + AS (control)',               '#7f7f7f', '--'),
+    ('entmax',                '1.5-entmax (AdaSplash)',               '#ff7f0e', '-'),
+    ('asentmax_zi',           'ASEntmax (1.5-entmax + AS)',           '#ff7f0e', '--'),
     ('stieltjes_q4',          'Stieltjes q=4 (dense)',                '#d62728', '-'),
     ('wstieltjes_q4_d2',      'Stieltjes q=4, d=2 (windowed)',        '#1f77b4', '-'),
     ('aswstieltjes_q2_d4_zi', 'Stieltjes q=2, d=4 + AS (windowed)',   '#2ca02c', '-'),

@@ -23,7 +23,7 @@ ok = True
 for dtype in (torch.float32, torch.bfloat16):
     for name, kw in ROWS.items():
         for T in (64, 300):
-            cfg = GPTConfig(n_layer=1, n_head=8, n_embd=512, block_size=256, bias=False, pos_emb='nape', **kw)
+            cfg = GPTConfig(n_layer=1, n_head=8, n_embd=512, block_size=256, bias=False, pos_emb='nape', nape_slope_type=os.environ.get('SLOPES', 'linear'), **kw)
             a = CausalSelfAttention(cfg).cuda()
             a.reset_scale_params()
             if cfg.attn_scale == 'as':   # perturb so the scale is non-trivial

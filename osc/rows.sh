@@ -8,6 +8,8 @@ row_args() {
     stieltjes_q4)          echo "--attn_type=stieltjes --stieltjes_q=4.0" ;;
     wstieltjes_q4_d2)      echo "--attn_type=stieltjes --stieltjes_q=4.0 --stieltjes_window=2.0" ;;
     aswstieltjes_q2_d4_zi) echo "--attn_type=stieltjes --stieltjes_q=2.0 --stieltjes_window=4.0 --attn_scale=as --attn_scale_zero_init=0.05" ;;
+    # _xs suffix = exponential (original ALiBi) NAPE slopes instead of the synthetic-task 1/h slopes
+    *_xs)                  echo "$(row_args ${1%_xs}) --nape_slope_type=exp" ;;
     *) echo "unknown row $1" >&2; return 1 ;;
   esac
 }

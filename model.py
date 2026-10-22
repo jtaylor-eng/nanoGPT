@@ -35,10 +35,20 @@ except Exception:
     _entmax_bisect = None
 
 
-def nape_slopes(n_head):
+def nape_slopes(n_head, slope_type='linear'):
+    """ALiBi slopes for the first n_head//2 heads, zeros (NoPE) for the rest.
+    'linear': 1/h (asentmax synthetic-task NAPE; very local, ~e^-1 per token on head 0).
+    'exp':    2^(-8h/n_alibi), the original ALiBi geometric slopes spread over the ALiBi heads (0.25 .. 2^-8 for 4
+              heads); the paper's LM runs use 'original exponential ALiBi slopes' (arXiv 2506.16640 App. G.3)."""
     n_alibi = n_head // 2
-    return torch.cat((1.0 / torch.arange(1, n_alibi + 1, dtype=torch.float32),
-                      torch.zeros(n_head - n_alibi)))
+    h = torch.arange(1, n_alibi + 1, dtype=torch.float32)
+    if slope_type == 'linear':
+        s = 1.0 / h
+    elif slope_type == 'exp':
+        s = torch.exp2(-8.0 * h / n_alibi)
+    else:
+        raise ValueError(slope_type)
+    return torch.cat((s, torch.zeros(n_head - n_alibi)))
 
 
 def nape_bias(slopes, T, device, dtype, causal_fill=None):
@@ -103,7 +113,7 @@ class CausalSelfAttention(nn.Module):
         if self.pos_emb not in ('learned', 'nape'):
             raise ValueError(f"pos_emb {self.pos_emb!r}")
         if self.pos_emb == 'nape':
-            self.register_buffer('nape_slopes', nape_slopes(config.n_head), persistent=False)
+            self.register_buffer('nape_slopes', nape_slopes(config.n_head, config.nape_slope_type), persistent=False)
         self.stieltjes_q = float(config.stieltjes_q)
         self.stieltjes_window = None if config.stieltjes_window <= 0 else float(config.stieltjes_window)
         self.stieltjes_num_iter = int(config.stieltjes_num_iter)
@@ -261,6 +271,7 @@ class GPTConfig:
     entmax_alpha: float = 1.5       # alpha-entmax (AdaSplash kernel; eager entmax_bisect for stats)
     entmax_niter: int = 10          # AdaSplash Halley-bisection iterations for tau
     pos_emb: str = 'learned'        # 'learned' (GPT-2 wpe) | 'nape' (half ALiBi / half NoPE heads, no wpe)
+    nape_slope_type: str = 'linear' # 'linear' (1/h) | 'exp' (2^-8h/n_alibi, original ALiBi)
     stieltjes_q: float = 4.0
     stieltjes_window: float = 0.0   # d; 0 = dense
     stieltjes_num_iter: int = 30
