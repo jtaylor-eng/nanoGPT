@@ -25,6 +25,8 @@ batch_tokens = 8192           # tokens per forward batch (logits are 50k-wide: 8
 stats_lengths = '512,4096'
 stats_seqs = 4
 out_name = 'lengths.json'        # output file name (override to keep an existing lengths.json)
+data_file = ''                   # '' = <data_dir>/val.bin, consecutive non-overlapping windows
+doc_len = 0                      # >0: data_file holds documents of exactly doc_len tokens; each window = first L+1 tokens of a doc
 num_iter_override = 0         # >0: evaluate with a different Stieltjes Newton-sweep count
 device = 'cuda'
 for arg in sys.argv[1:]:
@@ -42,10 +44,15 @@ model.load_state_dict(sd)
 model.to(device).eval()
 attns = [b.attn for b in model.transformer.h]
 ctx = torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16)
-val = np.memmap(os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')
+val = np.memmap(data_file if data_file else os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')
 
 def windows(L, n):
-    idx = np.arange(n) * (L + 1)
+    if doc_len > 0:
+        assert L + 1 <= doc_len, f'L={L} exceeds doc_len={doc_len}'
+        n = min(n, len(val) // doc_len)
+        idx = np.arange(n) * doc_len
+    else:
+        idx = np.arange(n) * (L + 1)
     assert idx[-1] + L + 1 <= len(val), 'val.bin too small'
     w = np.stack([val[i:i + L + 1].astype(np.int64) for i in idx])
     return torch.from_numpy(w)
@@ -55,6 +62,8 @@ for L in [int(x) for x in lengths.split(',')]:
     if args['pos_emb'] == 'learned' and L > args['block_size']:
         continue
     n = max(1, tokens_per_length // L)
+    if doc_len > 0:
+        n = len(val) // doc_len          # every document at every length
     W = windows(L, n)
     bs = max(1, batch_tokens // L)
     nb = 16                                     # position buckets
