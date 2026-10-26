@@ -1,0 +1,485 @@
+[10-25 19:45:56] run_lm aswstieltjes_q2_d4_zi_xs lr=7.5e-4 num_iter=15 host=a0370.ten.osc.edu job=8098770 commit=cf1f03b
+NVIDIA A100-PCIE-40GB, 40960 MiB
+/fs/scratch/PAS2836/jacktaylor/nanoGPT/train.py:219: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+  scaler = torch.cuda.amp.GradScaler(enabled=(dtype == 'float16'))
+Overriding config with /fs/scratch/PAS2836/jacktaylor/nanoGPT/config/lm_stieltjes.py:
+# Stieltjes-vs-softmax LM comparison (asentmax context/lm_plan_1012.md).
+# ~51M params (8L x 8H x 512, head_dim 64), FineWeb-10B GPT-2 tokens, T=512, 1.0B tokens.
+# Per-row attention settings + LR come from the command line (osc/run_lm.sh).
+dataset = 'fineweb10B'
+n_layer = 8
+n_head = 8
+n_embd = 512
+block_size = 512
+bias = False
+dropout = 0.0
+pos_emb = 'nape'
+
+# 32 x 512 x 8 = 131,072 tokens/step; 7630 steps = 1.0B tokens
+batch_size = 32
+gradient_accumulation_steps = 8
+max_iters = 7630
+lr_decay_iters = 7630
+warmup_iters = 400
+learning_rate = 1.5e-3     # overridden per job
+min_lr = 1.5e-4            # overridden per job (= lr / 10)
+beta1 = 0.9
+beta2 = 0.95
+weight_decay = 0.1
+grad_clip = 1.0
+
+eval_interval = 500
+eval_iters = 100           # 100 x 32 x 512 = 1.6M val tokens per periodic eval
+final_eval_iters = 800     # 13M val tokens for the selection number (final.json)
+log_interval = 20
+always_save_checkpoint = True   # keep last (cosine-decayed) model; selection = final val loss
+compile = True
+wandb_log = False
+
+Overriding: data_root = /tmp/fineweb10B
+Overriding: attn_type = stieltjes
+Overriding: stieltjes_q = 2.0
+Overriding: stieltjes_window = 4.0
+Overriding: attn_scale = as
+Overriding: attn_scale_zero_init = 0.05
+Overriding: nape_slope_type = exp
+Overriding: stieltjes_num_iter = 15
+Overriding: learning_rate = 0.00075
+Overriding: min_lr = 7.500000000000001e-05
+Overriding: out_dir = /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/aswstieltjes_q2_d4_zi_xs/lr7.5e-4
+Overriding: init_from = scratch
+Overriding: wall_limit_s = 9000
+tokens per iteration will be: 131,072
+Initializing a new model from scratch
+defaulting to vocab_size of GPT-2 to 50304 (50257 rounded up for efficiency)
+number of parameters: 50.96M
+num decayed parameter tensors: 49, with 50,954,240 parameters
+num non-decayed parameter tensors: 33, with 8,768 parameters
+using fused AdamW: True
+compiling the model... (takes a ~minute)
+step 0: train loss 10.9211, val loss 10.9207
+iter 0: loss 10.9293, time 36979.73ms, mfu -100.00%
+iter 20: loss 9.7414, time 811.38ms, mfu 17.13%
+iter 40: loss 8.9503, time 810.30ms, mfu 17.14%
+iter 60: loss 8.0034, time 809.56ms, mfu 17.14%
+iter 80: loss 7.4184, time 814.32ms, mfu 17.13%
+iter 100: loss 6.8922, time 813.74ms, mfu 17.13%
+iter 120: loss 6.5781, time 817.78ms, mfu 17.12%
+iter 140: loss 6.6317, time 818.68ms, mfu 17.10%
+iter 160: loss 6.3194, time 822.44ms, mfu 17.08%
+iter 180: loss 6.0866, time 821.65ms, mfu 17.07%
+iter 200: loss 6.0337, time 823.93ms, mfu 17.05%
+iter 220: loss 5.9951, time 826.63ms, mfu 17.02%
+iter 240: loss 5.9111, time 823.72ms, mfu 17.01%
+iter 260: loss 5.6235, time 821.07ms, mfu 17.00%
+iter 280: loss 5.5509, time 826.82ms, mfu 16.98%
+iter 300: loss 5.5590, time 826.34ms, mfu 16.97%
+iter 320: loss 5.4736, time 826.95ms, mfu 16.95%
+iter 340: loss 5.4716, time 821.00ms, mfu 16.95%
+iter 360: loss 5.5213, time 827.60ms, mfu 16.94%
+iter 380: loss 5.2023, time 827.66ms, mfu 16.92%
+iter 400: loss 5.2328, time 823.68ms, mfu 16.92%
+iter 420: loss 5.2018, time 829.10ms, mfu 16.90%
+iter 440: loss 5.1861, time 827.47ms, mfu 16.89%
+iter 460: loss 5.2409, time 829.06ms, mfu 16.88%
+iter 480: loss 5.1414, time 827.03ms, mfu 16.87%
+step 500: train loss 5.0604, val loss 5.0647
+saving checkpoint to /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/aswstieltjes_q2_d4_zi_xs/lr7.5e-4
+iter 500: loss 4.9952, time 13344.31ms, mfu 15.29%
+iter 520: loss 4.9458, time 829.21ms, mfu 15.44%
+iter 540: loss 5.0210, time 827.46ms, mfu 15.57%
+iter 560: loss 4.9037, time 829.65ms, mfu 15.69%
+iter 580: loss 4.8944, time 830.80ms, mfu 15.80%
+iter 600: loss 5.0086, time 828.85ms, mfu 15.89%
+iter 620: loss 4.8100, time 828.23ms, mfu 15.98%
+iter 640: loss 4.7968, time 828.20ms, mfu 16.06%
+iter 660: loss 4.6311, time 826.87ms, mfu 16.14%
+iter 680: loss 4.8001, time 829.34ms, mfu 16.20%
+iter 700: loss 4.8442, time 826.39ms, mfu 16.26%
+iter 720: loss 4.8464, time 829.82ms, mfu 16.31%
+iter 740: loss 4.6600, time 829.08ms, mfu 16.36%
+iter 760: loss 4.5610, time 830.49ms, mfu 16.40%
+iter 780: loss 4.6832, time 827.09ms, mfu 16.44%
+iter 800: loss 4.6726, time 827.45ms, mfu 16.47%
+iter 820: loss 4.4570, time 828.46ms, mfu 16.51%
+iter 840: loss 4.5880, time 826.84ms, mfu 16.54%
+iter 860: loss 4.5562, time 827.61ms, mfu 16.56%
+iter 880: loss 4.5764, time 825.56ms, mfu 16.59%
+iter 900: loss 4.4954, time 828.52ms, mfu 16.61%
+iter 920: loss 4.5791, time 826.97ms, mfu 16.63%
+iter 940: loss 4.5814, time 827.74ms, mfu 16.65%
+iter 960: loss 4.3804, time 828.28ms, mfu 16.66%
+iter 980: loss 4.4252, time 829.42ms, mfu 16.67%
+step 1000: train loss 4.4592, val loss 4.4539
+saving checkpoint to /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/aswstieltjes_q2_d4_zi_xs/lr7.5e-4
+iter 1000: loss 4.4552, time 13312.45ms, mfu 15.11%
+iter 1020: loss 4.3859, time 827.80ms, mfu 15.28%
+iter 1040: loss 4.4182, time 827.43ms, mfu 15.43%
+iter 1060: loss 4.5353, time 830.04ms, mfu 15.56%
+iter 1080: loss 4.4292, time 827.44ms, mfu 15.69%
+iter 1100: loss 4.5149, time 828.55ms, mfu 15.79%
+iter 1120: loss 4.3779, time 825.55ms, mfu 15.90%
+iter 1140: loss 4.2992, time 827.77ms, mfu 15.99%
+iter 1160: loss 4.2903, time 826.27ms, mfu 16.07%
+iter 1180: loss 4.2959, time 825.39ms, mfu 16.15%
+iter 1200: loss 4.4153, time 830.22ms, mfu 16.21%
+iter 1220: loss 4.3916, time 828.98ms, mfu 16.27%
+iter 1240: loss 4.4115, time 827.91ms, mfu 16.32%
+iter 1260: loss 4.3868, time 828.14ms, mfu 16.37%
+iter 1280: loss 4.2606, time 830.41ms, mfu 16.40%
+iter 1300: loss 4.4028, time 829.52ms, mfu 16.44%
+iter 1320: loss 4.3545, time 828.01ms, mfu 16.47%
+iter 1340: loss 4.3122, time 828.61ms, mfu 16.50%
+iter 1360: loss 4.2483, time 829.43ms, mfu 16.53%
+iter 1380: loss 4.3406, time 831.81ms, mfu 16.55%
+iter 1400: loss 4.5142, time 829.62ms, mfu 16.57%
+iter 1420: loss 4.2785, time 829.01ms, mfu 16.59%
+iter 1440: loss 4.2400, time 827.42ms, mfu 16.61%
+iter 1460: loss 4.4883, time 830.36ms, mfu 16.62%
+iter 1480: loss 4.2614, time 828.46ms, mfu 16.64%
+step 1500: train loss 4.2628, val loss 4.2699
+saving checkpoint to /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/aswstieltjes_q2_d4_zi_xs/lr7.5e-4
+iter 1500: loss 4.2459, time 13268.04ms, mfu 15.08%
+iter 1520: loss 4.2486, time 828.54ms, mfu 15.25%
+iter 1540: loss 4.2377, time 826.82ms, mfu 15.41%
+iter 1560: loss 4.2849, time 829.13ms, mfu 15.54%
+iter 1580: loss 4.3367, time 829.18ms, mfu 15.67%
+iter 1600: loss 4.1846, time 830.81ms, mfu 15.77%
+iter 1620: loss 4.2083, time 829.48ms, mfu 15.87%
+iter 1640: loss 4.2552, time 829.95ms, mfu 15.96%
+iter 1660: loss 4.2231, time 828.69ms, mfu 16.04%
+iter 1680: loss 4.1762, time 829.06ms, mfu 16.11%
+iter 1700: loss 4.1856, time 828.40ms, mfu 16.18%
+iter 1720: loss 4.3141, time 828.47ms, mfu 16.24%
+iter 1740: loss 4.1634, time 824.90ms, mfu 16.30%
+iter 1760: loss 4.4047, time 830.10ms, mfu 16.35%
+iter 1780: loss 4.3096, time 827.15ms, mfu 16.39%
+iter 1800: loss 4.1919, time 828.97ms, mfu 16.43%
+iter 1820: loss 4.1274, time 827.86ms, mfu 16.47%
+iter 1840: loss 4.2406, time 831.14ms, mfu 16.49%
+iter 1860: loss 4.0023, time 828.75ms, mfu 16.52%
+iter 1880: loss 4.1225, time 829.75ms, mfu 16.54%
+iter 1900: loss 4.0604, time 828.29ms, mfu 16.57%
+iter 1920: loss 4.1474, time 828.54ms, mfu 16.59%
+iter 1940: loss 4.2734, time 828.85ms, mfu 16.61%
+iter 1960: loss 4.1474, time 829.14ms, mfu 16.62%
+iter 1980: loss 4.1978, time 830.37ms, mfu 16.64%
+step 2000: train loss 4.1506, val loss 4.1563
+saving checkpoint to /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/aswstieltjes_q2_d4_zi_xs/lr7.5e-4
+iter 2000: loss 4.1272, time 13311.18ms, mfu 15.08%
+iter 2020: loss 4.2168, time 829.27ms, mfu 15.25%
+iter 2040: loss 4.3299, time 827.82ms, mfu 15.40%
+iter 2060: loss 4.1788, time 827.99ms, mfu 15.54%
+iter 2080: loss 4.3129, time 829.43ms, mfu 15.66%
+iter 2100: loss 4.1009, time 827.44ms, mfu 15.78%
+iter 2120: loss 4.1250, time 827.45ms, mfu 15.88%
+iter 2140: loss 4.1385, time 829.63ms, mfu 15.97%
+iter 2160: loss 4.0946, time 827.10ms, mfu 16.05%
+iter 2180: loss 4.1009, time 827.98ms, mfu 16.13%
+iter 2200: loss 4.2133, time 828.36ms, mfu 16.19%
+iter 2220: loss 4.1846, time 829.50ms, mfu 16.25%
+iter 2240: loss 4.0724, time 827.94ms, mfu 16.30%
+iter 2260: loss 4.1111, time 827.66ms, mfu 16.35%
+iter 2280: loss 4.0321, time 829.18ms, mfu 16.39%
+iter 2300: loss 4.0658, time 828.94ms, mfu 16.43%
+iter 2320: loss 4.1253, time 827.13ms, mfu 16.47%
+iter 2340: loss 4.1205, time 828.34ms, mfu 16.50%
+iter 2360: loss 4.0693, time 829.06ms, mfu 16.53%
+iter 2380: loss 4.0437, time 828.88ms, mfu 16.55%
+iter 2400: loss 4.2470, time 825.16ms, mfu 16.58%
+iter 2420: loss 4.2104, time 828.77ms, mfu 16.60%
+iter 2440: loss 4.0296, time 829.28ms, mfu 16.62%
+iter 2460: loss 4.1858, time 827.79ms, mfu 16.64%
+iter 2480: loss 4.2164, time 828.67ms, mfu 16.65%
+step 2500: train loss 4.0771, val loss 4.0929
+saving checkpoint to /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/aswstieltjes_q2_d4_zi_xs/lr7.5e-4
+iter 2500: loss 4.0458, time 13274.08ms, mfu 15.09%
+iter 2520: loss 4.0790, time 827.35ms, mfu 15.26%
+iter 2540: loss 4.1437, time 824.41ms, mfu 15.42%
+iter 2560: loss 4.1006, time 830.09ms, mfu 15.55%
+iter 2580: loss 4.0961, time 828.08ms, mfu 15.68%
+iter 2600: loss 4.1303, time 829.39ms, mfu 15.79%
+iter 2620: loss 4.0868, time 828.45ms, mfu 15.89%
+iter 2640: loss 4.0951, time 830.83ms, mfu 15.97%
+iter 2660: loss 4.1045, time 830.51ms, mfu 16.05%
+iter 2680: loss 4.0656, time 829.70ms, mfu 16.12%
+iter 2700: loss 4.0195, time 828.01ms, mfu 16.19%
+iter 2720: loss 3.9774, time 828.21ms, mfu 16.25%
+iter 2740: loss 4.0955, time 828.68ms, mfu 16.30%
+iter 2760: loss 4.2311, time 829.25ms, mfu 16.35%
+iter 2780: loss 4.0904, time 828.21ms, mfu 16.39%
+iter 2800: loss 4.0374, time 822.51ms, mfu 16.44%
+iter 2820: loss 3.9762, time 827.55ms, mfu 16.48%
+iter 2840: loss 4.0962, time 827.83ms, mfu 16.51%
+iter 2860: loss 4.0925, time 830.16ms, mfu 16.53%
+iter 2880: loss 4.1492, time 824.42ms, mfu 16.57%
+iter 2900: loss 4.0476, time 828.91ms, mfu 16.59%
+iter 2920: loss 4.0515, time 829.67ms, mfu 16.60%
+iter 2940: loss 3.8528, time 825.80ms, mfu 16.63%
+iter 2960: loss 4.1250, time 830.57ms, mfu 16.64%
+iter 2980: loss 3.9309, time 829.14ms, mfu 16.65%
+step 3000: train loss 4.0204, val loss 4.0398
+saving checkpoint to /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/aswstieltjes_q2_d4_zi_xs/lr7.5e-4
+iter 3000: loss 4.0085, time 13293.19ms, mfu 15.09%
+iter 3020: loss 3.9874, time 827.59ms, mfu 15.26%
+iter 3040: loss 3.9505, time 827.41ms, mfu 15.42%
+iter 3060: loss 4.0061, time 830.01ms, mfu 15.55%
+iter 3080: loss 3.9318, time 829.55ms, mfu 15.67%
+iter 3100: loss 3.9803, time 829.06ms, mfu 15.78%
+iter 3120: loss 4.0352, time 828.92ms, mfu 15.88%
+iter 3140: loss 4.1379, time 828.42ms, mfu 15.97%
+iter 3160: loss 3.9694, time 827.03ms, mfu 16.05%
+iter 3180: loss 3.9299, time 827.60ms, mfu 16.13%
+iter 3200: loss 4.0328, time 826.16ms, mfu 16.20%
+iter 3220: loss 3.9293, time 829.57ms, mfu 16.25%
+iter 3240: loss 3.9640, time 827.96ms, mfu 16.31%
+iter 3260: loss 3.9511, time 828.35ms, mfu 16.36%
+iter 3280: loss 4.0151, time 829.64ms, mfu 16.40%
+iter 3300: loss 4.1151, time 828.01ms, mfu 16.44%
+iter 3320: loss 3.8408, time 828.45ms, mfu 16.47%
+iter 3340: loss 3.9243, time 827.90ms, mfu 16.50%
+iter 3360: loss 4.0602, time 829.78ms, mfu 16.53%
+iter 3380: loss 3.9891, time 828.77ms, mfu 16.55%
+iter 3400: loss 4.1283, time 830.20ms, mfu 16.57%
+iter 3420: loss 4.0112, time 824.34ms, mfu 16.60%
+iter 3440: loss 3.8748, time 829.36ms, mfu 16.62%
+iter 3460: loss 3.9021, time 828.61ms, mfu 16.63%
+iter 3480: loss 4.1692, time 828.56ms, mfu 16.65%
+step 3500: train loss 3.9833, val loss 3.9861
+saving checkpoint to /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/aswstieltjes_q2_d4_zi_xs/lr7.5e-4
+iter 3500: loss 3.8567, time 13279.72ms, mfu 15.09%
+iter 3520: loss 3.9276, time 829.37ms, mfu 15.26%
+iter 3540: loss 3.9297, time 829.73ms, mfu 15.41%
+iter 3560: loss 3.9825, time 825.25ms, mfu 15.55%
+iter 3580: loss 4.0200, time 827.84ms, mfu 15.67%
+iter 3600: loss 4.1056, time 829.28ms, mfu 15.78%
+iter 3620: loss 3.9003, time 828.78ms, mfu 15.88%
+iter 3640: loss 3.9533, time 827.75ms, mfu 15.97%
+iter 3660: loss 4.0141, time 829.39ms, mfu 16.05%
+iter 3680: loss 3.9918, time 828.91ms, mfu 16.12%
+iter 3700: loss 3.9672, time 827.92ms, mfu 16.19%
+iter 3720: loss 3.9737, time 827.54ms, mfu 16.25%
+iter 3740: loss 3.9307, time 831.29ms, mfu 16.30%
+iter 3760: loss 4.0402, time 830.10ms, mfu 16.34%
+iter 3780: loss 3.9169, time 828.95ms, mfu 16.39%
+iter 3800: loss 3.9971, time 827.98ms, mfu 16.43%
+iter 3820: loss 4.0171, time 830.29ms, mfu 16.46%
+iter 3840: loss 4.0039, time 828.77ms, mfu 16.49%
+iter 3860: loss 3.8249, time 829.27ms, mfu 16.52%
+iter 3880: loss 3.7820, time 829.10ms, mfu 16.54%
+iter 3900: loss 3.8971, time 829.36ms, mfu 16.57%
+iter 3920: loss 3.9609, time 827.02ms, mfu 16.59%
+iter 3940: loss 4.0067, time 829.27ms, mfu 16.61%
+iter 3960: loss 3.9090, time 827.63ms, mfu 16.63%
+iter 3980: loss 3.9423, time 829.07ms, mfu 16.64%
+step 4000: train loss 3.9337, val loss 3.9286
+saving checkpoint to /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/aswstieltjes_q2_d4_zi_xs/lr7.5e-4
+iter 4000: loss 3.8278, time 13318.00ms, mfu 15.08%
+iter 4020: loss 4.0548, time 829.35ms, mfu 15.25%
+iter 4040: loss 3.7998, time 829.87ms, mfu 15.40%
+iter 4060: loss 3.9177, time 825.93ms, mfu 15.54%
+iter 4080: loss 3.8753, time 829.25ms, mfu 15.67%
+iter 4100: loss 3.9596, time 829.84ms, mfu 15.77%
+iter 4120: loss 4.1331, time 827.97ms, mfu 15.88%
+iter 4140: loss 3.8619, time 828.17ms, mfu 15.97%
+iter 4160: loss 3.9151, time 828.39ms, mfu 16.05%
+iter 4180: loss 3.8536, time 828.63ms, mfu 16.12%
+iter 4200: loss 4.1627, time 828.90ms, mfu 16.19%
+iter 4220: loss 3.9465, time 827.71ms, mfu 16.25%
+iter 4240: loss 3.8620, time 829.53ms, mfu 16.30%
+iter 4260: loss 3.9656, time 828.97ms, mfu 16.35%
+iter 4280: loss 3.8159, time 830.87ms, mfu 16.39%
+iter 4300: loss 4.0163, time 826.83ms, mfu 16.43%
+iter 4320: loss 3.9764, time 829.52ms, mfu 16.46%
+iter 4340: loss 3.8874, time 827.94ms, mfu 16.49%
+iter 4360: loss 3.8456, time 830.20ms, mfu 16.52%
+iter 4380: loss 3.8050, time 825.23ms, mfu 16.55%
+iter 4400: loss 3.9386, time 829.55ms, mfu 16.57%
+iter 4420: loss 3.8353, time 830.37ms, mfu 16.59%
+iter 4440: loss 3.8216, time 829.51ms, mfu 16.61%
+iter 4460: loss 3.9902, time 829.13ms, mfu 16.62%
+iter 4480: loss 3.9811, time 830.13ms, mfu 16.64%
+step 4500: train loss 3.8697, val loss 3.9200
+saving checkpoint to /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/aswstieltjes_q2_d4_zi_xs/lr7.5e-4
+iter 4500: loss 3.7558, time 13289.97ms, mfu 15.08%
+iter 4520: loss 3.9399, time 829.98ms, mfu 15.24%
+iter 4540: loss 3.9295, time 829.56ms, mfu 15.40%
+iter 4560: loss 3.8082, time 826.95ms, mfu 15.54%
+iter 4580: loss 3.8503, time 828.52ms, mfu 15.66%
+iter 4600: loss 3.9582, time 829.30ms, mfu 15.77%
+iter 4620: loss 3.8912, time 827.76ms, mfu 15.87%
+iter 4640: loss 3.9174, time 830.28ms, mfu 15.96%
+iter 4660: loss 3.9463, time 826.33ms, mfu 16.05%
+iter 4680: loss 3.7693, time 829.33ms, mfu 16.12%
+iter 4700: loss 3.8656, time 825.65ms, mfu 16.19%
+iter 4720: loss 3.9044, time 829.77ms, mfu 16.25%
+iter 4740: loss 3.8476, time 829.20ms, mfu 16.30%
+iter 4760: loss 3.8718, time 828.64ms, mfu 16.35%
+iter 4780: loss 3.8373, time 827.27ms, mfu 16.39%
+iter 4800: loss 3.9299, time 827.79ms, mfu 16.43%
+iter 4820: loss 3.7784, time 828.66ms, mfu 16.47%
+iter 4840: loss 3.8876, time 827.93ms, mfu 16.50%
+iter 4860: loss 3.8944, time 829.61ms, mfu 16.53%
+iter 4880: loss 3.8770, time 827.95ms, mfu 16.55%
+iter 4900: loss 3.8654, time 829.67ms, mfu 16.57%
+iter 4920: loss 3.8142, time 828.69ms, mfu 16.59%
+iter 4940: loss 3.8742, time 829.80ms, mfu 16.61%
+iter 4960: loss 3.8250, time 827.82ms, mfu 16.63%
+iter 4980: loss 3.9568, time 829.30ms, mfu 16.64%
+step 5000: train loss 3.8711, val loss 3.8845
+saving checkpoint to /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/aswstieltjes_q2_d4_zi_xs/lr7.5e-4
+iter 5000: loss 3.9359, time 13267.70ms, mfu 15.08%
+iter 5020: loss 3.8158, time 828.29ms, mfu 15.25%
+iter 5040: loss 3.8225, time 829.14ms, mfu 15.40%
+iter 5060: loss 3.6810, time 827.52ms, mfu 15.54%
+iter 5080: loss 3.9050, time 825.77ms, mfu 15.67%
+iter 5100: loss 3.7926, time 828.25ms, mfu 15.78%
+iter 5120: loss 3.8837, time 828.07ms, mfu 15.89%
+iter 5140: loss 3.9231, time 828.53ms, mfu 15.97%
+iter 5160: loss 3.8976, time 827.69ms, mfu 16.06%
+iter 5180: loss 3.9051, time 830.99ms, mfu 16.12%
+iter 5200: loss 3.8625, time 829.87ms, mfu 16.19%
+iter 5220: loss 3.9133, time 826.76ms, mfu 16.25%
+iter 5240: loss 3.8787, time 830.24ms, mfu 16.30%
+iter 5260: loss 3.8623, time 828.94ms, mfu 16.35%
+iter 5280: loss 3.6871, time 828.84ms, mfu 16.39%
+iter 5300: loss 4.0198, time 829.51ms, mfu 16.43%
+iter 5320: loss 3.8365, time 822.75ms, mfu 16.47%
+iter 5340: loss 3.7932, time 829.71ms, mfu 16.50%
+iter 5360: loss 3.9594, time 829.28ms, mfu 16.53%
+iter 5380: loss 3.9488, time 829.32ms, mfu 16.55%
+iter 5400: loss 3.8777, time 824.51ms, mfu 16.58%
+iter 5420: loss 3.8190, time 826.65ms, mfu 16.61%
+iter 5440: loss 3.8898, time 831.31ms, mfu 16.62%
+iter 5460: loss 4.0658, time 828.27ms, mfu 16.64%
+iter 5480: loss 3.7763, time 827.65ms, mfu 16.65%
+step 5500: train loss 3.8401, val loss 3.8780
+saving checkpoint to /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/aswstieltjes_q2_d4_zi_xs/lr7.5e-4
+iter 5500: loss 3.7531, time 13276.43ms, mfu 15.09%
+iter 5520: loss 3.6498, time 828.56ms, mfu 15.26%
+iter 5540: loss 3.8886, time 829.34ms, mfu 15.41%
+iter 5560: loss 3.7082, time 828.29ms, mfu 15.55%
+iter 5580: loss 3.8839, time 828.94ms, mfu 15.67%
+iter 5600: loss 3.8493, time 828.88ms, mfu 15.78%
+iter 5620: loss 3.8132, time 828.84ms, mfu 15.88%
+iter 5640: loss 3.8952, time 831.29ms, mfu 15.96%
+iter 5660: loss 3.8214, time 828.93ms, mfu 16.05%
+iter 5680: loss 3.8985, time 828.91ms, mfu 16.12%
+iter 5700: loss 3.7250, time 826.09ms, mfu 16.19%
+iter 5720: loss 3.7704, time 827.75ms, mfu 16.25%
+iter 5740: loss 3.7878, time 828.86ms, mfu 16.30%
+iter 5760: loss 3.8106, time 827.91ms, mfu 16.35%
+iter 5780: loss 3.6562, time 825.31ms, mfu 16.40%
+iter 5800: loss 3.8139, time 828.67ms, mfu 16.44%
+iter 5820: loss 3.7409, time 828.71ms, mfu 16.47%
+iter 5840: loss 3.8252, time 829.01ms, mfu 16.50%
+iter 5860: loss 3.7043, time 828.63ms, mfu 16.53%
+iter 5880: loss 3.9613, time 824.94ms, mfu 16.56%
+iter 5900: loss 3.7029, time 827.48ms, mfu 16.59%
+iter 5920: loss 3.7092, time 828.00ms, mfu 16.61%
+iter 5940: loss 3.9440, time 829.07ms, mfu 16.62%
+iter 5960: loss 3.6945, time 825.65ms, mfu 16.64%
+iter 5980: loss 3.8918, time 829.37ms, mfu 16.66%
+step 6000: train loss 3.8213, val loss 3.8588
+saving checkpoint to /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/aswstieltjes_q2_d4_zi_xs/lr7.5e-4
+iter 6000: loss 3.8961, time 13315.97ms, mfu 15.10%
+iter 6020: loss 3.8688, time 825.96ms, mfu 15.27%
+iter 6040: loss 3.8002, time 830.00ms, mfu 15.42%
+iter 6060: loss 3.8708, time 827.74ms, mfu 15.55%
+iter 6080: loss 3.8956, time 827.86ms, mfu 15.68%
+iter 6100: loss 3.8838, time 827.57ms, mfu 15.79%
+iter 6120: loss 3.8248, time 830.66ms, mfu 15.89%
+iter 6140: loss 3.8233, time 829.75ms, mfu 15.97%
+iter 6160: loss 3.6759, time 827.35ms, mfu 16.06%
+iter 6180: loss 3.6749, time 829.97ms, mfu 16.13%
+iter 6200: loss 3.8218, time 828.85ms, mfu 16.19%
+iter 6220: loss 3.8936, time 829.06ms, mfu 16.25%
+iter 6240: loss 3.8844, time 828.65ms, mfu 16.30%
+iter 6260: loss 3.9744, time 828.15ms, mfu 16.35%
+iter 6280: loss 3.8184, time 825.18ms, mfu 16.40%
+iter 6300: loss 3.8041, time 828.95ms, mfu 16.44%
+iter 6320: loss 3.8771, time 828.84ms, mfu 16.47%
+iter 6340: loss 3.6797, time 830.32ms, mfu 16.50%
+iter 6360: loss 3.8014, time 828.38ms, mfu 16.53%
+iter 6380: loss 3.7870, time 828.34ms, mfu 16.55%
+iter 6400: loss 3.7963, time 829.89ms, mfu 16.57%
+iter 6420: loss 3.7331, time 829.32ms, mfu 16.59%
+iter 6440: loss 3.7243, time 826.49ms, mfu 16.61%
+iter 6460: loss 3.9562, time 830.52ms, mfu 16.63%
+iter 6480: loss 3.8126, time 828.22ms, mfu 16.64%
+step 6500: train loss 3.8054, val loss 3.8234
+saving checkpoint to /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/aswstieltjes_q2_d4_zi_xs/lr7.5e-4
+iter 6500: loss 3.6981, time 13299.97ms, mfu 15.08%
+iter 6520: loss 3.6841, time 829.87ms, mfu 15.25%
+iter 6540: loss 3.8095, time 827.85ms, mfu 15.40%
+iter 6560: loss 3.7546, time 827.73ms, mfu 15.54%
+iter 6580: loss 3.9056, time 830.04ms, mfu 15.66%
+iter 6600: loss 3.8325, time 829.32ms, mfu 15.77%
+iter 6620: loss 3.7049, time 828.52ms, mfu 15.88%
+iter 6640: loss 3.7153, time 828.10ms, mfu 15.97%
+iter 6660: loss 3.7568, time 829.73ms, mfu 16.05%
+iter 6680: loss 3.7667, time 827.18ms, mfu 16.12%
+iter 6700: loss 3.6655, time 829.30ms, mfu 16.19%
+iter 6720: loss 3.7593, time 828.42ms, mfu 16.25%
+iter 6740: loss 3.9622, time 830.34ms, mfu 16.30%
+iter 6760: loss 3.7166, time 828.20ms, mfu 16.34%
+iter 6780: loss 3.6653, time 829.42ms, mfu 16.39%
+iter 6800: loss 3.9951, time 829.50ms, mfu 16.42%
+iter 6820: loss 3.7085, time 829.67ms, mfu 16.46%
+iter 6840: loss 3.6338, time 827.94ms, mfu 16.49%
+iter 6860: loss 3.9188, time 829.84ms, mfu 16.52%
+iter 6880: loss 3.7772, time 827.55ms, mfu 16.55%
+iter 6900: loss 3.8337, time 831.33ms, mfu 16.56%
+iter 6920: loss 3.8731, time 830.12ms, mfu 16.58%
+iter 6940: loss 3.8177, time 828.87ms, mfu 16.60%
+iter 6960: loss 3.6806, time 829.39ms, mfu 16.62%
+iter 6980: loss 3.6901, time 828.66ms, mfu 16.63%
+step 7000: train loss 3.7883, val loss 3.8049
+saving checkpoint to /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/aswstieltjes_q2_d4_zi_xs/lr7.5e-4
+iter 7000: loss 3.7804, time 13279.95ms, mfu 15.07%
+iter 7020: loss 3.9922, time 827.10ms, mfu 15.25%
+iter 7040: loss 3.7136, time 828.37ms, mfu 15.40%
+iter 7060: loss 3.7412, time 827.69ms, mfu 15.54%
+iter 7080: loss 3.7028, time 829.09ms, mfu 15.66%
+iter 7100: loss 3.8297, time 829.14ms, mfu 15.77%
+iter 7120: loss 3.8557, time 827.99ms, mfu 15.88%
+iter 7140: loss 3.6955, time 829.40ms, mfu 15.96%
+iter 7160: loss 3.8667, time 828.70ms, mfu 16.05%
+iter 7180: loss 3.7283, time 828.67ms, mfu 16.12%
+iter 7200: loss 3.8212, time 828.60ms, mfu 16.19%
+iter 7220: loss 3.8451, time 828.57ms, mfu 16.24%
+iter 7240: loss 3.8738, time 827.80ms, mfu 16.30%
+iter 7260: loss 3.7037, time 830.22ms, mfu 16.34%
+iter 7280: loss 3.8518, time 827.76ms, mfu 16.39%
+iter 7300: loss 3.7450, time 831.18ms, mfu 16.42%
+iter 7320: loss 3.7874, time 829.00ms, mfu 16.46%
+iter 7340: loss 3.8312, time 828.46ms, mfu 16.49%
+iter 7360: loss 3.7616, time 827.96ms, mfu 16.52%
+iter 7380: loss 3.8399, time 829.96ms, mfu 16.54%
+iter 7400: loss 3.7489, time 828.72ms, mfu 16.57%
+iter 7420: loss 3.7256, time 829.08ms, mfu 16.59%
+iter 7440: loss 3.7316, time 828.98ms, mfu 16.61%
+iter 7460: loss 3.7231, time 828.73ms, mfu 16.62%
+iter 7480: loss 3.8239, time 828.93ms, mfu 16.64%
+step 7500: train loss 3.7912, val loss 3.7952
+saving checkpoint to /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/aswstieltjes_q2_d4_zi_xs/lr7.5e-4
+iter 7500: loss 3.8225, time 13288.87ms, mfu 15.08%
+iter 7520: loss 3.8790, time 827.95ms, mfu 15.25%
+iter 7540: loss 3.7583, time 829.45ms, mfu 15.40%
+iter 7560: loss 3.8215, time 829.50ms, mfu 15.54%
+iter 7580: loss 3.8223, time 826.17ms, mfu 15.67%
+iter 7600: loss 3.8483, time 830.10ms, mfu 15.77%
+iter 7620: loss 3.7937, time 829.30ms, mfu 15.87%
+final: train loss 3.7701, val loss 3.8033
+[10-25 21:37:10] train exit 0
+/fs/scratch/PAS2836/jacktaylor/nanoGPT/eval_lengths.py:34: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(os.path.join(out_dir, 'ckpt.pt'), map_location=device)
+number of parameters: 50.96M
+L=512: val loss 3.7999 over 4096 seqs (11s); first/last bucket 4.418/3.713
+L=1024: val loss 3.7540 over 2048 seqs (13s); first/last bucket 4.189/3.706
+L=2048: val loss 3.7625 over 1024 seqs (19s); first/last bucket 4.010/3.823
+L=4096: val loss 3.8349 over 512 seqs (32s); first/last bucket 3.873/3.965
+stats L=512: last-quarter rows mean support 47.9 keys, entropy 2.697 nats
+stats L=4096: last-quarter rows mean support 83.1 keys, entropy 3.283 nats
+wrote /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/aswstieltjes_q2_d4_zi_xs/lr7.5e-4
+[10-25 21:39:10] eval exit 0
