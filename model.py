@@ -52,13 +52,16 @@ def nape_slopes(n_head, slope_type='linear'):
 
 
 def nape_bias(slopes, T, device, dtype, causal_fill=None):
-    """(1, H, T, T) additive bias: slope_h * min(j - i, 0); optionally causal_fill above the diagonal."""
+    """(1, H, T, T) additive bias: slope_h * min(j - i, 0); optionally causal_fill above the diagonal.
+    Built head by head in the target dtype so long-context eval (16k: 8 x T x T) does not allocate fp32 temporaries."""
     i = torch.arange(T, device=device)
-    diff = (i[None, :] - i[:, None])
-    bias = slopes.to(device=device, dtype=torch.float32).view(1, -1, 1, 1) * diff.clamp(max=0).to(torch.float32)
+    diff = (i[None, :] - i[:, None]).clamp(max=0)
+    out = torch.empty(1, slopes.numel(), T, T, device=device, dtype=dtype)
+    for h, s in enumerate(slopes.tolist()):
+        out[0, h] = (diff * s).to(dtype) if s != 0 else 0.0
     if causal_fill is not None:
-        bias = bias.masked_fill((diff > 0).view(1, 1, T, T), causal_fill)
-    return bias.to(dtype)
+        out.masked_fill_(torch.triu(torch.ones(T, T, dtype=torch.bool, device=device), 1).view(1, 1, T, T), causal_fill)
+    return out
 
 
 @torch.compiler.disable
@@ -170,18 +173,30 @@ class CausalSelfAttention(nn.Module):
             return _entmax_bisect(s, alpha=self.entmax_alpha, dim=-1, n_iter=50)
         return stieltjes_normalize(s, q=self.stieltjes_q, num_iter=self.stieltjes_num_iter, window=self.stieltjes_window)
 
-    def _record_stats(self, p):
-        # p: (B, H, T, T) fp32, causal. Per head: mean entropy, mean nnz support, mean max prob over all rows,
-        # plus last-quarter rows (long-context behaviour).
+    def _probs_head(self, q, k, h):
+        # q, k: (B, 1, T, D) for head h; same math as _probs but with that head's slope only
+        T = q.shape[2]
+        s = (q.float() @ k.float().transpose(-2, -1)) * (1.0 / math.sqrt(self.head_dim))
+        if self.pos_emb == 'nape':
+            s = s + nape_bias(self.nape_slopes[h:h + 1], T, q.device, torch.float32)
+        causal = torch.ones(T, T, dtype=torch.bool, device=q.device).tril()
+        s = s.masked_fill(~causal, float('-inf') if self.attn_type in ('softmax', 'entmax') else -1e30)
+        if self.attn_type == 'softmax':
+            return F.softmax(s, dim=-1)
+        if self.attn_type == 'entmax':
+            return _entmax_bisect(s, alpha=self.entmax_alpha, dim=-1, n_iter=50)
+        return stieltjes_normalize(s, q=self.stieltjes_q, num_iter=self.stieltjes_num_iter, window=self.stieltjes_window)
+
+    def _head_stats(self, p):
+        # p: (B, 1, T, T) fp32, causal. Scalars per stat: mean over all rows and over last-quarter rows.
         T = p.shape[-1]
-        ent = -(p * torch.log(p.clamp_min(1e-30))).sum(-1)              # (B,H,T)
+        ent = -(p * torch.log(p.clamp_min(1e-30))).sum(-1)              # (B,1,T)
         nnz = (p > 0).sum(-1).float()
         pmax = p.amax(-1)
         tail = slice(3 * T // 4, T)
-        self.last_stats = {k: v.mean(dim=(0, 2)).cpu() for k, v in
-                           (('entropy', ent), ('support', nnz), ('pmax', pmax))}
-        self.last_stats.update({k + '_tail': v[:, :, tail].mean(dim=(0, 2)).cpu() for k, v in
-                                (('entropy', ent), ('support', nnz), ('pmax', pmax))})
+        out = {k: v.mean().cpu() for k, v in (('entropy', ent), ('support', nnz), ('pmax', pmax))}
+        out.update({k + '_tail': v[:, :, tail].mean().cpu() for k, v in (('entropy', ent), ('support', nnz), ('pmax', pmax))})
+        return out
 
     def forward(self, x):
         B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
@@ -196,10 +211,18 @@ class CausalSelfAttention(nn.Module):
         if self.capture_qk:
             self.last_qk = (q.detach(), k.detach())
 
-        if self.collect_stats or (self.attn_type in ('stieltjes', 'entmax') and (self.stieltjes_impl == 'eager' or not q.is_cuda)):
+        if self.collect_stats:
+            # materialised eager path, one head at a time (a 16k x 16k fp32 map is 1 GB per head)
+            ys, stats = [], []
+            for h in range(self.n_head):
+                att = self._probs_head(q[:, h:h + 1], k[:, h:h + 1], h)
+                stats.append(self._head_stats(att.detach()))
+                ys.append(att.to(v.dtype) @ v[:, h:h + 1])
+                del att
+            y = torch.cat(ys, dim=1)
+            self.last_stats = {key: torch.stack([s[key] for s in stats]) for key in stats[0]}
+        elif self.attn_type in ('stieltjes', 'entmax') and (self.stieltjes_impl == 'eager' or not q.is_cuda):
             att = self._probs(q, k)
-            if self.collect_stats:
-                self._record_stats(att.detach())
             y = self.attn_dropout(att).to(v.dtype) @ v
         elif self.attn_type == 'entmax':
             slopes = self.nape_slopes if self.pos_emb == 'nape' else None

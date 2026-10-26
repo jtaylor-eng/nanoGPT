@@ -24,6 +24,7 @@ tokens_per_length = 2 * 1024 * 1024
 batch_tokens = 8192           # tokens per forward batch (logits are 50k-wide: 8k tok = 1.6 GB fp32)
 stats_lengths = '512,4096'
 stats_seqs = 4
+out_name = 'lengths.json'        # output file name (override to keep an existing lengths.json)
 num_iter_override = 0         # >0: evaluate with a different Stieltjes Newton-sweep count
 device = 'cuda'
 for arg in sys.argv[1:]:
@@ -99,6 +100,6 @@ for L in [int(x) for x in stats_lengths.split(',')]:
     ent = np.mean([np.mean(l['entropy_tail']) for l in res['stats'][L]])
     print(f"stats L={L}: last-quarter rows mean support {sup:.1f} keys, entropy {ent:.3f} nats", flush=True)
 
-with open(os.path.join(out_dir, 'lengths.json' if num_iter_override <= 0 else f'lengths_it{num_iter_override}.json'), 'w') as f:
+with open(os.path.join(out_dir, out_name if num_iter_override <= 0 else f'lengths_it{num_iter_override}.json'), 'w') as f:
     json.dump(res, f, indent=1)
 print('wrote', out_dir)
