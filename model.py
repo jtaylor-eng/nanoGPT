@@ -20,7 +20,7 @@ from torch.nn import functional as F
 #   NAPE: first n_head//2 heads ALiBi with linear slopes 1/(1..H/2), the rest NoPE (no positional signal).
 #   Stieltjes: w_j = [(lam - s_j)^-q - d^-q]_+ with lam solved per row (window d=0 -> dense).
 #   AS ('adapt-softplus-tanh'): NoPE-head queries scaled by 1 + softplus(Wb x) * log(pos+2)^(2 tanh(Wg x)).
-from stieltjes.stieltjes_eager import stieltjes_normalize
+from stieltjes.stieltjes_eager import stieltjes_normalize, stieltjes_normalize_qd
 try:
     from stieltjes.triton_stieltjes import stieltjes_attention as _triton_stieltjes
 except Exception:  # no triton (CPU-only box)
@@ -134,6 +134,12 @@ class CausalSelfAttention(nn.Module):
         self.last_stats = None
         self.capture_qk = False      # set by residual_probe.py: keep the (scaled) q, k of the last forward
         self.last_qk = None
+        # diagnostics (eval only): force the per-head eager path; per-head q / window overrides (tensors of shape (H,)
+        # or None); cap NoPE heads (slope == 0) to the last nope_cap keys (0 = no cap)
+        self.force_per_head = False
+        self.head_q = None
+        self.head_window = None
+        self.nope_cap = 0
         if not self.flash:
             print("WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0")
             # causal mask to ensure that attention is only applied to the left in the input sequence
@@ -180,11 +186,18 @@ class CausalSelfAttention(nn.Module):
         if self.pos_emb == 'nape':
             s = s + nape_bias(self.nape_slopes[h:h + 1], T, q.device, torch.float32)
         causal = torch.ones(T, T, dtype=torch.bool, device=q.device).tril()
+        if self.nope_cap > 0 and self.pos_emb == 'nape' and float(self.nape_slopes[h]) == 0.0:
+            causal = causal & torch.ones(T, T, dtype=torch.bool, device=q.device).triu(-(self.nope_cap - 1))
         s = s.masked_fill(~causal, float('-inf') if self.attn_type in ('softmax', 'entmax') else -1e30)
         if self.attn_type == 'softmax':
             return F.softmax(s, dim=-1)
         if self.attn_type == 'entmax':
             return _entmax_bisect(s, alpha=self.entmax_alpha, dim=-1, n_iter=50)
+        if self.head_q is not None or self.head_window is not None:
+            # per-head q / d as tensors (differentiable: used by the q/d gradient probe)
+            hq = self.head_q[h] if self.head_q is not None else torch.tensor(self.stieltjes_q, device=s.device)
+            hd = self.head_window[h] if self.head_window is not None else torch.tensor(self.stieltjes_window or 0.0, device=s.device)
+            return stieltjes_normalize_qd(s, hq, hd, num_iter=self.stieltjes_num_iter)
         return stieltjes_normalize(s, q=self.stieltjes_q, num_iter=self.stieltjes_num_iter, window=self.stieltjes_window)
 
     def _head_stats(self, p):
@@ -211,16 +224,18 @@ class CausalSelfAttention(nn.Module):
         if self.capture_qk:
             self.last_qk = (q.detach(), k.detach())
 
-        if self.collect_stats:
+        if self.collect_stats or self.force_per_head:
             # materialised eager path, one head at a time (a 16k x 16k fp32 map is 1 GB per head)
             ys, stats = [], []
             for h in range(self.n_head):
                 att = self._probs_head(q[:, h:h + 1], k[:, h:h + 1], h)
-                stats.append(self._head_stats(att.detach()))
+                if self.collect_stats:
+                    stats.append(self._head_stats(att.detach()))
                 ys.append(att.to(v.dtype) @ v[:, h:h + 1])
                 del att
             y = torch.cat(ys, dim=1)
-            self.last_stats = {key: torch.stack([s[key] for s in stats]) for key in stats[0]}
+            if self.collect_stats:
+                self.last_stats = {key: torch.stack([s[key] for s in stats]) for key in stats[0]}
         elif self.attn_type in ('stieltjes', 'entmax') and (self.stieltjes_impl == 'eager' or not q.is_cuda):
             att = self._probs(q, k)
             y = self.attn_dropout(att).to(v.dtype) @ v

@@ -112,6 +112,31 @@ def stieltjes_normalize(scores, q: float = 4.0, num_iter: int = 30, window=None,
     return _StieltjesNormalize.apply(scores, float(q), _window_c(float(q), window), int(num_iter), float(eps))
 
 
+def stieltjes_normalize_qd(scores, q, d, num_iter: int = 30, eps: float = 1e-6):
+    """Fork addition (diagnostics): the windowed map with q and d as 0-dim TENSORS, differentiable in both.
+    λ is solved without grad, then one Newton step is taken inside autograd, so d(out)/dq and d(out)/dd are the
+    exact implicit-function derivatives at the root (same trick as stieltjes_reference). d <= 0 means dense.
+    fp32 (fp64 if given fp64), materialised; eval-only."""
+    s = scores if scores.dtype == torch.float64 else scores.to(torch.float32)
+    x = s - s.max(dim=-1, keepdim=True).values.detach()
+    valid = torch.isfinite(s) & (s > -1e30)
+    dense = float(d) <= 0
+    c = torch.zeros((), dtype=s.dtype, device=s.device) if dense else d.to(s.dtype).pow(-q.to(s.dtype))
+    with torch.no_grad():
+        lam = _solve(x, float(q), float(c), num_iter, eps)
+
+    def w_of(lam_, xx):
+        w = (lam_ - xx).clamp(min=eps).pow(-q) - c
+        return torch.where(valid & (w > 0), w, torch.zeros_like(w))
+
+    w = w_of(lam, x)
+    f = w.sum(-1, keepdim=True) - 1
+    fp = -q * torch.where(w > 0, (w + c) / (lam - x).clamp(min=eps), torch.zeros_like(w)).sum(-1, keepdim=True)
+    lam = lam - f / fp
+    w = w_of(lam, x)
+    return (w / w.sum(-1, keepdim=True).clamp(min=eps)).to(scores.dtype)
+
+
 def stieltjes_reference(scores, q: float = 4.0, window=None, n_bisect: int = 200):
     """Slow fp64 reference for tests: 200 bisections for λ, then one differentiable
     Newton step so autograd gives the exact implicit-function gradient at the root."""

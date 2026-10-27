@@ -27,6 +27,10 @@ stats_seqs = 4
 out_name = 'lengths.json'        # output file name (override to keep an existing lengths.json)
 data_file = ''                   # '' = <data_dir>/val.bin, consecutive non-overlapping windows
 doc_len = 0                      # >0: data_file holds documents of exactly doc_len tokens; each window = first L+1 tokens of a doc
+max_docs = 0                     # doc mode: use only the first max_docs documents (0 = all)
+q_override = 0.0                 # >0: evaluate a Stieltjes checkpoint with this q instead of the trained one
+window_override = -1.0           # >=0: evaluate with this window d (0 = dense) instead of the trained one
+nope_cap = 0                     # >0: NoPE heads see only the last nope_cap keys (eager per-head path, slow at 16k)
 num_iter_override = 0         # >0: evaluate with a different Stieltjes Newton-sweep count
 device = 'cuda'
 for arg in sys.argv[1:]:
@@ -43,6 +47,14 @@ sd = {k.removeprefix('_orig_mod.'): v for k, v in ckpt['model'].items()}
 model.load_state_dict(sd)
 model.to(device).eval()
 attns = [b.attn for b in model.transformer.h]
+for a in attns:
+    if q_override > 0:
+        a.stieltjes_q = float(q_override)
+    if window_override >= 0:
+        a.stieltjes_window = None if window_override == 0 else float(window_override)
+    if nope_cap > 0:
+        a.nope_cap = int(nope_cap); a.force_per_head = True
+args['eval_overrides'] = {'q': q_override, 'window': window_override, 'nope_cap': nope_cap}
 ctx = torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16)
 val = np.memmap(data_file if data_file else os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')
 
@@ -64,6 +76,8 @@ for L in [int(x) for x in lengths.split(',')]:
     n = max(1, tokens_per_length // L)
     if doc_len > 0:
         n = len(val) // doc_len          # every document at every length
+        if max_docs > 0:
+            n = min(n, max_docs)
     W = windows(L, n)
     bs = max(1, batch_tokens // L)
     nb = 16                                     # position buckets
@@ -88,7 +102,7 @@ for L in [int(x) for x in lengths.split(',')]:
           f"first/last bucket {res['lengths'][L]['bucket_loss'][0]:.3f}/{res['lengths'][L]['bucket_loss'][-1]:.3f}", flush=True)
 
 res['stats'] = {}
-for L in [int(x) for x in stats_lengths.split(',')]:
+for L in [int(x) for x in stats_lengths.split(',') if x]:
     if args['pos_emb'] == 'learned' and L > args['block_size']:
         continue
     W = windows(L, stats_seqs)
