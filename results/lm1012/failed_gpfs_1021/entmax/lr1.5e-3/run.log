@@ -1,0 +1,4 @@
+[10-21 11:52:00] run_lm entmax lr=1.5e-3 num_iter=30 host=a0127.ten.osc.edu job=7968008 commit=d0a2fc0
+NVIDIA A100-PCIE-40GB, 40960 MiB
+/fs/scratch/PAS2836/jacktaylor/nanoGPT/train.py:218: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+  scaler = torch.cuda.amp.GradScaler(enabled=(dtype == 'float16'))
