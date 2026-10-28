@@ -35,7 +35,7 @@ done
 for row in wstieltjes_q4_d2_xs aswstieltjes_q2_d4_zi_xs stieltjes_q4_xs; do
   for lr in 1.5e-3 3e-3; do
     R=$LM_RESULTS/$row/lr$lr
-    for L in 2048 8192; do
+    for L in 2048 4096; do   # 8192 OOMs (fp32 per-head maps + autograd on 40 GB)
       [ -f $R/qd_grad_L$L.json ] && continue
       echo "== grad $row lr$lr L=$L $(date '+%H:%M:%S')"
       python $REPO/qd_grad_probe.py --out_dir=$R --data_file=$DATA --doc_len=16385 --L=$L --n_docs=8 2>&1 | grep -E "^L=|^  |Error"

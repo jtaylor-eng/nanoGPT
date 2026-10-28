@@ -16,8 +16,10 @@ row_args() {
     *)
       if [[ $name =~ ^(as)?(w)?stieltjes(_q([0-9.]+))?(_d([0-9.]+))?$ ]]; then
         local as=${BASH_REMATCH[1]} w=${BASH_REMATCH[2]} q=${BASH_REMATCH[4]:-4} d=${BASH_REMATCH[6]}
+        # configurator.py asserts type(value) == type(default) (float): always emit a decimal point
+        [[ $q == *.* ]] || q="$q.0"; [ -n "$d" ] && { [[ $d == *.* ]] || d="$d.0"; }
         out="--attn_type=stieltjes --stieltjes_q=$q"
-        if [ -n "$w" ]; then out="$out --stieltjes_window=${d:-2}"; elif [ -n "$d" ]; then echo "dense row with _d" >&2; return 1; fi
+        if [ -n "$w" ]; then out="$out --stieltjes_window=${d:-2.0}"; elif [ -n "$d" ]; then echo "dense row with _d" >&2; return 1; fi
         [ -n "$as" ] && out="$out --attn_scale=as"
       else
         echo "unknown row $1" >&2; return 1

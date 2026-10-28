@@ -33,10 +33,11 @@ for p in model.parameters():
 H = args['n_head']
 attns = [b.attn for b in model.transformer.h]
 q0, d0 = float(args['stieltjes_q']), float(args['stieltjes_window'])
+dense = d0 <= 0
 for a in attns:
     a.force_per_head = True
     a.head_q = torch.full((H,), q0, device=device, requires_grad=True)
-    a.head_window = torch.full((H,), d0, device=device, requires_grad=True)
+    a.head_window = torch.full((H,), d0, device=device, requires_grad=not dense)   # dense: d has no effect
 
 data = np.memmap(data_file, dtype=np.uint16, mode='r')
 n_docs = min(n_docs, len(data) // doc_len)
@@ -57,7 +58,7 @@ def run_loss(grad):
 
 base = run_loss(True)
 gq = torch.stack([a.head_q.grad for a in attns]).cpu()        # (layers, H)
-gd = torch.stack([a.head_window.grad for a in attns]).cpu()
+gd = torch.stack([a.head_window.grad if a.head_window.grad is not None else torch.zeros(H, device=device) for a in attns]).cpu()
 nope = [h for h in range(H) if float(attns[0].nape_slopes[h]) == 0.0]
 alibi = [h for h in range(H) if h not in nope]
 res = {'iter': ckpt['iter_num'], 'q0': q0, 'd0': d0, 'L': L, 'n_docs': n_docs, 'loss': base,
@@ -69,7 +70,7 @@ print(f"L={L} loss {base:.4f}  sum dL/dq {res['sum_dL_dq']:+.4f} (nope {res['sum
       f"  sum dL/dd {res['sum_dL_dd']:+.4f} (nope {res['sum_dL_dd_nope']:+.4f}, alibi {res['sum_dL_dd_alibi']:+.4f})", flush=True)
 # finite-difference check on global shifts (also directly useful: loss at d0 +- 0.25, q0 +- 0.5)
 fd = {}
-for name, dq, dd in (('d+0.25', 0, 0.25), ('d-0.25', 0, -0.25), ('q+0.5', 0.5, 0), ('q-0.5', -0.5, 0)):
+for name, dq, dd in ([] if dense else [('d+0.25', 0, 0.25), ('d-0.25', 0, -0.25)]) + [('q+0.5', 0.5, 0), ('q-0.5', -0.5, 0)]:
     for a in attns:
         a.head_q = torch.full((H,), q0 + dq, device=device); a.head_window = torch.full((H,), d0 + dd, device=device)
     fd[name] = run_loss(False)
