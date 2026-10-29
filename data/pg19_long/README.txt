@@ -1,0 +1,1 @@
+128 segments x 16385 GPT-2 tokens from the 100-book PG-19 test split (emozilla/pg19 parquet): 91 books give tokens [2048, 18433), then 37 of them give a second non-overlapping segment starting at 20481. File order.
