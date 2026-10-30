@@ -507,3 +507,5 @@ stats L=512: last-quarter rows mean support 442.3 keys, entropy 4.001 nats
 stats L=16384: last-quarter rows mean support 9996.9 keys, entropy 5.595 nats
 wrote /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/softmax_xs/lr3e-3_s1
 [10-28 02:49:40] arxiv exit 0
+[10-29 23:53:09] run_lm softmax_xs lr=3e-3 seed=1 num_iter=30 host=a0105.ten.osc.edu job=8204661 commit=9b59e89
+NVIDIA A100-PCIE-40GB, 40960 MiB
