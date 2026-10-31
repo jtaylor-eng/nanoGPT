@@ -11,6 +11,8 @@ source $VENV/bin/activate
 row=$1; lr=$2; seed=${3:-1337}
 CFG=${CONFIG:-lm_stieltjes.py}
 ROOT=$LM_RESULTS; [ "$CFG" != "lm_stieltjes.py" ] && ROOT=$LM_RESULTS/${CFG#lm_stieltjes_}; ROOT=${ROOT%.py}
+# 125M: the 40 GB card cannot hold micro-batch 16 at T=2048 for the sparse kernels; halve it and double accum
+[[ $CFG == *125m* ]] && [[ $row == *stieltjes* || $row == *entmax* ]] && EXTRA="--batch_size=8 --gradient_accumulation_steps=32" || EXTRA=""
 OUT=$ROOT/$row/lr$lr; [ "$seed" != "1337" ] && OUT=${OUT}_s$seed
 mkdir -p $OUT; LOG=$OUT/run.log
 NI=30; is_stieltjes $row && [ -f $LM_RESULTS/NUM_ITER ] && NI=$(cat $LM_RESULTS/NUM_ITER)
@@ -29,7 +31,7 @@ if [ ! -f $OUT/TRAIN_DONE ]; then
     rm -f $OUT/ckpt.pt $OUT/ckpt.pt.tmp $OUT/metrics.jsonl
   fi
   python $REPO/train.py $REPO/config/$CFG --data_root=$DATA_DIR $(row_args $row) --stieltjes_num_iter=$NI \
-    --learning_rate=$lr --min_lr=$minlr --seed=$seed --out_dir=$OUT --init_from=$INIT --wall_limit_s=${WALL_LIMIT_S:-9000} >> $LOG 2>&1
+    --learning_rate=$lr --min_lr=$minlr --seed=$seed --out_dir=$OUT --init_from=$INIT --wall_limit_s=${WALL_LIMIT_S:-9000} $EXTRA >> $LOG 2>&1
   rc=$?; echo "[$(date '+%m-%d %H:%M:%S')] train exit $rc" | tee -a $LOG
   [ -f $OUT/TRAIN_DONE ] || exit $rc
 fi
