@@ -452,3 +452,128 @@ iter 7300: loss 3.7220, time 1218.29ms, mfu 13.78%
 iter 7320: loss 3.6731, time 1218.39ms, mfu 13.80%
 wall limit reached at iter 7327; checkpointing for resume
 [10-30 12:21:01] train exit 4
+[10-30 18:07:29] run_lm asentmax_zi_xs lr=3e-3 seed=1337 num_iter=30 host=a0112.ten.osc.edu job=8224356 commit=9b59e89
+NVIDIA A100-PCIE-40GB, 40960 MiB
+/fs/scratch/PAS2836/jacktaylor/nanoGPT/train.py:184: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  checkpoint = torch.load(ckpt_path, map_location=device)
+/fs/scratch/PAS2836/jacktaylor/nanoGPT/train.py:219: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+  scaler = torch.cuda.amp.GradScaler(enabled=(dtype == 'float16'))
+Overriding config with /fs/scratch/PAS2836/jacktaylor/nanoGPT/config/lm_stieltjes_t2048.py:
+# Stage 3: same model and token budget as lm_stieltjes.py, trained at T=2048 (the ASEntmax paper's LM context
+# length). Tokens per step unchanged (8 x 2048 x 8 = 131,072), so max_iters / schedule / LR grid carry over.
+# Keep in sync with lm_stieltjes.py except the five lines marked T2048.
+dataset = 'fineweb10B'
+n_layer = 8
+n_head = 8
+n_embd = 512
+block_size = 2048                 # T2048
+bias = False
+dropout = 0.0
+pos_emb = 'nape'
+batch_size = 8                    # T2048
+gradient_accumulation_steps = 8
+max_iters = 7630
+lr_decay_iters = 7630
+warmup_iters = 400
+learning_rate = 1.5e-3     # overridden per job
+min_lr = 1.5e-4            # overridden per job (= lr / 10)
+beta1 = 0.9
+beta2 = 0.95
+weight_decay = 0.1
+grad_clip = 1.0
+eval_interval = 500
+eval_iters = 25                   # T2048: 25 x 8 x 2048 = 410k val tokens per periodic eval
+final_eval_iters = 200            # T2048: 3.3M val tokens for the selection number
+log_interval = 20
+always_save_checkpoint = True
+compile = True
+wandb_log = False
+
+Overriding: data_root = /tmp/fineweb10B
+Overriding: attn_type = entmax
+Overriding: entmax_alpha = 1.5
+Overriding: attn_scale = as
+Overriding: attn_scale_zero_init = 0.05
+Overriding: nape_slope_type = exp
+Overriding: stieltjes_num_iter = 30
+Overriding: learning_rate = 0.003
+Overriding: min_lr = 0.00030000000000000003
+Overriding: seed = 1337
+Overriding: out_dir = /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/t2048/asentmax_zi_xs/lr3e-3
+Overriding: init_from = resume
+Overriding: wall_limit_s = 9000
+tokens per iteration will be: 131,072
+Resuming training from /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/t2048/asentmax_zi_xs/lr3e-3
+number of parameters: 50.96M
+num decayed parameter tensors: 49, with 50,954,240 parameters
+num non-decayed parameter tensors: 33, with 8,768 parameters
+using fused AdamW: True
+compiling the model... (takes a ~minute)
+iter 7340: loss 3.6511, time 1202.97ms, mfu 14.19%
+iter 7360: loss 3.6182, time 1213.66ms, mfu 14.18%
+iter 7380: loss 3.9418, time 1218.66ms, mfu 14.16%
+iter 7400: loss 3.7305, time 1223.13ms, mfu 14.14%
+iter 7420: loss 3.7714, time 1223.99ms, mfu 14.12%
+iter 7440: loss 3.7205, time 1226.10ms, mfu 14.10%
+iter 7460: loss 3.6281, time 1224.65ms, mfu 14.09%
+iter 7480: loss 3.7823, time 1222.52ms, mfu 14.08%
+step 7500: train loss 3.6861, val loss 3.7078
+saving checkpoint to /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/t2048/asentmax_zi_xs/lr3e-3
+iter 7500: loss 3.4334, time 6945.62ms, mfu 12.91%
+iter 7520: loss 3.7037, time 1218.99ms, mfu 13.02%
+iter 7540: loss 3.7267, time 1217.61ms, mfu 13.12%
+iter 7560: loss 3.6575, time 1216.47ms, mfu 13.21%
+iter 7580: loss 3.7315, time 1220.00ms, mfu 13.29%
+iter 7600: loss 3.6033, time 1220.44ms, mfu 13.36%
+iter 7620: loss 3.7390, time 1214.36ms, mfu 13.43%
+final: train loss 3.6885, val loss 3.7302
+[10-30 18:14:51] train exit 0
+/fs/scratch/PAS2836/jacktaylor/nanoGPT/eval_lengths.py:41: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(os.path.join(out_dir, 'ckpt.pt'), map_location=device)
+number of parameters: 50.96M
+L=512: val loss 3.8100 over 4096 seqs (8s); first/last bucket 4.466/3.715
+L=1024: val loss 3.7500 over 2048 seqs (9s); first/last bucket 4.224/3.668
+L=2048: val loss 3.7135 over 1024 seqs (14s); first/last bucket 4.031/3.694
+L=4096: val loss 3.7053 over 512 seqs (23s); first/last bucket 3.886/3.709
+stats L=512: last-quarter rows mean support 23.5 keys, entropy 1.797 nats
+stats L=4096: last-quarter rows mean support 36.1 keys, entropy 2.306 nats
+wrote /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/t2048/asentmax_zi_xs/lr3e-3
+[10-30 18:16:02] eval exit 0
+/fs/scratch/PAS2836/jacktaylor/nanoGPT/eval_lengths.py:41: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(os.path.join(out_dir, 'ckpt.pt'), map_location=device)
+number of parameters: 50.96M
+L=512: val loss 3.8100 over 4096 seqs (7s); first/last bucket 4.466/3.715
+L=1024: val loss 3.7500 over 2048 seqs (9s); first/last bucket 4.224/3.668
+L=2048: val loss 3.7135 over 1024 seqs (13s); first/last bucket 4.031/3.694
+L=4096: val loss 3.7053 over 512 seqs (21s); first/last bucket 3.886/3.709
+L=8192: val loss 3.7200 over 256 seqs (37s); first/last bucket 3.860/3.755
+L=16384: val loss 3.7559 over 128 seqs (69s); first/last bucket 3.800/3.828
+stats L=512: last-quarter rows mean support 24.5 keys, entropy 1.859 nats
+stats L=4096: last-quarter rows mean support 36.1 keys, entropy 2.302 nats
+stats L=16384: last-quarter rows mean support 53.0 keys, entropy 2.522 nats
+wrote /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/t2048/asentmax_zi_xs/lr3e-3
+[10-30 18:19:33] eval16k exit 0
+/fs/scratch/PAS2836/jacktaylor/nanoGPT/eval_lengths.py:41: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(os.path.join(out_dir, 'ckpt.pt'), map_location=device)
+number of parameters: 50.96M
+L=512: val loss 4.6893 over 128 seqs (1s); first/last bucket 5.708/4.473
+L=1024: val loss 4.4934 over 128 seqs (1s); first/last bucket 5.399/4.140
+L=2048: val loss 4.3099 over 128 seqs (2s); first/last bucket 5.092/4.216
+L=4096: val loss 4.4355 over 128 seqs (5s); first/last bucket 4.867/4.688
+L=8192: val loss 4.5342 over 128 seqs (18s); first/last bucket 4.689/4.638
+L=16384: val loss 4.5731 over 128 seqs (69s); first/last bucket 4.493/4.631
+stats L=512: last-quarter rows mean support 25.5 keys, entropy 1.930 nats
+stats L=16384: last-quarter rows mean support 70.3 keys, entropy 2.528 nats
+wrote /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/t2048/asentmax_zi_xs/lr3e-3
+[10-30 18:22:13] arxiv exit 0
+/fs/scratch/PAS2836/jacktaylor/nanoGPT/eval_lengths.py:41: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(os.path.join(out_dir, 'ckpt.pt'), map_location=device)
+number of parameters: 50.96M
+L=512: val loss 4.1181 over 128 seqs (1s); first/last bucket 4.875/3.963
+L=1024: val loss 4.0719 over 128 seqs (1s); first/last bucket 4.613/4.008
+L=2048: val loss 4.0289 over 128 seqs (2s); first/last bucket 4.385/4.028
+L=4096: val loss 4.0436 over 128 seqs (5s); first/last bucket 4.227/4.079
+L=8192: val loss 4.0907 over 128 seqs (18s); first/last bucket 4.118/4.106
+L=16384: val loss 4.1209 over 128 seqs (69s); first/last bucket 4.072/4.181
+wrote /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/t2048/asentmax_zi_xs/lr3e-3
+[10-30 18:24:02] pg19 exit 0
