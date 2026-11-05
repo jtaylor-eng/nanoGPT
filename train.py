@@ -364,7 +364,8 @@ while True:
             mfu = raw_model.estimate_mfu(batch_size * gradient_accumulation_steps, dt)
             running_mfu = mfu if running_mfu == -1.0 else 0.9*running_mfu + 0.1*mfu
         print(f"iter {iter_num}: loss {lossf:.4f}, time {dt*1000:.2f}ms, mfu {running_mfu*100:.2f}%")
-        log_metrics(kind='train', iter=iter_num, loss=lossf, dt_ms=dt * 1000, tok_per_s=tokens_per_iter / dt, lr=lr)
+        mem_gb = torch.cuda.max_memory_allocated() / 2**30 if device_type == 'cuda' else 0.0
+        log_metrics(kind='train', iter=iter_num, loss=lossf, dt_ms=dt * 1000, tok_per_s=tokens_per_iter / dt, lr=lr, mem_gb=mem_gb)
         if not math.isfinite(lossf):
             print("non-finite loss: diverged")
             log_metrics(kind='diverged', iter=iter_num)
