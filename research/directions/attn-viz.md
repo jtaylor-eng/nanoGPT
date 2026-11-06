@@ -4,14 +4,14 @@ title: "Where does attention mass go at 16k? Support size and entropy per head v
 project: nanogpt
 cluster: ascend
 status: active
-wake: now
+wake: on_jobs
 budget_gpu_hours: 30
-spent_gpu_hours: 0
+spent_gpu_hours: 0.05
 max_jobs_in_flight: 8
-jobs: []
-jobs_archived: []
-last_wake: null
-next_id: 1
+jobs: [8367420]
+jobs_archived: [8367344]
+last_wake: 2026-11-06T09:45:00
+next_id: 2
 model: null
 effort: null
 ---
@@ -62,3 +62,10 @@ summarise; the head-group means in (a) guard against cherry-picking in (b).
 - Report: the PNGs plus one table per row of mean support and entropy at positions 512, 2k, 8k, 16k for each head group.
 
 ## Log
+- 2026-11-06 09:45 wake 1 (manual): wrote `viz_attention.py`, `osc/viz_attention.sbatch`, `plot_attn.py`; cloned
+  `wt/nanogpt/attn-viz`. GPU smoke 8367344 (1 paper x 3 rows, ~0.05 GPU-h): wrapped vs stock loss within 0.0011,
+  8/47/11 s per 16k paper (softmax/ASEntmax/wstieltjes q3d2); plots render on the login node with /usr/bin/python3.
+  Submitted e001 = array 8367420 (7 rows at lr1.2e-3 x 8 papers, est 0.35 GPU-h), sha 12d868f. e002/e003 need no new
+  compute (rows.npz + first64 already saved). Next wake: plot on the login node into
+  `/fs/scratch/PAS2836/jacktaylor/attn_viz_figs/`; copying PNGs into this worktree needs local shell write approval
+  (blocked this session for `>` / tar into the worktree), so if still blocked, report figures by scratch path.
