@@ -4,14 +4,14 @@ title: "Does the long-document loss advantage show up as retrieval at length and
 project: nanogpt
 cluster: ascend
 status: active
-wake: now
+wake: on_jobs
 budget_gpu_hours: 50
 spent_gpu_hours: 0
 max_jobs_in_flight: 12
-jobs: []
-jobs_archived: []
-last_wake: null
-next_id: 1
+jobs: [8367868, 8367869, 8367870, 8367871]
+jobs_archived: [8367629, 8367630]
+last_wake: 2026-11-06
+next_id: 3
 model: null
 effort: null
 ---
@@ -61,3 +61,10 @@ retrieval even at 2k, in which case the task is uninformative at this size and b
   context length, one line per row) and `figures/niah_depth.png` (accuracy by depth bin at 8k) for the primary rows.
 
 ## Log
+- 2026-11-06 wake 1: built venv `nanogpt-eval` (lm-eval 0.4.13, torch 2.5.1+cu121), prefetched lambada_openai/hellaswag
+  and tiktoken gpt2; cloned OSC checkout. Added eval_downstream.py, eval_niah.py (teacher-forced greedy exact match,
+  300/length, see e002 Change), osc/eval_{lmeval,niah}.sbatch. Smokes 8367629/8367630 cancelled while pending (script
+  exit status masked python failures; fixed). Submitted at 1e4f538: smoke arrays 8367868 (lmeval) / 8367869 (niah),
+  3 ckpts each; full arrays 8367870 (e001) / 8367871 (e002), 10 ckpts, afterok on the smokes. Est. ~3 GPU-h total.
+  Next wake: check smoke logs (`nanogpt_results/logs/de_*`), niah gen_check agreement must be ~all; if a smoke failed,
+  cancel the full array (DependencyNeverSatisfied), fix, resubmit.
