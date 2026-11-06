@@ -96,8 +96,9 @@ def score(batch):
     """True greedy exact match (same rule as greedy() + gen_check, up to 8 new tokens), batched with early exit.
     Forward 1 is teacher-forced on prompt + ' NNNNN': its argmax at the prompt end is greedy token 1, and it gives
     the continuous score log p(' NNNNN' | prompt). Then every undecided sample takes one more greedy step per forward
-    (all prompts have the same length, so live samples share one length). The 125M models answer '\nNNNNN' with the
-    needle's own digit pieces (non-canonical BPE), which a teacher-forced chain cannot score (e003)."""
+    (prompt length L - na differs by sample because ' NNNNN' is 1-3 BPE tokens, so each live sequence is right-padded
+    and read at its own last position). The 125M models answer '\nNNNNN' with the needle's own digit pieces
+    (non-canonical BPE), which a teacher-forced chain cannot score (e003)."""
     s1 = tf_check([(s['toks'][:-s['na']], s['toks'][-s['na']:]) for s in batch])
     gen = [[a0] for _, _, a0 in s1]
     res = [verdict(enc.decode(g), s['num']) for g, s in zip(gen, batch)]
@@ -105,12 +106,15 @@ def score(batch):
         live = [j for j, r in enumerate(res) if r is None]
         if not live:
             break
-        T = len(batch[0]['toks']) - batch[0]['na'] + len(gen[live[0]])
-        x = torch.full((len(live), (T + 63) // 64 * 64), enc.eot_token, dtype=torch.long, device=device)
-        for i, j in enumerate(live):
-            x[i, :T] = torch.tensor(batch[j]['toks'][:-batch[j]['na']] + gen[j], device=device)
+        seqs = [batch[j]['toks'][:-batch[j]['na']] + gen[j] for j in live]
+        Ts = [len(q) for q in seqs]
+        x = torch.full((len(live), (max(Ts) + 63) // 64 * 64), enc.eot_token, dtype=torch.long, device=device)
+        for i, q in enumerate(seqs):
+            x[i, :Ts[i]] = torch.tensor(q, device=device)
+        last = torch.tensor(Ts, device=device) - 1
         with torch.no_grad(), ctx:
-            nxt = model.lm_head(hidden(model, x)[:, T - 1]).float().argmax(-1).tolist()
+            h = hidden(model, x)
+            nxt = model.lm_head(h[torch.arange(len(live), device=device), last]).float().argmax(-1).tolist()
         for i, j in enumerate(live):
             gen[j].append(min(nxt[i], enc.n_vocab - 1))
             res[j] = verdict(enc.decode(gen[j]), batch[j]['num'])
