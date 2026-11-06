@@ -1,16 +1,21 @@
 # row name -> train.py attention overrides (NAPE everywhere via config/lm_stieltjes.py)
-# Grammar:  <base>[_zi][_xs]
-#   base: softmax | softmax_as | entmax | asentmax | [as][w]stieltjes[_q<Q>][_d<D>]
+# Grammar:  <base>[_zi][_xs][_a<N>]
+#   base: softmax | softmax_as | ssmax | entmax | asentmax | [as][w]stieltjes[_q<Q>][_d<D>]
+#   ssmax = softmax with the SSMax temperature on the NoPE heads (attn_scale=ssmax: q * s_h * log(pos+2))
 #   as  = adaptive scale (attn_scale=as);  _zi = zero-init the scale (eps 0.05; all AS rows so far use it)
 #   w   = windowed Stieltjes; _q<Q> default 4; _d<D> default 2 for windowed, dense otherwise
 #   _xs = exponential (original ALiBi) NAPE slopes instead of the synthetic-task 1/h slopes
+#   _a<N> = N ALiBi heads, n_head-N NoPE (default n_head//2); rides in nape_slope_type as <slopes>_a<N>
 row_args() {
-  local name=$1 out="" xs="" zi=""
-  [[ $name == *_xs ]] && { xs=" --nape_slope_type=exp"; name=${name%_xs}; }
+  local name=$1 out="" xs="" zi="" a=""
+  [[ $name =~ _a([0-9]+)$ ]] && { a="_a${BASH_REMATCH[1]}"; name=${name%_a*}; }
+  [[ $name == *_xs ]] && { xs=" --nape_slope_type=exp$a"; name=${name%_xs}; }
+  [ -n "$a" ] && [ -z "$xs" ] && xs=" --nape_slope_type=linear$a"
   [[ $name == *_zi ]] && { zi=" --attn_scale_zero_init=0.05"; name=${name%_zi}; }
   case $name in
     softmax)     out="--attn_type=softmax" ;;
     softmax_as)  out="--attn_type=softmax --attn_scale=as" ;;
+    ssmax)       out="--attn_type=softmax --attn_scale=ssmax" ;;
     entmax)      out="--attn_type=entmax --entmax_alpha=1.5" ;;
     asentmax)    out="--attn_type=entmax --entmax_alpha=1.5 --attn_scale=as" ;;
     *)

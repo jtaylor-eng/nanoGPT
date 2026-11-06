@@ -35,12 +35,21 @@ except Exception:
     _entmax_bisect = None
 
 
+def nape_split(n_head, slope_type='linear'):
+    """(base slope type, number of ALiBi heads). slope_type '<base>_a<N>' puts N ALiBi heads first (default n_head//2).
+    The split rides in nape_slope_type because that string is already saved in checkpoint model_args."""
+    base, _, n = slope_type.partition('_a')
+    n_alibi = int(n) if n else n_head // 2
+    assert 0 <= n_alibi <= n_head, slope_type
+    return base, n_alibi
+
+
 def nape_slopes(n_head, slope_type='linear'):
-    """ALiBi slopes for the first n_head//2 heads, zeros (NoPE) for the rest.
+    """ALiBi slopes for the first n_alibi heads (default n_head//2), zeros (NoPE) for the rest.
     'linear': 1/h (asentmax synthetic-task NAPE; very local, ~e^-1 per token on head 0).
     'exp':    2^(-8h/n_alibi), the original ALiBi geometric slopes spread over the ALiBi heads (0.25 .. 2^-8 for 4
               heads); the paper's LM runs use 'original exponential ALiBi slopes' (arXiv 2506.16640 App. G.3)."""
-    n_alibi = n_head // 2
+    slope_type, n_alibi = nape_split(n_head, slope_type)
     h = torch.arange(1, n_alibi + 1, dtype=torch.float32)
     if slope_type == 'linear':
         s = 1.0 / h
@@ -123,10 +132,15 @@ class CausalSelfAttention(nn.Module):
         self.stieltjes_impl = config.stieltjes_impl
         # adaptive length scale on the NoPE heads (all heads if no NAPE)
         self.attn_scale = config.attn_scale
-        if self.attn_scale not in ('none', 'as'):
+        if self.attn_scale not in ('none', 'as', 'ssmax'):
             raise ValueError(f"attn_scale {self.attn_scale!r}")
+        if self.attn_scale != 'none':
+            self.n_scaled = config.n_head - nape_split(config.n_head, config.nape_slope_type)[1] if self.pos_emb == 'nape' else config.n_head
+        if self.attn_scale == 'ssmax':
+            # SSMax (arXiv 2501.19399) = asentmax attn_scale_type='nakanishi': NoPE-head queries times s_h * log(pos+2),
+            # s_h ~ N(1, 0.01) learnable per head. 1-D so configure_optimizers does not weight-decay it.
+            self.ssmax_s = nn.Parameter(torch.empty(self.n_scaled).normal_(1.0, 0.01))
         if self.attn_scale == 'as':
-            self.n_scaled = config.n_head - config.n_head // 2 if self.pos_emb == 'nape' else config.n_head
             self.scale_beta = nn.Linear(config.n_embd, self.n_scaled, bias=True)
             self.scale_gamma = nn.Linear(config.n_embd, self.n_scaled, bias=True)
             self.attn_scale_zero_init = float(config.attn_scale_zero_init)
@@ -158,6 +172,9 @@ class CausalSelfAttention(nn.Module):
     def _apply_scale(self, q, x):
         B, H, T, D = q.shape
         log_pos = torch.log(torch.arange(2, T + 2, device=q.device, dtype=torch.float32)).view(1, 1, T, 1)
+        if self.attn_scale == 'ssmax':
+            scaler = (self.ssmax_s.float().view(1, -1, 1, 1) * log_pos).to(q.dtype)
+            return torch.cat((q[:, :H - self.n_scaled], q[:, H - self.n_scaled:] * scaler), dim=1)
         beta = F.softplus(self.scale_beta(x).float()).view(B, T, self.n_scaled, 1).transpose(1, 2)
         gamma = 2.0 * torch.tanh(self.scale_gamma(x).float()).view(B, T, self.n_scaled, 1).transpose(1, 2)
         scaler = (1.0 + beta * log_pos ** gamma).to(q.dtype)
@@ -219,7 +236,7 @@ class CausalSelfAttention(nn.Module):
         k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
         q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
         v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-        if self.attn_scale == 'as':
+        if self.attn_scale != 'none':
             q = self._apply_scale(q, x)
         if self.capture_qk:
             self.last_qk = (q.detach(), k.detach())
@@ -309,12 +326,14 @@ class GPTConfig:
     entmax_alpha: float = 1.5       # alpha-entmax (AdaSplash kernel; eager entmax_bisect for stats)
     entmax_niter: int = 10          # AdaSplash Halley-bisection iterations for tau
     pos_emb: str = 'learned'        # 'learned' (GPT-2 wpe) | 'nape' (half ALiBi / half NoPE heads, no wpe)
-    nape_slope_type: str = 'linear' # 'linear' (1/h) | 'exp' (2^-8h/n_alibi, original ALiBi)
+    nape_slope_type: str = 'linear' # 'linear' (1/h) | 'exp' (2^-8h/n_alibi, original ALiBi); '_a<N>' = N ALiBi heads
+    # (the ALiBi/NoPE split is encoded here, not in a separate nape_n_alibi field: train.py builds model_args from a
+    #  fixed key list and may not be edited on this direction, so a new field would never reach the checkpoint)
     stieltjes_q: float = 4.0
     stieltjes_window: float = 0.0   # d; 0 = dense
     stieltjes_num_iter: int = 30
     stieltjes_impl: str = 'triton'  # 'triton' | 'eager'
-    attn_scale: str = 'none'        # 'none' | 'as' (adapt-softplus-tanh on NoPE heads)
+    attn_scale: str = 'none'        # 'none' | 'as' (adapt-softplus-tanh on NoPE heads) | 'ssmax' (s_h log(pos+2), NoPE heads)
     attn_scale_zero_init: float = 0.0  # >0: zero-init the AS projections, scaler = 1 + eps at step 0
 
 class GPT(nn.Module):
