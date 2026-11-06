@@ -21,7 +21,8 @@ R=$(echo $ROWS | tr ' ' '\n' | sed -n "${SLURM_ARRAY_TASK_ID:-1}p")
 D=$LM_RESULTS/125m/$R
 cd ${TMPDIR:-/tmp}
 echo "commit $(git -C $REPO rev-parse --short HEAD) dirty=$(git -C $REPO status --porcelain | wc -l) $(nvidia-smi --query-gpu=name --format=csv,noheader) row=$R $(date '+%F %T')"
-[ -f $D/attn_stats/summary.json ] && { echo "skip $D"; exit 0; }
-python $REPO/viz_attention.py --out_dir=$D --data_file=$REPO/data/arxiv_long/arxiv_long.bin \
+OUT=$D/${STATS_DIR:-attn_stats}
+[ -f $OUT/summary.json ] && { echo "skip $OUT"; exit 0; }
+python $REPO/viz_attention.py --out_dir=$D --save_dir=$OUT --data_file=$REPO/data/arxiv_long/arxiv_long.bin \
   --doc_len=16385 --n_docs=8 --L=16384 "$@"
 echo "exit $? $(date '+%F %T')"
