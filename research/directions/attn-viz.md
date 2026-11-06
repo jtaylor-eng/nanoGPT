@@ -1,17 +1,20 @@
 ---
 slug: attn-viz
-title: "Where does attention mass go at 16k? Support size and entropy per head vs position, and NoPE attention rows, per map (existing 125M checkpoints)"
+title: Where does attention mass go at 16k? Support size and entropy per head vs position,
+  and NoPE attention rows, per map (existing 125M checkpoints)
 project: nanogpt
 cluster: ascend
-status: active
+status: paused
 wake: on_jobs
 budget_gpu_hours: 30
-spent_gpu_hours: 0.05
+spent_gpu_hours: 0.33
 max_jobs_in_flight: 8
-jobs: [8367420]
-jobs_archived: [8367344]
-last_wake: 2026-11-06T09:45:00
-next_id: 2
+jobs: []
+jobs_archived:
+- 8367344
+- 8367420
+last_wake: '2026-11-06T10:35:00-05:00'
+next_id: 3
 model: null
 effort: null
 ---
@@ -69,3 +72,11 @@ summarise; the head-group means in (a) guard against cherry-picking in (b).
   compute (rows.npz + first64 already saved). Next wake: plot on the login node into
   `/fs/scratch/PAS2836/jacktaylor/attn_viz_figs/`; copying PNGs into this worktree needs local shell write approval
   (blocked this session for `>` / tar into the worktree), so if still blocked, report figures by scratch path.
+- 2026-11-06 10:35 wake 2 (jobs 8367420_1..7 COMPLETED, 0.28 GPU-h; spent 0.05 + 0.28 = 0.33): e001 done, 5/7
+  predictions hit. NoPE k90 at 16k: softmax 5846, ASEntmax 39, q3/d2 21; every map's NoPE support grows ~1.7-2x from
+  2k to 16k (softmax k90 10x), ALiBi heads flat. No sink at 16k (softmax NoPE first64 0.055); sparse NoPE heads
+  retrieve scattered far keys (local2k ~0.18). e002 recorded from the same pass (0/2: no sink, support not local).
+  e003 closed (conditional on a sink). 26 PNGs copied by scp into `research/experiments/attn-viz/figures/`.
+  PAUSED: backlog empty and goal met; nothing further to submit. Report for
+  `asentmax/context/reproduction_lm_<MMDD>.md` not written (outside this worktree); e001 tables are ready to paste.
+  Suggested follow-up (user decision): per-query adaptive window, target = NoPE support flat in n.
