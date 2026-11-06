@@ -1,0 +1,63 @@
+{
+ "iter": 4771,
+ "model_args": {
+  "n_layer": 12,
+  "n_head": 12,
+  "n_embd": 768,
+  "block_size": 2048,
+  "bias": false,
+  "vocab_size": 50304,
+  "dropout": 0.0,
+  "attn_type": "softmax",
+  "pos_emb": "nape",
+  "nape_slope_type": "exp",
+  "stieltjes_q": 4.0,
+  "stieltjes_window": 0.0,
+  "stieltjes_num_iter": 30,
+  "stieltjes_impl": "triton",
+  "attn_scale": "none",
+  "entmax_alpha": 1.5,
+  "entmax_niter": 10,
+  "attn_scale_zero_init": 0.0
+ },
+ "eval_cfg": {
+  "out_dir": "/fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/125m/softmax_xs/lr6e-4",
+  "tasks": "lambada_openai,hellaswag",
+  "limit": 0,
+  "batch_size": 64,
+  "out_name": "lmeval.json",
+  "max_len": 2048,
+  "device": "cuda"
+ },
+ "eval_s": 137.90899658203125,
+ "results": {
+  "lambada_openai": {
+   "name": "lambada_openai",
+   "alias": "lambada_openai",
+   "sample_len": 5153,
+   "perplexity,none": 132.8894695717621,
+   "perplexity_stderr,none": 5.958198171791289,
+   "acc,none": 0.2185134872889579,
+   "acc_stderr,none": 0.0057572082680992405
+  },
+  "hellaswag": {
+   "name": "hellaswag",
+   "alias": "hellaswag",
+   "sample_len": 10042,
+   "acc,none": 0.2789285002987453,
+   "acc_stderr,none": 0.0044755573603599075,
+   "acc_norm,none": 0.2914758016331408,
+   "acc_norm_stderr,none": 0.004535133886462065
+  }
+ },
+ "n_samples": {
+  "lambada_openai": {
+   "original": 5153,
+   "effective": 5153
+  },
+  "hellaswag": {
+   "original": 10042,
+   "effective": 10042
+  }
+ }
+}

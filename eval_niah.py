@@ -4,14 +4,13 @@ Single-needle retrieval at length (RULER S-NIAH-1 style passkey) on a nanoGPT ch
 Each sample is exactly L tokens: PG-19 filler (doc i % n_docs of the eval set) with the needle
 "\nThe special magic number is NNNNN.\n" inserted at depth ~U(bin) (snapped forward to the next sentence end),
 then the question "\n\nWhat is the special magic number mentioned in the text above? The special magic number is"
-and the answer " NNNNN". Two teacher-forced forwards per sample (see score()): correct = the argmax chain emits ' NNNNN', or a whitespace
-token w then 'NNNNN', and the argmax after the number is not digit-led. This is greedy exact match of the immediate
-continuation (the 125M models answer "\nNNNNN"; a single ' NNNNN' check scored 0 while greedy was right). Log-probs
-of both answer forms are kept as continuous scores. Needles, numbers, depths and filler are seeded
+and the answer " NNNNN". correct = greedy decoding (<= 8 new tokens, batched with early exit, see score()) emits
+optional whitespace, then exactly NNNNN, then a non-digit. The 125M models answer "\nNNNNN" with the needle's digit
+pieces, which the teacher-forced chains of e002/e003 mis-scored. log p(' NNNNN') is kept as a continuous score. Needles, numbers, depths and filler are seeded
 by (seed, L) so every checkpoint sees identical samples. `gen_check` > 0 runs true greedy decoding (8 tokens)
-on that many samples at the shortest length and reports agreement with the teacher-forced score.
+on that many samples at the shortest length, one at a time, and reports agreement with the batched score.
 
-    python eval_niah.py --out_dir=<run> --data_file=<pg19_long.bin> [--lengths=2048,4096,8192,16384] [--n_per_length=300]
+    python eval_niah.py --out_dir=<run> --data_file=<pg19_long.bin> [--lengths=2048,4096,8192,16384] [--n_per_length=200]
 writes <run>/<out_name> (default niah.json)
 """
 import os, sys, json, time, re
@@ -25,7 +24,7 @@ out_dir = 'out'
 data_file = ''
 doc_len = 16385
 lengths = '2048,4096,8192,16384'
-n_per_length = 300
+n_per_length = 200
 n_bins = 10
 seed = 1234
 batch_tokens = 16384
@@ -45,8 +44,6 @@ n_docs = len(docs) // doc_len
 QUESTION = enc.encode_ordinary('\n\nWhat is the special magic number mentioned in the text above? The special magic number is')
 digit_led = torch.tensor([bool(re.match(r'\s*\d', enc.decode([t]))) for t in range(enc.n_vocab)]
                          + [False] * (args['vocab_size'] - enc.n_vocab), device=device)
-is_ws = [enc.decode([t]).strip() == '' for t in range(enc.n_vocab)] + [False] * (args['vocab_size'] - enc.n_vocab)
-NL = enc.encode_ordinary('\n')[0]
 sent_end = {t for t in range(enc.n_vocab) if re.search(r'[.!?]["\')]*\s*$', enc.decode([t]))}
 
 
@@ -87,17 +84,43 @@ def tf_check(pairs):
     return out
 
 
+def verdict(g, num):
+    """Greedy text so far -> True/False once decided (digits ended, or first non-space char is not a digit), else None."""
+    m = re.match(r'\s*(\d+)(\D)?', g)
+    if m is None:
+        return False if g.strip() else None
+    return int(m.group(1)) == num if m.group(2) else None
+
+
 def score(batch):
-    """Greedy-equivalent exact match in two forwards. Stage 1: prompt + ' NNNNN'. Stage 2: prompt + w + 'NNNNN',
-    w = the stage-1 argmax if it is a whitespace token (the 125M models answer '\nNNNNN'), else '\n' (continuous
-    score only). correct = stage-1 chain ok, or (stage-1 argmax is whitespace and the stage-2 chain is ok)."""
+    """True greedy exact match (same rule as greedy() + gen_check, up to 8 new tokens), batched with early exit.
+    Forward 1 is teacher-forced on prompt + ' NNNNN': its argmax at the prompt end is greedy token 1, and it gives
+    the continuous score log p(' NNNNN' | prompt). Then every undecided sample takes one more greedy step per forward
+    (all prompts have the same length, so live samples share one length). The 125M models answer '\nNNNNN' with the
+    needle's own digit pieces (non-canonical BPE), which a teacher-forced chain cannot score (e003)."""
     s1 = tf_check([(s['toks'][:-s['na']], s['toks'][-s['na']:]) for s in batch])
-    ws = [is_ws[a0] for _, _, a0 in s1]
-    s2 = tf_check([(s['toks'][:-s['na']] + [a0 if w else NL], enc.encode_ordinary(str(s['num'])))
-                   for s, (_, _, a0), w in zip(batch, s1, ws)])
+    gen = [[a0] for _, _, a0 in s1]
+    res = [verdict(enc.decode(g), s['num']) for g, s in zip(gen, batch)]
+    for _ in range(7):
+        live = [j for j, r in enumerate(res) if r is None]
+        if not live:
+            break
+        T = len(batch[0]['toks']) - batch[0]['na'] + len(gen[live[0]])
+        x = torch.full((len(live), (T + 63) // 64 * 64), enc.eot_token, dtype=torch.long, device=device)
+        for i, j in enumerate(live):
+            x[i, :T] = torch.tensor(batch[j]['toks'][:-batch[j]['na']] + gen[j], device=device)
+        with torch.no_grad(), ctx:
+            nxt = model.lm_head(hidden(model, x)[:, T - 1]).float().argmax(-1).tolist()
+        for i, j in enumerate(live):
+            gen[j].append(min(nxt[i], enc.n_vocab - 1))
+            res[j] = verdict(enc.decode(gen[j]), batch[j]['num'])
     out = []
-    for s, (ok1, lp1, a0), w, (ok2, lp2, _) in zip(batch, s1, ws, s2):
-        out.append(dict(correct=ok1 or (w and ok2), correct_space=ok1, logp=lp1, logp_ws=lp2,
+    for s, (ok1, lp1, a0), g, r in zip(batch, s1, gen, res):
+        text = enc.decode(g)
+        if r is None:                                   # 8 tokens and still undecided: same regex as gen_check
+            m = re.match(r'\s*(\d+)', text)
+            r = bool(m) and int(m.group(1)) == s['num']
+        out.append(dict(correct=bool(r), correct_space=ok1, logp=lp1, gen=text, n_gen=len(g),
                         first_tok=enc.decode([a0]), first_tok_ok=a0 == s['toks'][-s['na']]))
     return out
 
@@ -130,12 +153,12 @@ for L in [int(v) for v in lengths.split(',')]:
     res['lengths'][L] = dict(acc=float(acc), mean_logp=float(np.mean([r['logp'] for r in scored])),
                              first_tok_acc=float(np.mean([r['first_tok_ok'] for r in scored])),
                              acc_space=float(np.mean([r['correct_space'] for r in scored])),
-                             mean_logp_ws=float(np.mean([r['logp_ws'] for r in scored])),
+                             mean_n_gen=float(np.mean([r['n_gen'] for r in scored])),
                              first_ws_rate=float(np.mean([r['first_tok'].strip() == '' for r in scored])),
                              acc_by_bin=by_bin, n=len(scored), eval_s=time.time() - t0,
                              samples=[dict(num=s['num'], bin=s['bin'], depth=round(s['depth_tok'], 4), **r)
                                       for s, r in zip(samples, scored)])
-    print(f'L={L}: acc {acc:.3f}  logp {res["lengths"][L]["mean_logp"]:.2f}  logp_ws {res["lengths"][L]["mean_logp_ws"]:.2f}  by bin '
+    print(f'L={L}: acc {acc:.3f}  logp {res["lengths"][L]["mean_logp"]:.2f}  tok/sample {res["lengths"][L]["mean_n_gen"]:.2f}  by bin '
           + ' '.join(f'{a:.2f}' for a in by_bin) + f'  ({time.time() - t0:.0f}s)', flush=True)
 
 if gen_check > 0:
@@ -148,9 +171,9 @@ if gen_check > 0:
         m = re.match(r'\s*(\d+)', g)
         hit = bool(m) and int(m.group(1)) == s['num']
         agree += hit == r['correct']
-        gens.append(dict(num=s['num'], gen=g, gen_correct=hit, tf_correct=r['correct']))
+        gens.append(dict(num=s['num'], gen=g, gen_correct=hit, batch_correct=r['correct']))
     res['gen_check'] = dict(L=L, n=gen_check, agree=agree, samples=gens)
-    print(f'gen_check L={L}: teacher-forced vs greedy agree {agree}/{gen_check}; e.g. {gens[0]}', flush=True)
+    print(f'gen_check L={L}: batched vs single greedy agree {agree}/{gen_check}; e.g. {gens[0]}', flush=True)
 
 with open(os.path.join(out_dir, out_name), 'w') as f:
     json.dump(res, f, indent=1)

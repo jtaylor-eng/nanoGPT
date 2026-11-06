@@ -7,7 +7,7 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 50
-spent_gpu_hours: 0.07
+spent_gpu_hours: 0.69
 max_jobs_in_flight: 12
 jobs:
 - 8367870
@@ -19,7 +19,7 @@ jobs_archived:
 - 8367868
 - 8367869
 - 8367871
-last_wake: '2026-11-06T11:05:00-05:00'
+last_wake: '2026-11-06T11:00:01-05:00'
 next_id: 4
 model: null
 effort: null
