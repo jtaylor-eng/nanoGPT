@@ -1,17 +1,26 @@
 ---
 slug: downstream-eval
-title: "Does the long-document loss advantage show up as retrieval at length and on LAMBADA? (needle tasks and lm-eval on the existing 125M checkpoints)"
+title: Does the long-document loss advantage show up as retrieval at length and on
+  LAMBADA? (needle tasks and lm-eval on the existing 125M checkpoints)
 project: nanogpt
 cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 50
-spent_gpu_hours: 0
+spent_gpu_hours: 0.07
 max_jobs_in_flight: 12
-jobs: [8367868, 8367869, 8367870, 8367871]
-jobs_archived: [8367629, 8367630]
-last_wake: 2026-11-06
-next_id: 3
+jobs:
+- 8367870
+- 8368482
+- 8368483
+jobs_archived:
+- 8367629
+- 8367630
+- 8367868
+- 8367869
+- 8367871
+last_wake: '2026-11-06T11:00:00-05:00'
+next_id: 4
 model: null
 effort: null
 ---
@@ -68,3 +77,9 @@ retrieval even at 2k, in which case the task is uninformative at this size and b
   3 ckpts each; full arrays 8367870 (e001) / 8367871 (e002), 10 ckpts, afterok on the smokes. Est. ~3 GPU-h total.
   Next wake: check smoke logs (`nanogpt_results/logs/de_*`), niah gen_check agreement must be ~all; if a smoke failed,
   cancel the full array (DependencyNeverSatisfied), fix, resubmit.
+- 2026-11-06 wake 2: lmeval smoke 8367868 ok (3/3, ~1 min each); full e001 array 8367870 pending (Priority). niah smoke
+  8367869 exposed a scorer bug: models answer "\nNNNNN", scorer forced " NNNNN", so acc 0 everywhere and gen_check
+  agreement 3/5 (greedy right on 2/5 at 2k for softmax and ASEntmax). Cancelled 8367871 and 8367869_2 before start;
+  e002 failed. Fixed scoring (two-stage, greedy-equivalent) at 8e5a601 and submitted e003: smoke 8368482 (3 ckpts,
+  20/length, gen_check 20) -> full 8368483 (10 ckpts, afterok). Est. ~4 GPU-h. Backlog item 3 (distractors) is now e004.
+  Next wake: niah_smoke2 gen_check agreement must be >= 19/20 per row; else cancel 8368483 (second scorer failure: pause).
