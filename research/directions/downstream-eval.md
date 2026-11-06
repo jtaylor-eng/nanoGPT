@@ -7,12 +7,13 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 50
-spent_gpu_hours: 0.71
+spent_gpu_hours: 0.72
 max_jobs_in_flight: 12
 jobs:
+- 8369321
+jobs_archived:
 - 8369150
 - 8369151
-jobs_archived:
 - 8367629
 - 8367630
 - 8367868
@@ -21,8 +22,8 @@ jobs_archived:
 - 8367870
 - 8368482
 - 8368483
-last_wake: '2026-11-06T11:20:01-05:00'
-next_id: 5
+last_wake: '2026-11-06T12:05:00-05:00'
+next_id: 6
 model: null
 effort: null
 ---
@@ -98,3 +99,11 @@ retrieval even at 2k, in which case the task is uninformative at this size and b
   Smoke side evidence (n=20): answer log-prob 2k->16k softmax -4.9 -> -18.8, ASEntmax -5.2 -> -10.0, q3/d2 -3.6 -> -6.4.
   Next wake: smoke gate = batched vs single agreement >= 19/20 per row and 2k greedy correct 5/7/5 (+-1); else cancel
   8369151 and pause (a third scorer failure needs the user). Then apply backlog item 4 (all rows < 20 % at 2k -> done).
+- 2026-11-06 wake 5: e004 failed: smoke 8369150_0-2 crashed in ~15 s (eval_niah.py:111 shape mismatch 2046 vs 2047);
+  batched greedy loop assumed one prompt length per batch, but len(" NNNNN") in BPE varies by sample. A crash before
+  scoring, not a scoring-rule failure, so retried rather than paused. 8369151 cancelled by Slurm (afterok), never ran.
+  Fix at 475ab90: per-sample right-pad, read at own last position. e005 smoke 8369321 (3 ckpts, 20/length,
+  niah_smoke5.json) submitted ALONE, pending at end of wake. Distractors are now e006.
+  Next wake: if 8369321 crashed again for the same cause -> pause. Else gate: agreement >= 19/20 per row and 2k greedy
+  correct 5/7/5 (+-1); pass -> submit full array 0-9 (`sbatch --parsable osc/eval_niah.sbatch` at 475ab90, ~2.9 GPU-h)
+  and add it to e005 jobs; fail -> pause (scorer needs the user).
