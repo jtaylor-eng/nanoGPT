@@ -27,5 +27,5 @@ echo "commit $(git -C $REPO rev-parse --short HEAD) $(nvidia-smi --query-gpu=nam
 [ -f $D/TRAIN_DONE ] || { echo "no TRAIN_DONE in $D"; exit 1; }
 [ -f $D/$OUT_NAME ] && { echo "exists $D/$OUT_NAME"; exit 0; }
 cd $TMPDIR
-python $REPO/eval_downstream.py --out_dir=$D --out_name=$OUT_NAME ${EXTRA:-} 2>&1 | grep -vE "it/s\]|s/it\]"
+python $REPO/eval_downstream.py --out_dir=$D --out_name=$OUT_NAME ${EXTRA:-} 2>&1 | grep -vE "it/s\]|s/it\]" || exit 1
 echo DONE $(date '+%H:%M:%S')

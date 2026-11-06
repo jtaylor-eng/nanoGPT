@@ -28,5 +28,5 @@ echo "commit $(git -C $REPO rev-parse --short HEAD) $(nvidia-smi --query-gpu=nam
 [ -f $D/TRAIN_DONE ] || { echo "no TRAIN_DONE in $D"; exit 1; }
 [ -f $D/$OUT_NAME ] && { echo "exists $D/$OUT_NAME"; exit 0; }
 cd $TMPDIR
-python $REPO/eval_niah.py --out_dir=$D --data_file=$PG19 --out_name=$OUT_NAME ${EXTRA:-}
+python $REPO/eval_niah.py --out_dir=$D --data_file=$PG19 --out_name=$OUT_NAME ${EXTRA:-} || exit 1
 echo DONE $(date '+%H:%M:%S')
