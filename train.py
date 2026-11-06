@@ -66,6 +66,7 @@ entmax_alpha = 1.5
 entmax_niter = 10
 attn_scale = 'none'
 attn_scale_zero_init = 0.0
+stieltjes_learn_qd = False
 # run control (fork additions)
 seed = 1337
 wall_limit_s = 0       # >0: checkpoint and exit cleanly once this many seconds have elapsed (resume later)
@@ -167,7 +168,7 @@ model_args = dict(n_layer=n_layer, n_head=n_head, n_embd=n_embd, block_size=bloc
                   attn_type=attn_type, pos_emb=pos_emb, nape_slope_type=nape_slope_type, stieltjes_q=stieltjes_q,
                   stieltjes_window=stieltjes_window, stieltjes_num_iter=stieltjes_num_iter,
                   stieltjes_impl=stieltjes_impl, attn_scale=attn_scale, entmax_alpha=entmax_alpha, entmax_niter=entmax_niter,
-                  attn_scale_zero_init=attn_scale_zero_init) # start with model_args from command line
+                  attn_scale_zero_init=attn_scale_zero_init, stieltjes_learn_qd=stieltjes_learn_qd) # start with model_args from command line
 if init_from == 'scratch':
     # init a new model from scratch
     print("Initializing a new model from scratch")
@@ -188,6 +189,7 @@ elif init_from == 'resume':
     for k in ['n_layer', 'n_head', 'n_embd', 'block_size', 'bias', 'vocab_size',
               'attn_type', 'pos_emb', 'nape_slope_type', 'stieltjes_q', 'stieltjes_window', 'attn_scale', 'entmax_alpha']:
         model_args[k] = checkpoint_model_args[k]
+    model_args['stieltjes_learn_qd'] = checkpoint_model_args.get('stieltjes_learn_qd', False)
     # create the model
     gptconf = GPTConfig(**model_args)
     model = GPT(gptconf)
@@ -302,6 +304,11 @@ while True:
         print(f"step {iter_num}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
         log_metrics(kind='eval', iter=iter_num, train_loss=losses['train'], val_loss=losses['val'], lr=lr,
                     elapsed_s=time.time() - _t_start)
+        if stieltjes_learn_qd:   # learned per-head q_h, d_h, one list per layer
+            with torch.no_grad():
+                _qd = [b.attn.learned_qd() for b in raw_model.transformer.h]
+            log_metrics(kind='qd', iter=iter_num, q=[[round(x, 4) for x in qh.tolist()] for qh, _ in _qd],
+                        d=[[round(x, 4) for x in dh.tolist()] for _, dh in _qd])
         if wandb_log:
             wandb.log({
                 "iter": iter_num,

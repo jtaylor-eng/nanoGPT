@@ -1,4 +1,6 @@
-# Vendored verbatim from jtaylor-eng/asentmax@c7093f0 synthetic/src/kernels/adasplash/triton_stieltjes.py -- edit there, re-copy here.
+# Vendored from jtaylor-eng/asentmax@c7093f0 synthetic/src/kernels/adasplash/triton_stieltjes.py, plus a fork
+# addition (direction learnable-qd): PER_HEAD mode with runtime per-head q_h, d_h and their gradients
+# (stieltjes_attention_qd). PER_HEAD is constexpr, so the fixed-(q, d) kernels compile to the same code as before.
 """
 Fused (flash-style) Stieltjes attention, dense or windowed. Triton.
 
@@ -31,30 +33,36 @@ import triton.language as tl
 # ---------------------------------------------------------------------------
 
 @triton.jit
-def _pow_pair(diff, sq: tl.constexpr):
+def _pow_pair(diff, sq: tl.constexpr, qrt, PER_HEAD: tl.constexpr):
     """(diff^-q, diff^-q-1). Integer q via multiply chains (transcendentals dominate
-    the sweep cost); other q via exp/log. Masked entries (diff ~ 1e30) underflow to 0."""
-    r = 1.0 / diff
-    if sq == 1.0:
-        inv_q = r
-    elif sq == 2.0:
-        inv_q = r * r
-    elif sq == 3.0:
-        inv_q = r * r * r
-    elif sq == 4.0:
-        r2 = r * r
-        inv_q = r2 * r2
-    elif sq == 8.0:
-        r2 = r * r
-        r4 = r2 * r2
-        inv_q = r4 * r4
-    elif sq == 16.0:
-        r2 = r * r
-        r4 = r2 * r2
-        r8 = r4 * r4
-        inv_q = r8 * r8
+    the sweep cost); other q via exp/log. Masked entries (diff ~ 1e30) underflow to 0.
+    PER_HEAD: runtime q = qrt via exp2/log2 (three MUFU ops, no IEEE divide)."""
+    if PER_HEAD:
+        lg = tl.math.log2(diff)
+        r = tl.math.exp2(-lg)
+        inv_q = tl.math.exp2(-qrt * lg)
     else:
-        inv_q = tl.exp(tl.log(diff) * (-sq))
+        r = 1.0 / diff
+        if sq == 1.0:
+            inv_q = r
+        elif sq == 2.0:
+            inv_q = r * r
+        elif sq == 3.0:
+            inv_q = r * r * r
+        elif sq == 4.0:
+            r2 = r * r
+            inv_q = r2 * r2
+        elif sq == 8.0:
+            r2 = r * r
+            r4 = r2 * r2
+            inv_q = r4 * r4
+        elif sq == 16.0:
+            r2 = r * r
+            r4 = r2 * r2
+            r8 = r4 * r4
+            inv_q = r8 * r8
+        else:
+            inv_q = tl.exp(tl.log(diff) * (-sq))
     return inv_q, inv_q * r
 
 
@@ -74,10 +82,10 @@ def _scores(q_block, k_block, offs_m, offs_n, sm_scale, alibi_slope, N_CTX,
 
 
 @triton.jit
-def _weights(qk, lam_row, c, sq: tl.constexpr, EPS: tl.constexpr):
+def _weights(qk, lam_row, c, sq: tl.constexpr, EPS: tl.constexpr, qrt=0.0, PER_HEAD: tl.constexpr = False):
     """(w, r) for a tile: w = [(λ-s)^-q - c]_+, r = (λ-s)^-q-1 on the support, 0 off it."""
     diff = tl.maximum(lam_row[:, None] - qk, EPS)
-    inv_q, inv_q1 = _pow_pair(diff, sq)
+    inv_q, inv_q1 = _pow_pair(diff, sq, qrt, PER_HEAD)
     w = inv_q - c
     on = w > 0
     return tl.where(on, w, 0.0), tl.where(on, inv_q1, 0.0)
@@ -89,7 +97,7 @@ def _weights(qk, lam_row, c, sq: tl.constexpr, EPS: tl.constexpr):
 
 @triton.jit
 def _fwd_kernel(
-    Q, K, V, O, Lam, S, Slopes,
+    Q, K, V, O, Lam, S, Slopes, HQ, HC,
     stride_qz, stride_qh, stride_qm, stride_qk,
     stride_kz, stride_kh, stride_kn, stride_kk,
     stride_vz, stride_vh, stride_vn, stride_vk,
@@ -97,7 +105,7 @@ def _fwd_kernel(
     sm_scale, c, lam0, N_CTX, H,
     sq: tl.constexpr, NUM_ITER: tl.constexpr, EPS: tl.constexpr,
     HEAD_DIM: tl.constexpr, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr,
-    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr,
+    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr, PER_HEAD: tl.constexpr = False,
 ):
     start_m = tl.program_id(0)
     off_hz = tl.program_id(1)
@@ -112,6 +120,10 @@ def _fwd_kernel(
     alibi_slope = 0.0
     if USE_ALIBI:
         alibi_slope = tl.load(Slopes + off_h)
+    qe = sq
+    if PER_HEAD:
+        qe = tl.load(HQ + off_h)
+        c = tl.load(HC + off_h)
     hi = N_CTX
     if CAUSAL:
         hi = tl.minimum((start_m + 1) * BLOCK_M, N_CTX)
@@ -125,6 +137,8 @@ def _fwd_kernel(
         row_max = tl.maximum(row_max, tl.max(qk, axis=1))
 
     # 2) Newton for λ (absolute), from the left of the root
+    if PER_HEAD:
+        lam0 = tl.exp(-tl.log(1.0 + c) / qe)
     lam = row_max + lam0
     for _it in tl.static_range(NUM_ITER):
         f = tl.zeros([BLOCK_M], dtype=tl.float32)
@@ -133,10 +147,10 @@ def _fwd_kernel(
             offs_n = start_n + tl.arange(0, BLOCK_N)
             k_block = tl.load(k_base + offs_n[:, None] * stride_kn + offs_d[None, :] * stride_kk, mask=offs_n[:, None] < N_CTX, other=0.0)
             qk = _scores(q_block, k_block, offs_m, offs_n, sm_scale, alibi_slope, N_CTX, CAUSAL, USE_ALIBI)
-            w, r = _weights(qk, lam, c, sq, EPS)
+            w, r = _weights(qk, lam, c, sq, EPS, qe, PER_HEAD)
             f += tl.sum(w, axis=1)
             fp += tl.sum(r, axis=1)
-        lam = lam + (f - 1.0) / (sq * tl.maximum(fp, 1e-30))   # f' = -q Σ r
+        lam = lam + (f - 1.0) / (qe * tl.maximum(fp, 1e-30))   # f' = -q Σ r
 
     # 3) O = Σ w v / S
     acc = tl.zeros([BLOCK_M, HEAD_DIM], dtype=tl.float32)
@@ -146,7 +160,7 @@ def _fwd_kernel(
         k_block = tl.load(k_base + offs_n[:, None] * stride_kn + offs_d[None, :] * stride_kk, mask=offs_n[:, None] < N_CTX, other=0.0)
         v_block = tl.load(v_base + offs_n[:, None] * stride_vn + offs_d[None, :] * stride_vk, mask=offs_n[:, None] < N_CTX, other=0.0)
         qk = _scores(q_block, k_block, offs_m, offs_n, sm_scale, alibi_slope, N_CTX, CAUSAL, USE_ALIBI)
-        w, _r = _weights(qk, lam, c, sq, EPS)
+        w, _r = _weights(qk, lam, c, sq, EPS, qe, PER_HEAD)
         s_row += tl.sum(w, axis=1)
         acc += tl.dot(w.to(v_block.dtype), v_block, input_precision="ieee")
     acc = acc / tl.maximum(s_row, EPS)[:, None]
@@ -165,7 +179,7 @@ def _fwd_kernel(
 
 @triton.jit
 def _bwd_delta_kernel(
-    Q, K, V, DO, Lam, Delta, Slopes,
+    Q, K, V, DO, Lam, Delta, Slopes, HQ, HC,
     stride_qz, stride_qh, stride_qm, stride_qk,
     stride_kz, stride_kh, stride_kn, stride_kk,
     stride_vz, stride_vh, stride_vn, stride_vk,
@@ -173,7 +187,7 @@ def _bwd_delta_kernel(
     sm_scale, c, N_CTX, H,
     sq: tl.constexpr, EPS: tl.constexpr,
     HEAD_DIM: tl.constexpr, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr,
-    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr,
+    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr, PER_HEAD: tl.constexpr = False,
 ):
     """δ_i = Σ_j dP_ij r_ij / Σ_j r_ij,  dP = dO V^T."""
     start_m = tl.program_id(0)
@@ -190,6 +204,10 @@ def _bwd_delta_kernel(
     alibi_slope = 0.0
     if USE_ALIBI:
         alibi_slope = tl.load(Slopes + off_h)
+    qe = sq
+    if PER_HEAD:
+        qe = tl.load(HQ + off_h)
+        c = tl.load(HC + off_h)
     hi = N_CTX
     if CAUSAL:
         hi = tl.minimum((start_m + 1) * BLOCK_M, N_CTX)
@@ -201,7 +219,7 @@ def _bwd_delta_kernel(
         k_block = tl.load(k_base + offs_n[:, None] * stride_kn + offs_d[None, :] * stride_kk, mask=offs_n[:, None] < N_CTX, other=0.0)
         v_block = tl.load(v_base + offs_n[:, None] * stride_vn + offs_d[None, :] * stride_vk, mask=offs_n[:, None] < N_CTX, other=0.0)
         qk = _scores(q_block, k_block, offs_m, offs_n, sm_scale, alibi_slope, N_CTX, CAUSAL, USE_ALIBI)
-        _w, r = _weights(qk, lam, c, sq, EPS)
+        _w, r = _weights(qk, lam, c, sq, EPS, qe, PER_HEAD)
         dP = tl.dot(do_block, tl.trans(v_block), input_precision="ieee")
         num += tl.sum(dP * r, axis=1)
         den += tl.sum(r, axis=1)
@@ -210,7 +228,7 @@ def _bwd_delta_kernel(
 
 @triton.jit
 def _bwd_dkdv_kernel(
-    Q, K, V, DO, Lam, Coef, Delta, Slopes, DK, DV,
+    Q, K, V, DO, Lam, Coef, Delta, Slopes, HQ, HC, DK, DV,
     stride_qz, stride_qh, stride_qm, stride_qk,
     stride_kz, stride_kh, stride_kn, stride_kk,
     stride_vz, stride_vh, stride_vn, stride_vk,
@@ -220,7 +238,7 @@ def _bwd_dkdv_kernel(
     sm_scale, c, N_CTX, H,
     sq: tl.constexpr, EPS: tl.constexpr,
     HEAD_DIM: tl.constexpr, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr,
-    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr,
+    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr, PER_HEAD: tl.constexpr = False,
 ):
     """Fixed K/V block, sweep Q blocks:  dK = Σ dS^T Q scale,  dV = Σ P^T dO."""
     start_n = tl.program_id(0)
@@ -236,6 +254,10 @@ def _bwd_dkdv_kernel(
     alibi_slope = 0.0
     if USE_ALIBI:
         alibi_slope = tl.load(Slopes + off_h)
+    qe = sq
+    if PER_HEAD:
+        qe = tl.load(HQ + off_h)
+        c = tl.load(HC + off_h)
     lo = 0
     if CAUSAL:
         lo = start_n * BLOCK_N
@@ -250,11 +272,11 @@ def _bwd_dkdv_kernel(
         coef = tl.load(Coef + off_hz * N_CTX + offs_m, mask=offs_m < N_CTX, other=0.0)   # q / S
         delta = tl.load(Delta + off_hz * N_CTX + offs_m, mask=offs_m < N_CTX, other=0.0)
         qk = _scores(q_block, k_block, offs_m, offs_n, sm_scale, alibi_slope, N_CTX, CAUSAL, USE_ALIBI)
-        w, r = _weights(qk, lam, c, sq, EPS)
+        w, r = _weights(qk, lam, c, sq, EPS, qe, PER_HEAD)
         dP = tl.dot(do_block, tl.trans(v_block), input_precision="ieee")
         dS = (coef[:, None] * r * (dP - delta[:, None])).to(q_block.dtype)
         dk += tl.dot(tl.trans(dS), q_block, input_precision="ieee") * sm_scale
-        p = w * (coef * (1.0 / sq))[:, None]
+        p = w * (coef * (1.0 / qe))[:, None]
         dv += tl.dot(tl.trans(p.to(do_block.dtype)), do_block, input_precision="ieee")
 
     tl.store(DK + off_z * stride_dkz + off_h * stride_dkh + offs_n[:, None] * stride_dkn + offs_d[None, :] * stride_dkk, dk.to(k_block.dtype), mask=offs_n[:, None] < N_CTX)
@@ -263,7 +285,7 @@ def _bwd_dkdv_kernel(
 
 @triton.jit
 def _bwd_dq_kernel(
-    Q, K, V, DO, Lam, Coef, Delta, Slopes, DQ,
+    Q, K, V, DO, Lam, Coef, Delta, Slopes, HQ, HC, DQ, GD, GQ,
     stride_qz, stride_qh, stride_qm, stride_qk,
     stride_kz, stride_kh, stride_kn, stride_kk,
     stride_vz, stride_vh, stride_vn, stride_vk,
@@ -272,7 +294,7 @@ def _bwd_dq_kernel(
     sm_scale, c, N_CTX, H,
     sq: tl.constexpr, EPS: tl.constexpr,
     HEAD_DIM: tl.constexpr, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr,
-    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr,
+    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr, PER_HEAD: tl.constexpr = False,
 ):
     """Fixed Q block, sweep K/V blocks:  dQ = Σ dS K scale."""
     start_m = tl.program_id(0)
@@ -291,22 +313,41 @@ def _bwd_dq_kernel(
     alibi_slope = 0.0
     if USE_ALIBI:
         alibi_slope = tl.load(Slopes + off_h)
+    qe = sq
+    if PER_HEAD:
+        qe = tl.load(HQ + off_h)
+        c = tl.load(HC + off_h)
     hi = N_CTX
     if CAUSAL:
         hi = tl.minimum((start_m + 1) * BLOCK_M, N_CTX)
 
     dq = tl.zeros([BLOCK_M, HEAD_DIM], dtype=tl.float32)
+    gd = tl.zeros([BLOCK_M], dtype=tl.float32)   # PER_HEAD: Σ_A (dP - δ)
+    gq = tl.zeros([BLOCK_M], dtype=tl.float32)   # PER_HEAD: Σ_A ∂w/∂q|λ (dP - δ)
+    lnd = 0.0
+    if PER_HEAD:
+        lnd = -tl.log(c) / qe                    # ln d, c = d^-q
     for start_n in tl.range(0, hi, BLOCK_N):
         offs_n = start_n + tl.arange(0, BLOCK_N)
         k_block = tl.load(k_base + offs_n[:, None] * stride_kn + offs_d[None, :] * stride_kk, mask=offs_n[:, None] < N_CTX, other=0.0)
         v_block = tl.load(v_base + offs_n[:, None] * stride_vn + offs_d[None, :] * stride_vk, mask=offs_n[:, None] < N_CTX, other=0.0)
         qk = _scores(q_block, k_block, offs_m, offs_n, sm_scale, alibi_slope, N_CTX, CAUSAL, USE_ALIBI)
-        _w, r = _weights(qk, lam, c, sq, EPS)
+        _w, r = _weights(qk, lam, c, sq, EPS, qe, PER_HEAD)
         dP = tl.dot(do_block, tl.trans(v_block), input_precision="ieee")
         dS = (coef * r * (dP - delta[:, None])).to(q_block.dtype)
         dq += tl.dot(dS, k_block, input_precision="ieee") * sm_scale
+        if PER_HEAD:
+            on = _w > 0
+            g = tl.where(on, dP - delta[:, None], 0.0)
+            gd += tl.sum(g, axis=1)
+            ln_diff = tl.log(tl.maximum(lam[:, None] - qk, EPS))
+            # ∂w/∂q|λ = -ln(diff) diff^-q + ln(d) c, with diff^-q = w + c on the support
+            gq += tl.sum(tl.where(on, ((-ln_diff) * (_w + c) + lnd * c) * g, 0.0), axis=1)
 
     tl.store(DQ + off_z * stride_dqz + off_h * stride_dqh + offs_m[:, None] * stride_dqm + offs_d[None, :] * stride_dqk, dq.to(q_block.dtype), mask=offs_m[:, None] < N_CTX)
+    if PER_HEAD:
+        tl.store(GD + off_hz * N_CTX + offs_m, gd, mask=offs_m < N_CTX)
+        tl.store(GQ + off_hz * N_CTX + offs_m, gq, mask=offs_m < N_CTX)
 
 
 # ---------------------------------------------------------------------------
@@ -344,8 +385,9 @@ def window_c(q: float, window) -> float:
     return 0.0 if (window is None or window <= 0 or window == float("inf")) else float(window) ** (-q)
 
 
-def _forward(q, k, v, causal, sm_scale, sq, num_iter, c, alibi_slopes):
-    """Launch the forward kernel. Returns (o, λ, S, slopes, BLOCK_M, BLOCK_N)."""
+def _forward(q, k, v, causal, sm_scale, sq, num_iter, c, alibi_slopes, hq=None, hc=None):
+    """Launch the forward kernel. Returns (o, λ, S, slopes, BLOCK_M, BLOCK_N).
+    hq, hc: optional (H,) fp32 per-head q and c = d^-q (PER_HEAD mode; sq and c are then ignored)."""
     B, H, N, D = q.shape
     assert k.shape == v.shape == (B, H, N, D)
     assert D in {16, 32, 64, 128, 256}
@@ -360,16 +402,56 @@ def _forward(q, k, v, causal, sm_scale, sq, num_iter, c, alibi_slopes):
         assert alibi_slopes.shape == (H,), "alibi_slopes must have shape (H,)"
     else:
         alibi_slopes = lam   # never read (constexpr-eliminated); any valid pointer
+    per_head = hq is not None
+    lam0 = 0.0 if per_head else (1.0 + c) ** (-1.0 / sq)
+    if not per_head:
+        hq = hc = lam    # never read
     BLOCK_M, BLOCK_N = _pick_blocks(D, q.element_size(), q.device)
     grid = (triton.cdiv(N, BLOCK_M), B * H)
     _fwd_kernel[grid](
-        q, k, v, o, lam, S, alibi_slopes,
+        q, k, v, o, lam, S, alibi_slopes, hq, hc,
         *_strides(q), *_strides(k), *_strides(v), *_strides(o),
-        sm_scale, c, (1.0 + c) ** (-1.0 / sq), N, H,
+        sm_scale, c, lam0, N, H,
         sq=sq, NUM_ITER=num_iter, EPS=1e-6, HEAD_DIM=D,
-        BLOCK_M=BLOCK_M, BLOCK_N=BLOCK_N, CAUSAL=causal, USE_ALIBI=use_alibi,
+        BLOCK_M=BLOCK_M, BLOCK_N=BLOCK_N, CAUSAL=causal, USE_ALIBI=use_alibi, PER_HEAD=per_head,
     )
     return o, lam, S, alibi_slopes, BLOCK_M, BLOCK_N
+
+
+def _backward(do, q, k, v, lam, S, alibi_slopes, causal, sm_scale, sq, c, use_alibi, BLOCK_M, BLOCK_N,
+              hq=None, hc=None):
+    """Launch the three backward kernels. Returns (dq, dk, dv, gd, gq); gd, gq are per-row
+    Σ_A (dP - δ) and Σ_A ∂w/∂q|λ (dP - δ), shape (B*H, N), only in PER_HEAD mode (else None)."""
+    B, H, N, D = q.shape
+    do = do.contiguous()
+    per_head = hq is not None
+    common = dict(sq=sq, EPS=1e-6, HEAD_DIM=D, BLOCK_M=BLOCK_M, BLOCK_N=BLOCK_N,
+                  CAUSAL=causal, USE_ALIBI=use_alibi, PER_HEAD=per_head)
+    grid_m = (triton.cdiv(N, BLOCK_M), B * H)
+    grid_n = (triton.cdiv(N, BLOCK_N), B * H)
+    if per_head:
+        coef = (hq.repeat(B)[:, None] / S.clamp(min=1e-6)).contiguous()
+        gd, gq = torch.empty_like(lam), torch.empty_like(lam)
+    else:
+        coef = (sq / S.clamp(min=1e-6)).contiguous()
+        hq = hc = gd = gq = lam   # never read / written
+    delta = torch.empty_like(lam)
+    _bwd_delta_kernel[grid_m](
+        q, k, v, do, lam, delta, alibi_slopes, hq, hc,
+        *_strides(q), *_strides(k), *_strides(v), *_strides(do),
+        sm_scale, c, N, H, **common)
+    dk, dv, dq = torch.empty_like(k), torch.empty_like(v), torch.empty_like(q)
+    _bwd_dkdv_kernel[grid_n](
+        q, k, v, do, lam, coef, delta, alibi_slopes, hq, hc, dk, dv,
+        *_strides(q), *_strides(k), *_strides(v), *_strides(do), *_strides(dk), *_strides(dv),
+        sm_scale, c, N, H, **common)
+    _bwd_dq_kernel[grid_m](
+        q, k, v, do, lam, coef, delta, alibi_slopes, hq, hc, dq, gd, gq,
+        *_strides(q), *_strides(k), *_strides(v), *_strides(do), *_strides(dq),
+        sm_scale, c, N, H, **common)
+    if not per_head:
+        gd = gq = None
+    return dq, dk, dv, gd, gq
 
 
 class StieltjesAttention(torch.autograd.Function):
@@ -383,30 +465,46 @@ class StieltjesAttention(torch.autograd.Function):
     @staticmethod
     def backward(ctx, do):
         q, k, v, lam, S, alibi_slopes = ctx.saved_tensors
-        causal, sm_scale, sq, c, use_alibi, BLOCK_M, BLOCK_N = ctx.meta
-        B, H, N, D = q.shape
-        do = do.contiguous()
-        common = dict(sq=sq, EPS=1e-6, HEAD_DIM=D, BLOCK_M=BLOCK_M, BLOCK_N=BLOCK_N,
-                      CAUSAL=causal, USE_ALIBI=use_alibi)
-        grid_m = (triton.cdiv(N, BLOCK_M), B * H)
-        grid_n = (triton.cdiv(N, BLOCK_N), B * H)
-
-        delta = torch.empty_like(lam)
-        _bwd_delta_kernel[grid_m](
-            q, k, v, do, lam, delta, alibi_slopes,
-            *_strides(q), *_strides(k), *_strides(v), *_strides(do),
-            sm_scale, c, N, H, **common)
-        coef = (sq / S.clamp(min=1e-6)).contiguous()
-        dk, dv, dq = torch.empty_like(k), torch.empty_like(v), torch.empty_like(q)
-        _bwd_dkdv_kernel[grid_n](
-            q, k, v, do, lam, coef, delta, alibi_slopes, dk, dv,
-            *_strides(q), *_strides(k), *_strides(v), *_strides(do), *_strides(dk), *_strides(dv),
-            sm_scale, c, N, H, **common)
-        _bwd_dq_kernel[grid_m](
-            q, k, v, do, lam, coef, delta, alibi_slopes, dq,
-            *_strides(q), *_strides(k), *_strides(v), *_strides(do), *_strides(dq),
-            sm_scale, c, N, H, **common)
+        dq, dk, dv, _, _ = _backward(do, q, k, v, lam, S, alibi_slopes, *ctx.meta)
         return dq, dk, dv, None, None, None, None, None, None
+
+
+class StieltjesAttentionQD(torch.autograd.Function):
+    """Windowed map with per-head q_h, d_h (H,) tensors, differentiable in both.
+    Implicit-function gradient for a per-head parameter θ with a_j = ∂w_j/∂θ|λ on the support A:
+        dL/dθ = Σ_rows (1/S) Σ_A a_j (dP_j - δ)
+    a_j = q d^{-q-1} for d (c = d^-q), a_j = -ln(λ - s_j)(λ - s_j)^{-q} + ln(d) c for q."""
+    @staticmethod
+    def forward(ctx, q, k, v, head_q, head_d, causal, sm_scale, num_iter, alibi_slopes):
+        hq = head_q.detach().float().contiguous()
+        hd = head_d.detach().float().contiguous()
+        hc = hd.pow(-hq).contiguous()
+        o, lam, S, slopes, BLOCK_M, BLOCK_N = _forward(q, k, v, causal, sm_scale, 0.0, num_iter, 0.0,
+                                                       alibi_slopes, hq, hc)
+        ctx.save_for_backward(q, k, v, lam, S, slopes, hq, hd, hc)
+        ctx.meta = (causal, sm_scale, alibi_slopes is not None, BLOCK_M, BLOCK_N)
+        return o
+
+    @staticmethod
+    def backward(ctx, do):
+        q, k, v, lam, S, slopes, hq, hd, hc = ctx.saved_tensors
+        causal, sm_scale, use_alibi, BLOCK_M, BLOCK_N = ctx.meta
+        B, H, N, _ = q.shape
+        dq, dk, dv, gd, gq = _backward(do, q, k, v, lam, S, slopes, causal, sm_scale, 0.0, 0.0, use_alibi,
+                                       BLOCK_M, BLOCK_N, hq, hc)
+        inv_s = 1.0 / S.clamp(min=1e-6)
+        gd_h = (gd * inv_s).view(B, H, N).sum(dim=(0, 2))
+        gq_h = (gq * inv_s).view(B, H, N).sum(dim=(0, 2))
+        d_head_d = gd_h * hq * hc / hd
+        return dq, dk, dv, gq_h, d_head_d, None, None, None, None
+
+
+def stieltjes_attention_qd(q, k, v, head_q, head_d, causal=False, sm_scale=None, num_iter=30, alibi_slopes=None):
+    """Fused windowed Stieltjes attention with per-head q_h, d_h ((H,) tensors, d_h > 1 finite),
+    differentiable in q, k, v, q_h and d_h. Runtime-q kernels (exp2/log2) in place of the integer chains."""
+    if sm_scale is None:
+        sm_scale = 1.0 / (q.shape[-1] ** 0.5)
+    return StieltjesAttentionQD.apply(q, k, v, head_q, head_d, causal, sm_scale, int(num_iter), alibi_slopes)
 
 
 def stieltjes_attention(q, k, v, causal=False, sm_scale=None, stieltjes_q=4.0, num_iter=30,

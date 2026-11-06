@@ -23,6 +23,7 @@ from torch.nn import functional as F
 from stieltjes.stieltjes_eager import stieltjes_normalize, stieltjes_normalize_qd
 try:
     from stieltjes.triton_stieltjes import stieltjes_attention as _triton_stieltjes
+    from stieltjes.triton_stieltjes import stieltjes_attention_qd as _triton_stieltjes_qd
 except Exception:  # no triton (CPU-only box)
     _triton_stieltjes = None
 try:
@@ -121,6 +122,15 @@ class CausalSelfAttention(nn.Module):
         self.stieltjes_window = None if config.stieltjes_window <= 0 else float(config.stieltjes_window)
         self.stieltjes_num_iter = int(config.stieltjes_num_iter)
         self.stieltjes_impl = config.stieltjes_impl
+        # learnable per-head q_h = 2 + softplus(theta_q), d_h = 1 + exp(theta_d), init at (stieltjes_q, stieltjes_window)
+        self.stieltjes_learn_qd = bool(config.stieltjes_learn_qd)
+        if self.stieltjes_learn_qd:
+            if self.attn_type != 'stieltjes' or self.stieltjes_window is None:
+                raise ValueError("stieltjes_learn_qd needs attn_type=stieltjes and a window")
+            if not (self.stieltjes_q > 2.0 and self.stieltjes_window > 1.0):
+                raise ValueError("stieltjes_learn_qd init needs q > 2 and d > 1")
+            self.stieltjes_theta_q = nn.Parameter(torch.full((config.n_head,), math.log(math.expm1(self.stieltjes_q - 2.0))))
+            self.stieltjes_theta_d = nn.Parameter(torch.full((config.n_head,), math.log(self.stieltjes_window - 1.0)))
         # adaptive length scale on the NoPE heads (all heads if no NAPE)
         self.attn_scale = config.attn_scale
         if self.attn_scale not in ('none', 'as'):
@@ -146,7 +156,19 @@ class CausalSelfAttention(nn.Module):
             self.register_buffer("bias", torch.tril(torch.ones(config.block_size, config.block_size))
                                         .view(1, 1, config.block_size, config.block_size))
 
+    def learned_qd(self):
+        """(q_h, d_h) fp32 tensors of shape (H,) for stieltjes_learn_qd."""
+        return 2.0 + F.softplus(self.stieltjes_theta_q.float()), 1.0 + torch.exp(self.stieltjes_theta_d.float())
+
     def reset_scale_params(self):
+        """Also re-inits the learnable q/d (GPT._init_weights only touches Linear/Embedding)."""
+        if self.stieltjes_learn_qd:
+            with torch.no_grad():
+                self.stieltjes_theta_q.fill_(math.log(math.expm1(self.stieltjes_q - 2.0)))
+                self.stieltjes_theta_d.fill_(math.log(self.stieltjes_window - 1.0))
+        self._reset_as_params()
+
+    def _reset_as_params(self):
         """AS zero-init (asentmax attn_scale_zero_init): scaler = 1 + eps for every query at step 0."""
         if self.attn_scale != 'as' or self.attn_scale_zero_init <= 0:
             return
@@ -193,10 +215,11 @@ class CausalSelfAttention(nn.Module):
             return F.softmax(s, dim=-1)
         if self.attn_type == 'entmax':
             return _entmax_bisect(s, alpha=self.entmax_alpha, dim=-1, n_iter=50)
-        if self.head_q is not None or self.head_window is not None:
-            # per-head q / d as tensors (differentiable: used by the q/d gradient probe)
-            hq = self.head_q[h] if self.head_q is not None else torch.tensor(self.stieltjes_q, device=s.device)
-            hd = self.head_window[h] if self.head_window is not None else torch.tensor(self.stieltjes_window or 0.0, device=s.device)
+        if self.head_q is not None or self.head_window is not None or self.stieltjes_learn_qd:
+            # per-head q / d as tensors (differentiable: used by the q/d gradient probe and stieltjes_learn_qd)
+            lq, ld = self.learned_qd() if self.stieltjes_learn_qd else (None, None)
+            hq = self.head_q[h] if self.head_q is not None else (lq[h] if lq is not None else torch.tensor(self.stieltjes_q, device=s.device))
+            hd = self.head_window[h] if self.head_window is not None else (ld[h] if ld is not None else torch.tensor(self.stieltjes_window or 0.0, device=s.device))
             return stieltjes_normalize_qd(s, hq, hd, num_iter=self.stieltjes_num_iter)
         return stieltjes_normalize(s, q=self.stieltjes_q, num_iter=self.stieltjes_num_iter, window=self.stieltjes_window)
 
@@ -224,7 +247,7 @@ class CausalSelfAttention(nn.Module):
         if self.capture_qk:
             self.last_qk = (q.detach(), k.detach())
 
-        if self.collect_stats or self.force_per_head:
+        if self.collect_stats or self.force_per_head or (self.stieltjes_learn_qd and (self.stieltjes_impl == 'eager' or not q.is_cuda)):
             # materialised eager path, one head at a time (a 16k x 16k fp32 map is 1 GB per head)
             ys, stats = [], []
             for h in range(self.n_head):
@@ -242,6 +265,12 @@ class CausalSelfAttention(nn.Module):
         elif self.attn_type == 'entmax':
             slopes = self.nape_slopes if self.pos_emb == 'nape' else None
             y = _entmax_fused(q, k, v, self.entmax_alpha, self.entmax_niter, slopes)
+        elif self.stieltjes_learn_qd:
+            slopes = self.nape_slopes if self.pos_emb == 'nape' else None
+            hq, hd = self.learned_qd()
+            y = _triton_stieltjes_qd(q.contiguous(), k.contiguous(), v.contiguous(), hq, hd, causal=True,
+                                     sm_scale=1.0 / math.sqrt(self.head_dim), num_iter=self.stieltjes_num_iter,
+                                     alibi_slopes=slopes)
         elif self.attn_type == 'stieltjes':
             slopes = self.nape_slopes if self.pos_emb == 'nape' else None
             y = _stieltjes_fused(q, k, v, 1.0 / math.sqrt(self.head_dim), self.stieltjes_q,
@@ -316,6 +345,7 @@ class GPTConfig:
     stieltjes_impl: str = 'triton'  # 'triton' | 'eager'
     attn_scale: str = 'none'        # 'none' | 'as' (adapt-softplus-tanh on NoPE heads)
     attn_scale_zero_init: float = 0.0  # >0: zero-init the AS projections, scaler = 1 + eps at step 0
+    stieltjes_learn_qd: bool = False   # learnable per-head q_h, d_h (windowed Stieltjes; init at stieltjes_q / stieltjes_window)
 
 class GPT(nn.Module):
 

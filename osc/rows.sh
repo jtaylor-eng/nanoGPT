@@ -1,6 +1,7 @@
 # row name -> train.py attention overrides (NAPE everywhere via config/lm_stieltjes.py)
 # Grammar:  <base>[_zi][_xs]
 #   base: softmax | softmax_as | entmax | asentmax | [as][w]stieltjes[_q<Q>][_d<D>]
+#   l   = learnable per-head q_h, d_h initialised at _q/_d (needs w; direction learnable-qd)
 #   as  = adaptive scale (attn_scale=as);  _zi = zero-init the scale (eps 0.05; all AS rows so far use it)
 #   w   = windowed Stieltjes; _q<Q> default 4; _d<D> default 2 for windowed, dense otherwise
 #   _xs = exponential (original ALiBi) NAPE slopes instead of the synthetic-task 1/h slopes
@@ -14,13 +15,14 @@ row_args() {
     entmax)      out="--attn_type=entmax --entmax_alpha=1.5" ;;
     asentmax)    out="--attn_type=entmax --entmax_alpha=1.5 --attn_scale=as" ;;
     *)
-      if [[ $name =~ ^(as)?(w)?stieltjes(_q([0-9.]+))?(_d([0-9.]+))?$ ]]; then
-        local as=${BASH_REMATCH[1]} w=${BASH_REMATCH[2]} q=${BASH_REMATCH[4]:-4} d=${BASH_REMATCH[6]}
+      if [[ $name =~ ^(as)?(l)?(w)?stieltjes(_q([0-9.]+))?(_d([0-9.]+))?$ ]]; then
+        local as=${BASH_REMATCH[1]} l=${BASH_REMATCH[2]} w=${BASH_REMATCH[3]} q=${BASH_REMATCH[5]:-4} d=${BASH_REMATCH[7]}
         # configurator.py asserts type(value) == type(default) (float): always emit a decimal point
         [[ $q == *.* ]] || q="$q.0"; [ -n "$d" ] && { [[ $d == *.* ]] || d="$d.0"; }
         out="--attn_type=stieltjes --stieltjes_q=$q"
         if [ -n "$w" ]; then out="$out --stieltjes_window=${d:-2.0}"; elif [ -n "$d" ]; then echo "dense row with _d" >&2; return 1; fi
         [ -n "$as" ] && out="$out --attn_scale=as"
+        if [ -n "$l" ]; then [ -n "$w" ] || { echo "l needs w" >&2; return 1; }; out="$out --stieltjes_learn_qd=True"; fi
       else
         echo "unknown row $1" >&2; return 1
       fi ;;
