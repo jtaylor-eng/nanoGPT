@@ -19,7 +19,7 @@ jobs_archived:
 - 8367868
 - 8367869
 - 8367871
-last_wake: '2026-11-06T11:00:00-05:00'
+last_wake: '2026-11-06T11:05:00-05:00'
 next_id: 4
 model: null
 effort: null
@@ -83,3 +83,6 @@ retrieval even at 2k, in which case the task is uninformative at this size and b
   e002 failed. Fixed scoring (two-stage, greedy-equivalent) at 8e5a601 and submitted e003: smoke 8368482 (3 ckpts,
   20/length, gen_check 20) -> full 8368483 (10 ckpts, afterok). Est. ~4 GPU-h. Backlog item 3 (distractors) is now e004.
   Next wake: niah_smoke2 gen_check agreement must be >= 19/20 per row; else cancel 8368483 (second scorer failure: pause).
+- 2026-11-06 wake 3: stale trigger (cancellations of 8367869_2 / 8367871, already recorded in wake 2; e002 failed).
+  No new finishes: e001 full array 8367870 running (tasks 0-1 started, 2-9 pending); e003 smoke 8368482 and full
+  8368483 pending. Nothing submitted (e004 is gated on e003's 16k result). Next wake: same gates as wake 2.
