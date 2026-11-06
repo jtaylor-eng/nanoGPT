@@ -1,17 +1,38 @@
 ---
 slug: learnable-qd
-title: "Can a learned window take windowed Stieltjes off the fixed-(q,d) frontier at 125M? (AS-scale gate, per-head learnable q/d, per-query adaptive window)"
+title: Can a learned window take windowed Stieltjes off the fixed-(q,d) frontier at
+  125M? (AS-scale gate, per-head learnable q/d, per-query adaptive window)
 project: nanogpt
 cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 300
-spent_gpu_hours: 0
+spent_gpu_hours: 0.03
 max_jobs_in_flight: 36
-jobs: [8368232, 8368233, 8368234, 8368235, 8368236, 8368237, 8368238, 8368239, 8368240]
-jobs_archived: []
-last_wake: 2026-11-06T12:00:00
-next_id: 2
+jobs:
+- 8368233
+- 8368234
+- 8368235
+- 8368236
+- 8368237
+- 8368238
+- 8368239
+- 8368240
+- 8369209
+- 8369210
+- 8369211
+- 8369212
+- 8369213
+- 8369214
+- 8369215
+- 8369216
+- 8369217
+- 8369218
+- 8369219
+jobs_archived:
+- 8368232
+last_wake: '2026-11-06T12:45:00-05:00'
+next_id: 3
 model: null
 effort: null
 max_turns: 150
@@ -79,3 +100,4 @@ Learnable per-query q is out of scope (proposal: poorly identified against the s
 
 ## Log
 - 2026-11-06: e001 (gate, `aswstieltjes_q3_d2_zi_xs` x lr {3e-4, 6e-4, 1.2e-3}) submitted at 844514e: smoke 8368232 gates 8 x 3:30 segment arrays 8368233..8368240; est. 60 GPU-h (measured 13.7 s/step for q3/d2 + 5 % AS). Ported env.sh REPO/VENV override from lm350m-qdf; created OSC checkout and copied the ArXiv/PG-19 eval bins into it. Next wake: check smoke, then start e002 (Variant A) implementation in parallel.
+- 2026-11-06: smoke 8368232 OK (0.03 GPU-h). e002 (Variant A, `lwstieltjes_q3_d2_xs`, per-head learnable q_h/d_h in the fused kernel via a constexpr PER_HEAD mode with implicit-function q/d grads) x lr {3e-4, 6e-4, 1.2e-3} submitted at 5bb25c6: qdtest 8369209 (fixed path bit-identical vs 3074a63, fused-vs-eager incl. theta grads, 125M throughput probe <= 17.5 s/step) + smoke 8369210 gate 9 x 3:30 segment arrays 8369211..8369219; est. 60 GPU-h. Shared checkout moved to 5bb25c6, so e001 seg 1 (8368233) re-gated afterok:8369209. Next wake: read qdtest (speed, correctness); if speed-only failure, fall back to learnable d_h with q fixed 3 and release e001.
