@@ -10,17 +10,19 @@ budget_gpu_hours: 50
 spent_gpu_hours: 0.69
 max_jobs_in_flight: 12
 jobs:
-- 8367870
-- 8368482
-- 8368483
+- 8369150
+- 8369151
 jobs_archived:
 - 8367629
 - 8367630
 - 8367868
 - 8367869
 - 8367871
-last_wake: '2026-11-06T11:00:01-05:00'
-next_id: 4
+- 8367870
+- 8368482
+- 8368483
+last_wake: '2026-11-06T11:40:00-05:00'
+next_id: 5
 model: null
 effort: null
 ---
@@ -86,3 +88,13 @@ retrieval even at 2k, in which case the task is uninformative at this size and b
 - 2026-11-06 wake 3: stale trigger (cancellations of 8367869_2 / 8367871, already recorded in wake 2; e002 failed).
   No new finishes: e001 full array 8367870 running (tasks 0-1 started, 2-9 pending); e003 smoke 8368482 and full
   8368483 pending. Nothing submitted (e004 is gated on e003's 16k result). Next wake: same gates as wake 2.
+- 2026-11-06 wake 4: e001 done (0.59 GPU-h): LAMBADA 22.9-23.2 / HellaSwag acc_norm 29.4-29.9 for the three primary
+  rows, within 1 SE; all 3 predictions true; only LR separates rows. e003 smoke gate failed (agreement 17/20 softmax,
+  16/20 ASEntmax; 20/20 q3/d2): all misses are greedy-right answers "\nNNNNN" written with the needle's digit pieces
+  (" 7"+"48"+"62" -> "7","48","62") while stage 2 forced the bare-number BPE ("748","62"). Different cause from e002,
+  same class, so instead of pausing I removed the class: score() now IS greedy decoding (batched, early exit; ~1.15x
+  e003 cost), n 300 -> 200/length for the 5 GPU-h ceiling. Cancelled 8368483 unstarted; e003 failed. Submitted e004 at
+  65eac28: smoke 8369150 (3 ckpts, 20/length) -> full 8369151 (10 ckpts, afterok). Est. ~3 GPU-h. Distractors = e005.
+  Smoke side evidence (n=20): answer log-prob 2k->16k softmax -4.9 -> -18.8, ASEntmax -5.2 -> -10.0, q3/d2 -3.6 -> -6.4.
+  Next wake: smoke gate = batched vs single agreement >= 19/20 per row and 2k greedy correct 5/7/5 (+-1); else cancel
+  8369151 and pause (a third scorer failure needs the user). Then apply backlog item 4 (all rows < 20 % at 2k -> done).
