@@ -4,14 +4,14 @@ title: "Is the sparse maps' long-context gain sparsity or position-dependent tem
 project: nanogpt
 cluster: ascend
 status: active
-wake: now
+wake: on_jobs
 budget_gpu_hours: 150
 spent_gpu_hours: 0
 max_jobs_in_flight: 24
-jobs: []
+jobs: [8368600]
 jobs_archived: []
-last_wake: null
-next_id: 1
+last_wake: 2026-11-06
+next_id: 2
 model: null
 effort: null
 max_turns: 100
@@ -77,3 +77,4 @@ construction. More NoPE heads give the map more rows where it can differ from so
   linestyle by split. Copy the json results into `results/lm1012/125m/<row>/lr<lr>/` on this branch.
 
 ## Log
+- 2026-11-06: e001 implemented (ssmax row, `_a<N>` split carried in `nape_slope_type` because train.py may not change; REPO/VENV override ported from lm350m-qdf), probe job 8368600 submitted (~0.5 GPU-h). Next: e002 + e003 sized from the measured step times.
