@@ -4,14 +4,14 @@ title: "Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M p
 project: nanogpt
 cluster: ascend
 status: active
-wake: now
+wake: on_jobs
 budget_gpu_hours: 500
 spent_gpu_hours: 0
 max_jobs_in_flight: 16
-jobs: []
+jobs: [8353512]
 jobs_archived: []
-last_wake: null
-next_id: 1
+last_wake: 2026-11-05T19:10:00
+next_id: 2
 ---
 # Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M params, but not 125M. Is 125M a fluke? (trying ~350M params)
 
@@ -65,3 +65,4 @@ Note 2026-11-05: `OSCusage -P PAS2836` shows Remaining Budget 287.8 (dollars); m
 
 ## Log
 One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobids> | eNNN done <metric> | paused: <reason>`
+2026-11-05 19:10  e001 submitted 8353512 (350M throughput/memory probe, nextgen, ~0.5 GPU-h) | env: scratch purge killed venvs/asentmax, built venvs/nanogpt; checkout wt/nanogpt/lm350m-qdf created at 4465367 | OSCusage remaining 287.8 dollars
