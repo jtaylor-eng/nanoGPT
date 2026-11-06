@@ -4,14 +4,14 @@ title: "Can a learned window take windowed Stieltjes off the fixed-(q,d) frontie
 project: nanogpt
 cluster: ascend
 status: active
-wake: now
+wake: on_jobs
 budget_gpu_hours: 300
 spent_gpu_hours: 0
 max_jobs_in_flight: 36
-jobs: []
+jobs: [8368232, 8368233, 8368234, 8368235, 8368236, 8368237, 8368238, 8368239, 8368240]
 jobs_archived: []
-last_wake: null
-next_id: 1
+last_wake: 2026-11-06T12:00:00
+next_id: 2
 model: null
 effort: null
 max_turns: 150
@@ -78,3 +78,4 @@ Learnable per-query q is out of scope (proposal: poorly identified against the s
   for B a PNG of the d_i distribution vs position. Copy result jsons into `results/lm1012/125m/` on this branch.
 
 ## Log
+- 2026-11-06: e001 (gate, `aswstieltjes_q3_d2_zi_xs` x lr {3e-4, 6e-4, 1.2e-3}) submitted at 844514e: smoke 8368232 gates 8 x 3:30 segment arrays 8368233..8368240; est. 60 GPU-h (measured 13.7 s/step for q3/d2 + 5 % AS). Ported env.sh REPO/VENV override from lm350m-qdf; created OSC checkout and copied the ArXiv/PG-19 eval bins into it. Next wake: check smoke, then start e002 (Variant A) implementation in parallel.
