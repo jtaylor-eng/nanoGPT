@@ -5,7 +5,7 @@
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
-#SBATCH --time=1:00:00
+#SBATCH --time=1:30:00
 #SBATCH --array=0-9
 #SBATCH --output=/fs/scratch/PAS2836/jacktaylor/nanogpt_results/logs/%x_%A_%a.log
 # direction downstream-eval: single-needle retrieval (eval_niah.py) on one 125M checkpoint per array task

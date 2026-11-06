@@ -4,10 +4,10 @@ Single-needle retrieval at length (RULER S-NIAH-1 style passkey) on a nanoGPT ch
 Each sample is exactly L tokens: PG-19 filler (doc i % n_docs of the eval set) with the needle
 "\nThe special magic number is NNNNN.\n" inserted at depth ~U(bin) (snapped forward to the next sentence end),
 then the question "\n\nWhat is the special magic number mentioned in the text above? The special magic number is"
-and the answer " NNNNN". One teacher-forced forward per sample gives:
-  correct = argmax matches every answer token AND the argmax after the answer is not a digit-led token,
-which is exactly "greedy decoding emits ' NNNNN' and then stops the number" (exact match of the immediate
-continuation), plus the answer log-prob as a continuous score. Needles, numbers, depths and filler are seeded
+and the answer " NNNNN". Two teacher-forced forwards per sample (see score()): correct = the argmax chain emits ' NNNNN', or a whitespace
+token w then 'NNNNN', and the argmax after the number is not digit-led. This is greedy exact match of the immediate
+continuation (the 125M models answer "\nNNNNN"; a single ' NNNNN' check scored 0 while greedy was right). Log-probs
+of both answer forms are kept as continuous scores. Needles, numbers, depths and filler are seeded
 by (seed, L) so every checkpoint sees identical samples. `gen_check` > 0 runs true greedy decoding (8 tokens)
 on that many samples at the shortest length and reports agreement with the teacher-forced score.
 
@@ -45,6 +45,8 @@ n_docs = len(docs) // doc_len
 QUESTION = enc.encode_ordinary('\n\nWhat is the special magic number mentioned in the text above? The special magic number is')
 digit_led = torch.tensor([bool(re.match(r'\s*\d', enc.decode([t]))) for t in range(enc.n_vocab)]
                          + [False] * (args['vocab_size'] - enc.n_vocab), device=device)
+is_ws = [enc.decode([t]).strip() == '' for t in range(enc.n_vocab)] + [False] * (args['vocab_size'] - enc.n_vocab)
+NL = enc.encode_ordinary('\n')[0]
 sent_end = {t for t in range(enc.n_vocab) if re.search(r'[.!?]["\')]*\s*$', enc.decode([t]))}
 
 
@@ -64,20 +66,39 @@ def make_sample(L, i, rng):
     return dict(num=num, bin=b, depth=depth, depth_tok=pos / n_fill, toks=toks, na=len(answer))
 
 
-def score(batch):
-    x = torch.tensor([s['toks'] for s in batch], device=device)
+def tf_check(pairs):
+    """pairs: [(prefix, answer)]. One right-padded forward; per pair: (argmax chain == answer and the argmax after
+    it is not digit-led, log p(answer | prefix), argmax at the end of the prefix)."""
+    T = max(len(p) + len(a) for p, a in pairs)
+    x = torch.full((len(pairs), (T + 63) // 64 * 64), enc.eot_token, dtype=torch.long, device=device)
+    for j, (p, a) in enumerate(pairs):
+        x[j, :len(p) + len(a)] = torch.tensor(p + a, device=device)
     with torch.no_grad(), ctx:
         h = hidden(model, x)
     out = []
-    for j, s in enumerate(batch):
-        L, na = x.shape[1], s['na']
+    for j, (p, a) in enumerate(pairs):
+        P, m = len(p), len(a)
         with torch.no_grad(), ctx:
-            lp = F.log_softmax(model.lm_head(h[j, L - 1 - na:L]).float(), dim=-1)   # predicts answer[0..na-1], then next
-        tgt = x[j, L - na:]
+            lp = F.log_softmax(model.lm_head(h[j, P - 1:P + m]).float(), dim=-1)   # predicts a[0..m-1], then next
+        tgt = torch.tensor(a, device=device)
         am = lp.argmax(-1)
-        ok = bool((am[:na] == tgt).all()) and not bool(digit_led[am[na]])
-        out.append(dict(correct=ok, logp=lp[:na].gather(-1, tgt[:, None]).sum().item(),
-                        first_tok_ok=bool(am[0] == tgt[0])))
+        out.append((bool((am[:m] == tgt).all()) and not bool(digit_led[am[m]]),
+                    lp[:m].gather(-1, tgt[:, None]).sum().item(), int(am[0])))
+    return out
+
+
+def score(batch):
+    """Greedy-equivalent exact match in two forwards. Stage 1: prompt + ' NNNNN'. Stage 2: prompt + w + 'NNNNN',
+    w = the stage-1 argmax if it is a whitespace token (the 125M models answer '\nNNNNN'), else '\n' (continuous
+    score only). correct = stage-1 chain ok, or (stage-1 argmax is whitespace and the stage-2 chain is ok)."""
+    s1 = tf_check([(s['toks'][:-s['na']], s['toks'][-s['na']:]) for s in batch])
+    ws = [is_ws[a0] for _, _, a0 in s1]
+    s2 = tf_check([(s['toks'][:-s['na']] + [a0 if w else NL], enc.encode_ordinary(str(s['num'])))
+                   for s, (_, _, a0), w in zip(batch, s1, ws)])
+    out = []
+    for s, (ok1, lp1, a0), w, (ok2, lp2, _) in zip(batch, s1, ws, s2):
+        out.append(dict(correct=ok1 or (w and ok2), correct_space=ok1, logp=lp1, logp_ws=lp2,
+                        first_tok=enc.decode([a0]), first_tok_ok=a0 == s['toks'][-s['na']]))
     return out
 
 
@@ -108,10 +129,13 @@ for L in [int(v) for v in lengths.split(',')]:
     by_bin = [float(np.mean([r['correct'] for r, s in zip(scored, samples) if s['bin'] == b])) for b in range(n_bins)]
     res['lengths'][L] = dict(acc=float(acc), mean_logp=float(np.mean([r['logp'] for r in scored])),
                              first_tok_acc=float(np.mean([r['first_tok_ok'] for r in scored])),
+                             acc_space=float(np.mean([r['correct_space'] for r in scored])),
+                             mean_logp_ws=float(np.mean([r['logp_ws'] for r in scored])),
+                             first_ws_rate=float(np.mean([r['first_tok'].strip() == '' for r in scored])),
                              acc_by_bin=by_bin, n=len(scored), eval_s=time.time() - t0,
                              samples=[dict(num=s['num'], bin=s['bin'], depth=round(s['depth_tok'], 4), **r)
                                       for s, r in zip(samples, scored)])
-    print(f'L={L}: acc {acc:.3f}  logp {res["lengths"][L]["mean_logp"]:.2f}  by bin '
+    print(f'L={L}: acc {acc:.3f}  logp {res["lengths"][L]["mean_logp"]:.2f}  logp_ws {res["lengths"][L]["mean_logp_ws"]:.2f}  by bin '
           + ' '.join(f'{a:.2f}' for a in by_bin) + f'  ({time.time() - t0:.0f}s)', flush=True)
 
 if gen_check > 0:
