@@ -7,10 +7,9 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 500
-spent_gpu_hours: 0.23
+spent_gpu_hours: 34.83
 max_jobs_in_flight: 16
 jobs:
-- 8365020
 - 8365021
 - 8365022
 - 8365023
@@ -26,7 +25,8 @@ jobs:
 - 8365033
 jobs_archived:
 - 8353512
-last_wake: '2026-11-06T08:30:00-05:00'
+- 8365020
+last_wake: '2026-11-06T20:00:00-05:00'
 next_id: 3
 ---
 # Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M params, but not 125M. Is 125M a fluke? (trying ~350M params)
@@ -83,3 +83,4 @@ Note 2026-11-05: `OSCusage -P PAS2836` shows Remaining Budget 287.8 (dollars); m
 One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobids> | eNNN done <metric> | paused: <reason>`
 2026-11-05 19:10  e001 submitted 8353512 (350M throughput/memory probe, nextgen, ~0.5 GPU-h) | env: scratch purge killed venvs/asentmax, built venvs/nanogpt; checkout wt/nanogpt/lm350m-qdf created at 4465367 | OSCusage remaining 287.8 dollars
 2026-11-06 08:30  e001 done: tok/s softmax 32.4k / ASEntmax 21.0k / Stieltjes q3d2 15.0k at micro-batch 8 (all fit, 28-31 GB; softmax bs16 OOM), 9-run stage = 302.6 GPU-h train, fits budget | e002 submitted 8365020-8365033 (14 chained 4:15 segment arrays, 3 rows x 3e-4/6e-4/1.2e-3, 2.5B tok, est 300-360 GPU-h) at 27a87fb | env: pip entmax 1.3 added to venvs/nanogpt (missing, broke ASEntmax eager path) | OSCusage remaining 271.86 dollars
+2026-11-06 20:00  e002 segment 1 (8365020_0-8) done: all 9 exit 4 = planned wall-limit checkpoint (not a failure; every e002 segment ends this way), ckpt.pt written, s/iter 16.3/25.2/35.1 matches e001; softmax 840, ASEntmax 545, Stieltjes 391 iters per segment, chain lengths suffice | segment 2 (8365021) pending on Priority | nothing new submitted (backlog 3/4 wait on e002) | ascend checkout stays at 27a87fb until the chain ends
