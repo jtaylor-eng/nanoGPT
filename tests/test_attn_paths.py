@@ -32,7 +32,7 @@ for dtype in (torch.float32, torch.bfloat16):
                     a.scale_beta.weight.normal_(0, 0.02); a.scale_gamma.weight.normal_(0, 0.02)
             if cfg.stieltjes_learn_qd:   # spread q_h, d_h across heads (q about 2.6..3.5, d about 1.6..2.6)
                 with torch.no_grad():
-                    a.stieltjes_theta_q.add_(torch.linspace(-0.6, 0.6, cfg.n_head)); a.stieltjes_theta_d.add_(torch.linspace(-0.5, 0.5, cfg.n_head))
+                    a.stieltjes_theta_q.add_(torch.linspace(-0.6, 0.6, cfg.n_head, device='cuda')); a.stieltjes_theta_d.add_(torch.linspace(-0.5, 0.5, cfg.n_head, device='cuda'))
             b = copy.deepcopy(a); b.collect_stats = True
             x = (torch.randn(2, T, 512, device='cuda') * 3).requires_grad_(True)
             x2 = x.detach().clone().requires_grad_(True)
