@@ -7,9 +7,20 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 300
-spent_gpu_hours: 19.64
+spent_gpu_hours: 125.05
 max_jobs_in_flight: 36
 jobs:
+- 8369219
+- 8388278
+jobs_archived:
+- 8368232
+- 8368233
+- 8368234
+- 8369209
+- 8369210
+- 8369211
+- 8369212
+- 8388227
 - 8368235
 - 8368236
 - 8368237
@@ -22,23 +33,13 @@ jobs:
 - 8369216
 - 8369217
 - 8369218
-- 8369219
-- 8388278
-jobs_archived:
-- 8368232
-- 8368233
-- 8368234
-- 8369209
-- 8369210
-- 8369211
-- 8369212
-- 8388227
-last_wake: '2026-11-07T16:30:00-05:00'
+last_wake: '2026-11-08T15:30:00-05:00'
 next_id: 3
 model: null
 effort: null
 max_turns: 150
 timeout_minutes: 90
+wakes: 1
 ---
 # Can a learned window take windowed Stieltjes off the fixed-(q,d) frontier at 125M?
 
@@ -104,3 +105,4 @@ Learnable per-query q is out of scope (proposal: poorly identified against the s
 - 2026-11-06: e001 (gate, `aswstieltjes_q3_d2_zi_xs` x lr {3e-4, 6e-4, 1.2e-3}) submitted at 844514e: smoke 8368232 gates 8 x 3:30 segment arrays 8368233..8368240; est. 60 GPU-h (measured 13.7 s/step for q3/d2 + 5 % AS). Ported env.sh REPO/VENV override from lm350m-qdf; created OSC checkout and copied the ArXiv/PG-19 eval bins into it. Next wake: check smoke, then start e002 (Variant A) implementation in parallel.
 - 2026-11-06: smoke 8368232 OK (0.03 GPU-h). e002 (Variant A, `lwstieltjes_q3_d2_xs`, per-head learnable q_h/d_h in the fused kernel via a constexpr PER_HEAD mode with implicit-function q/d grads) x lr {3e-4, 6e-4, 1.2e-3} submitted at 5bb25c6: qdtest 8369209 (fixed path bit-identical vs 3074a63, fused-vs-eager incl. theta grads, 125M throughput probe <= 17.5 s/step) + smoke 8369210 gate 9 x 3:30 segment arrays 8369211..8369219; est. 60 GPU-h. Shared checkout moved to 5bb25c6, so e001 seg 1 (8368233) re-gated afterok:8369209. Next wake: read qdtest (speed, correctness); if speed-only failure, fall back to learnable d_h with q fixed 3 and release e001.
 - 2026-11-07: segments 8368234 (e001) and 8369212 (e002) ended exit 4 = planned wall-limit checkpoint, not failures. qdtest 8369209 had failed on a test bug (CPU linspace in test_attn_paths), so Slurm cancelled segment 1 of both chains and segment 2 trained first. Fixed at 2dfc088; qdtest2 8388227 (debug-nextgen; desktop GPU refused) ALL OK: fixed path bit-identical, learnable fused vs eager incl. theta grads <= 1.2e-6 fp32. e001 14.0 s/step (on plan, ~60 GPU-h). e002 20.0 s/step, over the 17.5 s gate: continuing (correct, 12 % done, restart as d-only saves ~14 GPU-h net) at ~28 GPU-h/LR, over the 25 ceiling; added segment array 8388278 so 4770 iters fit. Committed ~150 of 300 GPU-h. Next wake: chains finish ~Nov 9-10; then score e001 gate and e002.
+- 2026-11-08: e001 done (57.34 GPU-h). Gate FAILS: `aswstieltjes_q3_d2_zi_xs` best LR 1.2e-3 val 3.537 (= fixed q3/d2 3.534), ArXiv 16k 4.095 vs threshold 3.911 and 0.147 worse than fixed q3/d2 (3.948); all LRs > 3.93. Already 0.084 worse on ArXiv at 2k, so it is a domain-robustness cost, not a length effect. Backlog item 4: no Variant B. e002 segment 8 (8369218) ended 4:0 (wall-limit checkpoint) at iter ~3990; 8369219 running, 8388278 pending, finishes ~Nov 9. At iter 4000 lr1.2e-3 the learned d_h widens to layer medians 3.0-3.9 and q_h drops to ~2.4 in deep layers (wider and heavier-tailed than any fixed 125M cell). No new submission. Figure `figures/arxiv_vs_length.png`. Next wake: score e002, write the negative, decide `done` vs seeds (item 5 only if within 0.01 of ASEntmax).
