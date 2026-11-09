@@ -4,13 +4,12 @@ title: Can a learned window take windowed Stieltjes off the fixed-(q,d) frontier
   125M? (AS-scale gate, per-head learnable q/d, per-query adaptive window)
 project: nanogpt
 cluster: ascend
-status: active
+status: done
 wake: on_jobs
 budget_gpu_hours: 300
-spent_gpu_hours: 135.05
+spent_gpu_hours: 140.16
 max_jobs_in_flight: 36
-jobs:
-- 8388278
+jobs: []
 jobs_archived:
 - 8368232
 - 8368233
@@ -33,13 +32,14 @@ jobs_archived:
 - 8369217
 - 8369218
 - 8369219
-last_wake: '2026-11-08T18:45:00-05:00'
+- 8388278
+last_wake: '2026-11-08T20:50:00-05:00'
 next_id: 3
 model: null
 effort: null
 max_turns: 150
 timeout_minutes: 90
-wakes: 2
+wakes: 3
 ---
 # Can a learned window take windowed Stieltjes off the fixed-(q,d) frontier at 125M?
 
@@ -107,3 +107,4 @@ Learnable per-query q is out of scope (proposal: poorly identified against the s
 - 2026-11-07: segments 8368234 (e001) and 8369212 (e002) ended exit 4 = planned wall-limit checkpoint, not failures. qdtest 8369209 had failed on a test bug (CPU linspace in test_attn_paths), so Slurm cancelled segment 1 of both chains and segment 2 trained first. Fixed at 2dfc088; qdtest2 8388227 (debug-nextgen; desktop GPU refused) ALL OK: fixed path bit-identical, learnable fused vs eager incl. theta grads <= 1.2e-6 fp32. e001 14.0 s/step (on plan, ~60 GPU-h). e002 20.0 s/step, over the 17.5 s gate: continuing (correct, 12 % done, restart as d-only saves ~14 GPU-h net) at ~28 GPU-h/LR, over the 25 ceiling; added segment array 8388278 so 4770 iters fit. Committed ~150 of 300 GPU-h. Next wake: chains finish ~Nov 9-10; then score e001 gate and e002.
 - 2026-11-08: e001 done (57.34 GPU-h). Gate FAILS: `aswstieltjes_q3_d2_zi_xs` best LR 1.2e-3 val 3.537 (= fixed q3/d2 3.534), ArXiv 16k 4.095 vs threshold 3.911 and 0.147 worse than fixed q3/d2 (3.948); all LRs > 3.93. Already 0.084 worse on ArXiv at 2k, so it is a domain-robustness cost, not a length effect. Backlog item 4: no Variant B. e002 segment 8 (8369218) ended 4:0 (wall-limit checkpoint) at iter ~3990; 8369219 running, 8388278 pending, finishes ~Nov 9. At iter 4000 lr1.2e-3 the learned d_h widens to layer medians 3.0-3.9 and q_h drops to ~2.4 in deep layers (wider and heavier-tailed than any fixed 125M cell). No new submission. Figure `figures/arxiv_vs_length.png`. Next wake: score e002, write the negative, decide `done` vs seeds (item 5 only if within 0.01 of ASEntmax).
 - 2026-11-08 (evening): e002 segment 9 (8369219_{0,1,2}) ended 4:0 = wall-limit checkpoint, archived; spent 135.05 GPU-h (sacct total of archived ids 134.1 h + the in-flight segment). Val@4500: lr3e-4 3.731, lr6e-4 3.589, lr1.2e-3 3.589. 8388278 at iter 4610/4770, finishes training ~19:40 then runs evals. No new submission (backlog: gate failed, no Variant B; only e002 scoring and the write-up remain). Next wake: score e002, write the negative, decide `done` vs seeds.
+- 2026-11-08 (night): e002 done. 8388278_{0,1,2} COMPLETED 0:0 (training to 4771 + four evals); archived. e002 82.81 GPU-h, direction 140.15 of 300. Variant A `lwstieltjes_q3_d2_xs` best LR 1.2e-3: val 3.619 (fixed q3/d2 3.534, ASEntmax 3.476), ArXiv 16k 4.323 (3.948, 3.874), PG-19 16k 3.986. Clear negative, worse than predicted (predicted near q3/d3). Learned (q_h, d_h) plateau at an LR-dependent level (median d 2.23 / 2.48 / 3.24 at lr 3e-4 / 6e-4 / 1.2e-3; q falls to ~2.4 in deep layers at 1.2e-3); at lr 6e-4 the endpoint lies between the q3/d2 and q3/d3 cells yet the run is 0.105 behind fixed q3/d2 on val, so the cost is not the endpoint (learning dynamics vs per-head spread not separated). Both e001 and e002 lower train-split loss and raise val/ArXiv (val-train gap 0.18 / 0.32 vs 0.15 fixed); note fineweb25B/train.bin is 2.5B tokens, so runs are ~1 epoch. Figures `arxiv_vs_length.png`, `qd_vs_iter.png`. Backlog empty (item 4: no Variant B; item 5: no row within 0.01 of ASEntmax): `status: done`, no submission. Follow-ups for the user, outside this brief: learnable d at 10x lower theta LR or frozen after warmup; check the train/val gap ordering on fresh data.
