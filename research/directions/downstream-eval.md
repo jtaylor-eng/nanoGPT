@@ -4,14 +4,12 @@ title: Does the long-document loss advantage show up as retrieval at length and 
   LAMBADA? (needle tasks and lm-eval on the existing 125M checkpoints)
 project: nanogpt
 cluster: ascend
-status: active
+status: done
 wake: on_jobs
 budget_gpu_hours: 50
-spent_gpu_hours: 1.08
+spent_gpu_hours: 3.48
 max_jobs_in_flight: 12
-jobs:
-- 8453350
-- 8453572
+jobs: []
 jobs_archived:
 - 8369321
 - 8369150
@@ -24,11 +22,13 @@ jobs_archived:
 - 8367870
 - 8368482
 - 8368483
-last_wake: '2026-11-09T18:05:00-05:00'
+- 8453350
+- 8453572
+last_wake: '2026-11-09T18:50:00-05:00'
 next_id: 6
 model: null
 effort: null
-wakes: 1
+wakes: 2
 ---
 # Does the long-document loss advantage show up as retrieval at length and on LAMBADA?
 
@@ -120,3 +120,9 @@ retrieval even at 2k, in which case the task is uninformative at this size and b
   a0264 with sane numbers (2k 23.5 %). Resubmitted tasks 0-7,9 at 475ab90 with --exclude=a0339 -> 8453572.
   Next wake: if the retry hits a fresh bad node, exclude it and retry once more; a code failure -> diagnose. When all
   ten niah.json exist: fill e005, copy jsons, figures, score predictions, then e006 or done (gate: any row > 50 % at 16k).
+- 2026-11-09 wake 8: e005 done (2.77 GPU-h; retry 8453572 all completed). NIAH exact match 2k/4k/8k/16k, n=200, lr 1.2e-3:
+  softmax 26.5/0.5/1.0/1.0, ASEntmax 41.5/9.5/2.5/3.0, q3/d2 31.0/13.5/6.5/5.0; best at length ASEntmax lr6e-4
+  46.5/25.5/12.5/6.0. Sparse rows keep a few points past 2k where softmax has ~0, but LR swings (up to 25 pt at 2k)
+  exceed between-map gaps on one seed; no ASEntmax vs Stieltjes ranking. Predictions 7/10. Figures niah_vs_length.png,
+  niah_depth.png. e006 gate (any row > 50 % at 16k) fails (max 6.0 %): backlog empty, status done. Retrieval at
+  length needs the 350M checkpoints (lm350m-qdf); eval_niah.py runs on them unchanged. Spent 3.48 / 50 GPU-h.
