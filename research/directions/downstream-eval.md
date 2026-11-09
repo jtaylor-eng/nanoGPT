@@ -7,10 +7,11 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 50
-spent_gpu_hours: 0.81
+spent_gpu_hours: 1.08
 max_jobs_in_flight: 12
 jobs:
 - 8453350
+- 8453572
 jobs_archived:
 - 8369321
 - 8369150
@@ -23,10 +24,11 @@ jobs_archived:
 - 8367870
 - 8368482
 - 8368483
-last_wake: '2026-11-09T17:39:45-05:00'
+last_wake: '2026-11-09T18:05:00-05:00'
 next_id: 6
 model: null
 effort: null
+wakes: 1
 ---
 # Does the long-document loss advantage show up as retrieval at length and on LAMBADA?
 
@@ -113,3 +115,8 @@ retrieval even at 2k, in which case the task is uninformative at this size and b
   q3d2 20/20/10/5. Submitted full array 8453350 (10 ckpts, 200/length) at 475ab90, est. ~2 GPU-h.
   Next wake: fill e005 from niah.json x10, copy jsons to results/lm1012/125m/, draw figures/niah_vs_length.png and
   niah_depth.png, score predictions. Then e006 (distractors) only if any row > 50 % at 16k, else direction done.
+- 2026-11-09 wake 7: 8453350 tasks 0-7,9 FAILED in ~10 s, all on node a0339 ("CUDA-capable device(s) busy or
+  unavailable" at model load; unrelated job 8453383_1 also died there): bad node, not code. Task 8 (q4_d2) running on
+  a0264 with sane numbers (2k 23.5 %). Resubmitted tasks 0-7,9 at 475ab90 with --exclude=a0339 -> 8453572.
+  Next wake: if the retry hits a fresh bad node, exclude it and retry once more; a code failure -> diagnose. When all
+  ten niah.json exist: fill e005, copy jsons, figures, score predictions, then e006 or done (gate: any row > 50 % at 16k).
