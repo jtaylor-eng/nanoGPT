@@ -7,11 +7,12 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 50
-spent_gpu_hours: 0.72
+spent_gpu_hours: 0.81
 max_jobs_in_flight: 12
 jobs:
-- 8369321
+- 8453350
 jobs_archived:
+- 8369321
 - 8369150
 - 8369151
 - 8367629
@@ -22,7 +23,7 @@ jobs_archived:
 - 8367870
 - 8368482
 - 8368483
-last_wake: '2026-11-06T12:05:00-05:00'
+last_wake: '2026-11-09T17:39:45-05:00'
 next_id: 6
 model: null
 effort: null
@@ -107,3 +108,8 @@ retrieval even at 2k, in which case the task is uninformative at this size and b
   Next wake: if 8369321 crashed again for the same cause -> pause. Else gate: agreement >= 19/20 per row and 2k greedy
   correct 5/7/5 (+-1); pass -> submit full array 0-9 (`sbatch --parsable osc/eval_niah.sbatch` at 475ab90, ~2.9 GPU-h)
   and add it to e005 jobs; fail -> pause (scorer needs the user).
+- 2026-11-09 wake 6: e005 smoke 8369321 done (0.09 GPU-h), gate passed: batched vs single 20/20 every row, 2k greedy
+  5/7/4 (softmax/ASEntmax/q3d2, lr 1.2e-3, n=20). Smoke n=20 acc 2k/4k/8k/16k: softmax 25/5/0/0, ASEntmax 35/5/5/0,
+  q3d2 20/20/10/5. Submitted full array 8453350 (10 ckpts, 200/length) at 475ab90, est. ~2 GPU-h.
+  Next wake: fill e005 from niah.json x10, copy jsons to results/lm1012/125m/, draw figures/niah_vs_length.png and
+  niah_depth.png, score predictions. Then e006 (distractors) only if any row > 50 % at 16k, else direction done.
