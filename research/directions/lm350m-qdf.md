@@ -7,7 +7,7 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 900
-spent_gpu_hours: 195.68
+spent_gpu_hours: 202.76
 max_jobs_in_flight: 16
 jobs:
 - 8453455
@@ -42,9 +42,9 @@ jobs_archived:
 - 8365033
 - 8453383
 - 8453387
-last_wake: '2026-11-09T18:00:00-05:00'
+last_wake: '2026-11-09T19:05:00-05:00'
 next_id: 5
-wakes: 2
+wakes: 3
 ---
 # Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M params, but not 125M. Is 125M a fluke? (trying ~350M params)
 
@@ -126,3 +126,4 @@ One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobid
 2026-11-08 13:05  e002 softmax rows done (8365025_0-2 exit 0): best lr 1.2e-3 val@2048 3.532, ArXiv 16k 4.396, worse than 125M (3.461) | DATA BUG: run_lm.sh re-sources env.sh, which resets DATA_SRC to fineweb10B (1.0B tok), so DATA_SRC_OVERRIDE=fineweb25B was ignored; every 125M and 350M run trained 2.5 epochs on 1B tokens (val flat after epoch 1, iter 1907; 350M train/val gap 0.65) | held 8365026-8365033 (scontrol hold, reversible); 8365025_3,4,6-8 still running and will checkpoint | paused: user decision needed. (a) release the hold and finish e002 on fineweb10B (~95 GPU-h; consistent with 125M as actually run, but tests overfitting to repeated data); (b) cancel e002, fix env.sh:6 to `${DATA_SRC:-...}`, rerun the 9-run stage on fineweb25B at 1 epoch (~300 GPU-h, total ~490 of 500, so no margin); (c) (b) plus a budget raise, and also redo 125M on fineweb25B, since the 51M->125M crossover is confounded by 1 vs 2.5 epochs. Recommend (c), or (b) with 2 LRs per row if the budget stays at 500.
 2026-11-09 17:38  resumed: by user
 2026-11-09 18:00  e002 failed (2.5 epochs of fineweb10B via env.sh:6; 195.34 GPU-h; held arrays 8365026-33 scancelled per decision (c)) | fix at 5c5d8c0: env.sh keeps DATA_SRC, run_lm.sh data guard (MIN_TRAIN_TOKENS) + RESULTS_TAG + DIVERGED skip, mixed-config manifests | smoke debug-nextgen 8453383/8453387 ok, fineweb25B path printed (8453383_1 node fault a0339, rerun ok) | e003 (350M x9) + e004 (125M x6) submitted as one 14-segment chain 8453455-8453469 at fec70ed, segments 2-14 HELD: next wake verifies segment-1 data path, then scontrol release | est ~400 GPU-h, budget 900, spent 195.68
+2026-11-09 19:05  segment 1 check: fineweb25B path + 2.5e9-token guard confirmed in all 15 run.logs | 8453455_5,_8,_10 failed on node a0339 (CUDA device busy, node fault, same as smoke 8453383_1), ~0.02 GPU-h; pending arrays 8453456-8453469 updated ExcNodeList=a0339 and released; the three tasks restart in segment 2 (enough segments left; 125M Stieltjes 1.2e-3 may need a separate eval job) | nothing new submitted
