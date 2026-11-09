@@ -11,14 +11,19 @@ source $VENV/bin/activate
 row=$1; lr=$2; seed=${3:-1337}
 CFG=${CONFIG:-lm_stieltjes.py}
 ROOT=$LM_RESULTS; [ "$CFG" != "lm_stieltjes.py" ] && ROOT=$LM_RESULTS/${CFG#lm_stieltjes_}; ROOT=${ROOT%.py}
+[ -n "${RESULTS_TAG:-}" ] && ROOT=$LM_RESULTS/$RESULTS_TAG   # e.g. 350m_fw25: keeps the fineweb10B results intact
 # 125M: the 40 GB card cannot hold micro-batch 16 at T=2048 for the sparse kernels; halve it and double accum
 [[ $CFG == *125m* ]] && [[ $row == *stieltjes* || $row == *entmax* ]] && EXTRA="--batch_size=8 --gradient_accumulation_steps=32" || EXTRA=""
 OUT=$ROOT/$row/lr$lr; [ "$seed" != "1337" ] && OUT=${OUT}_s$seed
 mkdir -p $OUT; LOG=$OUT/run.log
+[ -f $OUT/DIVERGED ] && { echo "[$(date '+%m-%d %H:%M:%S')] DIVERGED marker present; not resuming (deterministic NaN)" | tee -a $LOG; exit 3; }
 NI=30; is_stieltjes $row && [ -f $LM_RESULTS/NUM_ITER ] && NI=$(cat $LM_RESULTS/NUM_ITER)
 echo "[$(date '+%m-%d %H:%M:%S')] run_lm $row lr=$lr seed=$seed num_iter=$NI host=$(hostname) job=${SLURM_JOB_ID:-local} commit=$(git -C $REPO rev-parse --short HEAD)" | tee -a $LOG
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader | tee -a $LOG
 RUNDIR=$TMPDIR/run; mkdir -p $RUNDIR; stage_data
+NTOK=$(( $(stat -L -c %s $DATA_DIR/train.bin) / 2 ))
+echo "[$(date '+%m-%d %H:%M:%S')] data DATA_SRC=$DATA_SRC train_tokens=$NTOK min=${MIN_TRAIN_TOKENS:-0}" | tee -a $LOG
+[ $NTOK -lt ${MIN_TRAIN_TOKENS:-0} ] && { echo "train.bin has $NTOK tokens < MIN_TRAIN_TOKENS; refusing (would repeat data)" | tee -a $LOG; exit 5; }
 cd $RUNDIR; ln -sfn $REPO/config config
 minlr=$(python -c "print($lr/10)")
 if [ ! -f $OUT/TRAIN_DONE ]; then
@@ -31,10 +36,11 @@ if [ ! -f $OUT/TRAIN_DONE ]; then
     rm -f $OUT/ckpt.pt $OUT/ckpt.pt.tmp $OUT/metrics.jsonl
   fi
   python $REPO/train.py $REPO/config/$CFG --data_root=$DATA_DIR $(row_args $row) --stieltjes_num_iter=$NI \
-    --learning_rate=$lr --min_lr=$minlr --seed=$seed --out_dir=$OUT --init_from=$INIT --wall_limit_s=${WALL_LIMIT_S:-9000} $EXTRA >> $LOG 2>&1
+    --learning_rate=$lr --min_lr=$minlr --seed=$seed --out_dir=$OUT --init_from=$INIT --wall_limit_s=${WALL_LIMIT_S:-9000} $EXTRA ${TRAIN_EXTRA:-} >> $LOG 2>&1
   rc=$?; echo "[$(date '+%m-%d %H:%M:%S')] train exit $rc" | tee -a $LOG
   [ -f $OUT/TRAIN_DONE ] || exit $rc
 fi
+[ -n "${SKIP_EVAL:-}" ] && exit 0   # smokes only
 if [ ! -f $OUT/lengths.json ]; then
   python $REPO/eval_lengths.py --out_dir=$OUT --data_dir=$DATA_DIR --batch_tokens=8192 >> $LOG 2>&1
   echo "[$(date '+%m-%d %H:%M:%S')] eval exit $?" | tee -a $LOG
