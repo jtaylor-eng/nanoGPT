@@ -4,17 +4,27 @@ title: Where does attention mass go at 16k? Support size and entropy per head vs
   and NoPE attention rows, per map (existing 125M checkpoints)
 project: nanogpt
 cluster: ascend
-status: active
+status: paused
 wake: on_jobs
 budget_gpu_hours: 30
-spent_gpu_hours: 0.35
+spent_gpu_hours: 0.84
 max_jobs_in_flight: 8
 jobs: []
 jobs_archived:
 - 8367344
 - 8367420
-last_wake: '2026-11-06T10:20:01-05:00'
-next_id: 3
+- 8459148
+- 8459225
+- 8459655
+- 8459719
+- 8459720
+- 8459721
+- 8459722
+- 8460032
+- 8460033
+- 8460034
+last_wake: '2026-11-09T22:15:00-05:00'
+next_id: 6
 model: null
 effort: null
 ---
@@ -56,6 +66,11 @@ summarise; the head-group means in (a) guard against cherry-picking in (b).
 3. **e003, only if e002 shows a sink:** fraction of mass on the first 64 keys vs query position for every row and
    head group, one PNG. Same pass, no new compute beyond re-reading the `.npz`.
 
+4. **e003-e005 (added 2026-11-09 after the user approved the per-query adaptive window follow-up).** e003: does the
+   trained AS window (`aswstieltjes_q3_d2_zi_xs`, trained by `learnable-qd` e001; AS scale s is exactly window d/s)
+   flatten NoPE support in n? e004/e005: impose `window = d / (1 + a ln(max(i, 2048)/2048))` on fixed q3/d2's NoPE
+   heads at inference, a in [-0.2, 0.2]: does flat support (a > 0) or wider support (a < 0) lower loss past 2k?
+
 ## Constraints
 - Files the agent may add: `viz_attention.py`, `osc/viz_attention.sbatch`, `research/`. It may not change
   `model.py`, `train.py`, `eval_lengths.py` (import from them; subclass or wrap for weight extraction).
@@ -81,3 +96,14 @@ summarise; the head-group means in (a) guard against cherry-picking in (b).
   `asentmax/context/reproduction_lm_<MMDD>.md` not written (outside this worktree); e001 tables are ready to paste.
   Suggested follow-up (user decision): per-query adaptive window, target = NoPE support flat in n.
 2026-11-09 21:33  user decision: go ahead with suggested follow up
+- 2026-11-09 22:15 wake 3 (manual, after the user's go-ahead): the per-query adaptive window already exists as
+  `aswstieltjes_q3_d2_zi_xs` (AS scale s = window d/s exactly; trained by learnable-qd e001, gate failed), so tested
+  the mechanism training-free on debug-nextgen, 0.49 GPU-h total (spent 0.84 / 30). e003 (8459148, 8459225): its NoPE
+  AS scale is ~1.13 at 2k and ~1.14-1.18 at 16k, support still grows 1.73x (fixed q3/d2 1.76x): the learned window has
+  no n-dependence. e004/e005 (8459655, 8459719-22, 8460032-34): an imposed NoPE window schedule
+  d / (1 + a ln(n/2048)) on fixed q3/d2: tail loss (positions 2k-16k, 8 papers) is minimised at a = 0; flattening
+  (a = 0.2, support 34 -> 24) costs +0.020 (8/8 papers), widening (a = -0.2, 34 -> 58) +0.018 (8/8). Within-model
+  support elasticity to the window is ~1, not the ~3 of the across-model d sweep. Figures `scale_vs_position.png`,
+  `sched_support_loss.png`; e001 position plots now include the AS row. PAUSED: "NoPE support flat in n" is the wrong
+  target at 125M, and nothing here justifies a trained n-dependent window run (~19 GPU-h at 125M); that call is the
+  user's. Code: `viz_attention.py` gained `scale` stat, `--nope_sched_a`, per-position loss.
