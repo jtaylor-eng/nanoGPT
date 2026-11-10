@@ -7,10 +7,9 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 150
-spent_gpu_hours: 95.41
+spent_gpu_hours: 96.07
 max_jobs_in_flight: 24
 jobs:
-- 8489957
 - 8489958
 - 8489959
 - 8489960
@@ -34,13 +33,14 @@ jobs_archived:
 - 8453899
 - 8471998
 - 8471999
-last_wake: '2026-11-10T17:00:02-05:00'
+- 8489957
+last_wake: '2026-11-10T17:20:01-05:00'
 next_id: 6
 model: null
 effort: null
 max_turns: 100
 timeout_minutes: 60
-wakes: 12
+wakes: 13
 ---
 # Is the sparse maps' long-context gain sparsity or position-dependent temperature, and does it live on the NoPE heads?
 
@@ -116,3 +116,4 @@ construction. More NoPE heads give the map more rows where it can differ from so
 - 2026-11-10 15:05  trigger: 8453518_3 no-op again (6 s, Stieltjes a4 scored 13:35); nothing finished, nothing submitted | progress: Stieltjes a2 8453518_4 iter 4470/4770 (38k tok/s); e004 asentmax a4/a2 8471998 iter 4330/4280 (53k/51k tok/s); e005 softmax_xs_a0 8489957 iter 690 (83k tok/s); no NaN | spent_gpu_hours left at driver value 88.53 | next: score e004 when 8471998 ends (~1.3 h + evals); e003 when Stieltjes a2 + lm350m-qdf 6/6 cell land, then Stieltjes a0 decision.
 - 2026-11-10 17:25  e003 done (55.00 GPU-h): Stieltjes a2 (8453518_4, 18.78 GPU-h) + 6/6 Stieltjes ref landed; ArXiv 16k Stieltjes 6/6 -> 4/8 -> 2/10 = 3.981 -> 3.813 -> 3.829, softmax 4.370 -> 4.349 -> 4.164, gap 0.389 / 0.536 / 0.335 (non-monotone); Stieltjes curve falls with length at every split, softmax rises at every split -> the signature is the map, not the split; 3/6 predictions hit (all 3 directional claims miss) | e004 interim: asentmax_zi_xs_a4 done (13.66 GPU-h), ArXiv 16k flat across splits 3.707 / 3.722 / 3.745 (a2 PG-19 eval still running in 8471998_1) | Stieltjes a0 (e005 second half) NOT submitted: gate "monotone through 2/10" not met | spare 8453899 cancelled (task done); archived 8453518, 8453899 | nothing submitted | in flight: 8471998_1 (+spare 8471999), e005 softmax_xs_a0 8489957-60 (iter 1640) | next: score e004 and e005; backlog then empty -> write the direction report and set status done.
 - 2026-11-10 17:40  e004 done (27.6 GPU-h): asentmax_zi_xs_a2 finished (8471998_1, 2.27 h; spare 8471999 no-op); ASEntmax ArXiv 16k 6/6 -> 4/8 -> 2/10 = 3.707 -> 3.722 -> 3.745 (flat, inside bounce), FW 16k 3.440 -> 3.472 -> 3.606, val@2048 spread 0.02; 4/6 predictions hit (miss: "a2 improves like softmax", "val cost >= 0.02") -> the split moves softmax only; sparse-map extrapolation does not live on more NoPE heads | figure + RESULTS.md regenerated; archived 8471998, 8471999 | nothing submitted (backlog empty after e005; Stieltjes a0 gate not met) | in flight: e005 softmax_xs_a0 8489957 iter 1830 (83k tok/s, finishes in segment 2-3) | next: score e005, then write the direction report and set status done.
+- 2026-11-10 18:05  trigger 8489957_0 (e005 softmax_xs_a0 segment 1): planned wall-limit exit 4 at 3.85 h, checkpoint iter 2180 of 4770, val 3.785 @2000, 83k tok/s, no NaN; resumed in 8489958 (iter 2240) | archived 8489957 (~3.85 GPU-h) | nothing finished, nothing submitted | in flight: 8489958-8489960 (finishes in segment 2-3) | next: score e005, then write the direction report and set status done.
