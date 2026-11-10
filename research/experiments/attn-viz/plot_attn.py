@@ -19,7 +19,8 @@ rows = list(DIRS)
 os.makedirs(figs, exist_ok=True)
 COL = ['#1f77b4', '#d62728', '#2ca02c', '#9467bd', '#ff7f0e', '#8c564b', '#17becf', '#7f7f7f']
 LABEL = {'support': 'support (nonzero keys)', 'k90': 'keys holding 90 % of mass', 'entropy': 'entropy (nats)',
-         'first64': 'mass on first 64 keys', 'local2k': 'mass within 2048 back', 'dist': 'E[i - j]'}
+         'first64': 'mass on first 64 keys', 'local2k': 'mass within 2048 back', 'dist': 'E[i - j]',
+         'scale': 'AS scale s on q (window = d / s)'}
 
 
 def load(r):
@@ -37,10 +38,12 @@ def logbin(binned):
     return centres, vals
 
 
-for stat in ('support', 'k90', 'entropy', 'first64', 'local2k', 'dist'):
+for stat in ('support', 'k90', 'entropy', 'first64', 'local2k', 'dist', 'scale'):
     fig, ax = plt.subplots(figsize=(7, 4.5))
     for c, r in zip(COL, rows):
         s, summ = load(r)
+        if stat not in list(s['stats']):
+            continue                                         # stats.npz written before the stat existed
         j = list(s['stats']).index(stat)
         nope = list(s['nope']); H = s['binned'].shape[3]
         for g, hs, ls in (('ALiBi', [h for h in range(H) if h not in nope], '-'), ('NoPE', nope, '--')):

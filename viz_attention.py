@@ -39,12 +39,15 @@ for arg in sys.argv[1:]:
     globals()[k] = type(g)(v) if not isinstance(g, str) else v
 save_dir = save_dir or os.path.join(out_dir, 'attn_stats')
 os.makedirs(save_dir, exist_ok=True)
-STATS = ('support', 'k90', 'entropy', 'pmax', 'first64', 'local2k', 'dist')
+STATS = ('support', 'k90', 'entropy', 'pmax', 'first64', 'local2k', 'dist', 'scale')   # scale: AS factor on q (1 = none)
 rows_pos = [int(x) for x in rows_pos.split(',') if int(x) <= L]
 table_pos = [int(x) for x in table_pos.split(',') if int(x) <= L]
 
 ckpt = torch.load(os.path.join(out_dir, 'ckpt.pt'), map_location=device)
 args = dict(ckpt['model_args'])
+# checkpoints from other direction branches may carry config keys this branch lacks; only inert ones may be dropped
+extra = {k: args.pop(k) for k in list(args) if k not in GPTConfig.__dataclass_fields__}
+assert all(k == 'stieltjes_learn_qd' and not v for k, v in extra.items()), f'unsupported model_args {extra}'
 model = GPT(GPTConfig(**args))
 model.load_state_dict({k.removeprefix('_orig_mod.'): v for k, v in ckpt['model'].items()})
 model.to(device).eval()
@@ -74,12 +77,15 @@ def chunked_forward(self, x):
     assert B == 1
     q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
     q, k, v = (t.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) for t in (q, k, v))
+    st = self.acc                                                    # (n_stats, H, T) for this layer, this doc
+    st[7] = 1.0
     if self.attn_scale == 'as':
+        q0 = q
         q = self._apply_scale(q, x)
+        st[7] = q[0].float().norm(dim=-1) / q0[0].float().norm(dim=-1).clamp_min(1e-12)   # scalar per (h, i)
     qf, kf = q[0].float(), k[0].float()                              # (H, T, D)
     y = torch.empty_like(v[0])
     fill = float('-inf') if self.attn_type in ('softmax', 'entmax') else -1e30
-    st = self.acc                                                    # (n_stats, H, T) for this layer, this doc
     for c0 in range(0, T, chunk):
         c1 = min(T, c0 + chunk)
         qi = torch.arange(c0, c1, device=x.device)

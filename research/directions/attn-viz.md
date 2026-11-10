@@ -4,16 +4,16 @@ title: Where does attention mass go at 16k? Support size and entropy per head vs
   and NoPE attention rows, per map (existing 125M checkpoints)
 project: nanogpt
 cluster: ascend
-status: paused
+status: active
 wake: on_jobs
 budget_gpu_hours: 30
-spent_gpu_hours: 0.33
+spent_gpu_hours: 0.35
 max_jobs_in_flight: 8
 jobs: []
 jobs_archived:
 - 8367344
 - 8367420
-last_wake: '2026-11-06T10:35:00-05:00'
+last_wake: '2026-11-06T10:20:01-05:00'
 next_id: 3
 model: null
 effort: null
@@ -80,3 +80,4 @@ summarise; the head-group means in (a) guard against cherry-picking in (b).
   PAUSED: backlog empty and goal met; nothing further to submit. Report for
   `asentmax/context/reproduction_lm_<MMDD>.md` not written (outside this worktree); e001 tables are ready to paste.
   Suggested follow-up (user decision): per-query adaptive window, target = NoPE support flat in n.
+2026-11-09 21:33  user decision: go ahead with suggested follow up
