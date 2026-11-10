@@ -7,7 +7,7 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 900
-spent_gpu_hours: 301.24
+spent_gpu_hours: 316.02
 max_jobs_in_flight: 16
 jobs:
 - 8453457
@@ -42,9 +42,9 @@ jobs_archived:
 - 8453387
 - 8453455
 - 8453456
-last_wake: '2026-11-10T02:05:00-05:00'
+last_wake: '2026-11-10T03:10:00-05:00'
 next_id: 5
-wakes: 5
+wakes: 6
 ---
 # Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M params, but not 125M. Is 125M a fluke? (trying ~350M params)
 
@@ -129,3 +129,4 @@ One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobid
 2026-11-09 19:05  segment 1 check: fineweb25B path + 2.5e9-token guard confirmed in all 15 run.logs | 8453455_5,_8,_10 failed on node a0339 (CUDA device busy, node fault, same as smoke 8453383_1), ~0.02 GPU-h; pending arrays 8453456-8453469 updated ExcNodeList=a0339 and released; the three tasks restart in segment 2 (enough segments left; 125M Stieltjes 1.2e-3 may need a separate eval job) | nothing new submitted
 2026-11-09 22:15  segment 1 (8453455) ended: 12 tasks exit 4 = planned wall-limit checkpoint, ckpt.pt written; _5,_8,_10 = a0339 node fault (diagnosed last wake, restarted from iter 0 in segment 2) | 8453455 archived | segment 2 (8453456_0-14) running, resumes verified | nothing new submitted (backlog 3/4 wait on e003/e004)
 2026-11-10 02:05  segment 2 (8453456_0-14) ended: all 15 exit 4 = planned wall-limit checkpoint, ckpt.pt written, no divergence | 8453456 archived | segment 3 (8453457) running | partial val: 125M softmax 1.2e-3 3.434 @4250, 350M softmax 6e-4 3.639 @1500 | nothing new submitted (backlog 3/4 wait on e003/e004)
+2026-11-10 03:10  e004 125M softmax_xs done (8453457_0/_1 exit 0, 17.4 GPU-h): lr 1.2e-3 val@2048 3.431 (2.5-ep 3.461), FineWeb 16k 3.424, ArXiv 2k/16k 4.051/4.370 (no ArXiv gain from fresh data), PG-19 16k 3.858; lr 6e-4 3.488; figure figures/e004_lengths.png | 8453457_2-14 still running, array stays in jobs | nothing new submitted (backlog 3/4 wait on e003/e004)
