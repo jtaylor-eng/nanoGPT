@@ -7,12 +7,11 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 150
-spent_gpu_hours: 85.98
+spent_gpu_hours: 94.89
 max_jobs_in_flight: 24
 jobs:
 - 8453518
 - 8453899
-- 8471997
 - 8471998
 - 8471999
 - 8489957
@@ -34,13 +33,14 @@ jobs_archived:
 - 8489898
 - 8488707
 - 8488708
-last_wake: '2026-11-10T14:20:01-05:00'
+- 8471997
+last_wake: '2026-11-10T14:40:01-05:00'
 next_id: 6
 model: null
 effort: null
 max_turns: 100
 timeout_minutes: 60
-wakes: 8
+wakes: 9
 ---
 # Is the sparse maps' long-context gain sparsity or position-dependent temperature, and does it live on the NoPE heads?
 
@@ -112,3 +112,4 @@ construction. More NoPE heads give the map more rows where it can differ from so
 - 2026-11-10 14:15  no run finished this wake: 8453517_3 (Stieltjes a4, already scored) done; 8453517_4 (wstieltjes_q3_d2_xs_a2) planned wall-limit exit 4 at iter ~4100, resumed in 8453518_4 (iter 4120, ~2.5 h + evals left); 8453518_3 no-op; ssmax_xs retry 8488707 at iter 4570 (ends in ~25 min); e004 asentmax a4/a2 iter ~3870 in 8471997 | archived 8453517, smoke 8489898 | e005 softmax half (`softmax_xs_a0`, gate = softmax monotone through 2/10) smoke 8489898 ok (debug-nextgen), chain 8489957-8489960 submitted at b93be9e, ~9 GPU-h; committed total ~103 of 150 | next: score e002 (ssmax) and e003 (Stieltjes a2 + 6/6 cell) as they land; Stieltjes a0 (~19 GPU-h, `ROWS=wstieltjes_q3_d2_xs_a0 NSEG=6 bash osc/submit_hs_e005.sh`) only if Stieltjes 6/6 -> 4/8 -> 2/10 is monotone.
 - 2026-11-10 14:25  trigger 8453518_3 = no-op task (Stieltjes a4, scored 13:35), 6 s; nothing new to score | in flight: ssmax_xs retry 8488707 TRAIN_DONE, evals running (score e002 next wake); 8453518_4 Stieltjes a2 resumed iter 4120; e004 asentmax a4/a2 in 8471997 (3.5 h into segment 3); e005 softmax_xs_a0 seg 1 in 8489957 | nothing submitted (8453518 kept in jobs, task 4 running) | next: score e002 when 8488707 ends; e003 when Stieltjes a2 lands; Stieltjes a0 decision then.
 - 2026-11-10 14:45  e002 done (ssmax_xs, 8.95 GPU-h; retry 8488707 1.17 h, spare 8488708 no-op): val@2048 3.427 (softmax 3.431), ArXiv 2k/16k 3.941/4.109 vs softmax 4.051/4.370 and ASEntmax 3.972/3.707 -> log-n temperature closes 39 % of the softmax-ASEntmax 16k gap for free at train length, but the ArXiv curve still rises with length; the falling-curve signature needs sparsity and/or per-query scale; 5/6 predictions hit (miss: 'ArXiv falls 2k->16k'); backlog 6 (ssmax lr 6e-4) not triggered | archived 8488707, 8488708 | nothing submitted (Stieltjes a0 gated on e003) | in flight: Stieltjes a2 8453518_4 (+spare 8453899), e004 asentmax a4/a2 8471997-9, e005 softmax_xs_a0 8489957-60 | next: e003 when Stieltjes a2 + lm350m-qdf 6/6 cell land, then Stieltjes a0 decision.
+- 2026-11-10 14:57  trigger: 8453518_3 no-op (6 s); 8471997_0/1 (e004 asentmax_zi_xs_a4/a2 segment 3) planned wall-limit exit 4 at 3.84/3.85 h, resumed in 8471998 at iter 4200/4170 of 4770 (53k/51k tok/s, ~1.7 h + evals left, no NaN) | archived 8471997 (+7.69 GPU-h, spent 94.89) | nothing finished to score, nothing submitted | in flight: Stieltjes a2 8453518_4 (+spare 8453899), e004 8471998-9, e005 softmax_xs_a0 8489957-60 | next: score e004 when 8471998 ends; e003 when Stieltjes a2 + lm350m-qdf 6/6 cell land, then Stieltjes a0 decision.
