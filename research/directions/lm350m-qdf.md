@@ -4,10 +4,10 @@ title: Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M pa
   but not 125M. Is 125M a fluke? (trying ~350M params)
 project: nanogpt
 cluster: ascend
-status: active
+status: paused
 wake: on_jobs
 budget_gpu_hours: 900
-spent_gpu_hours: 435.53
+spent_gpu_hours: 459.36
 max_jobs_in_flight: 16
 jobs:
 - 8453460
@@ -42,9 +42,9 @@ jobs_archived:
 - 8453457
 - 8453458
 - 8453459
-last_wake: '2026-11-10T14:00:00-05:00'
+last_wake: '2026-11-10T16:50:00-05:00'
 next_id: 5
-wakes: 9
+wakes: 10
 ---
 # Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M params, but not 125M. Is 125M a fluke? (trying ~350M params)
 
@@ -133,3 +133,4 @@ One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobid
 2026-11-10 04:30  e003 350M asentmax_zi_xs 1.2e-3 diverged (8453457_11 exit 3, NaN at iter 1400 with no loss spike, last ckpt val 3.730 @1250; e002 same cell NaN @1710): second divergence, cell dropped, no retry (fix would change protocol); ASEntmax 350M = best of {3e-4, 6e-4}, caveat that 1.2e-3 led 3e-4 by 0.10 @1000 | prediction 'diverges again' (45 %) hit | cell cost 9.89 GPU-h | 8453457 stays in jobs (other tasks running) | nothing new submitted (backlog 3/4 wait on e003/e004)
 2026-11-10 13:40  e004 125M asentmax_zi_xs done (8453458_2/_3, 27.5 GPU-h): best lr 1.2e-3 val@2048 3.448 (softmax 3.431), ArXiv 16k 3.707 (2.5-ep 3.874), PG-19 16k 3.749 | e004 wstieltjes_q3_d2_xs 6e-4 done (8453459_4, 18.7 GPU-h): val@2048 3.519 (same-lr softmax 3.488, gap +0.031, 2.5-ep +0.029), ArXiv 16k 3.792 (2.5-ep 4.019) | provisional: fresh data helps all rows ~0.03 at 2048, sparse rows gain 0.17-0.23 at ArXiv 16k, overfitting does not explain the Stieltjes 2048 deficit at 6e-4 | Stieltjes 1.2e-3 resumes @4000 in its last segment 8453460_5 (~3.4 h incl. evals) | 350M segments 3-5 all planned exit 4, no new divergence | 8453457-8453459 archived | figure e004_lengths regenerated | nothing new submitted (backlog 3/4 wait on e003)
 2026-11-10 14:00  8453460_4 exit 0 (125M Stieltjes 6e-4 already done, no-op) and 8453460_11 exit 3 (DIVERGED guard, dropped 350M ASEntmax 1.2e-3 cell), both expected, ~0 GPU-h | 125M Stieltjes 1.2e-3 (8453460_5) at iter 4150, ETA ~17:00 incl. evals | 350M segment 6 running | 8453460 stays in jobs | nothing new submitted (backlog 3/4 wait on e003)
+2026-11-10 16:50  e003 350M softmax_xs 3e-4/6e-4 done (8453460_6/_7, 44.7 GPU-h): val@2048 3.503/3.491, worse than 125M softmax 3.431 on every eval, train-val gap 0.32/0.50 | e004 125M Stieltjes 1.2e-3 trained: val@2048 3.486 (softmax 3.431, gap +0.055), ArXiv/PG-19 evals still running in 8453460_5 | BUG: train.py reseeds 1337 on every resume and ckpt.pt has no RNG state, so each segment replays segment 1's batch windows (CPU simulation: 99 % overlap). Unique data = one segment: 125M softmax/ASEntmax/Stieltjes 2.2x/3.5x/4.7x repeats, 350M 5.7x/8.8x/12.2x. Biased against the slow sparse kernels; confounds e002, e003, e004 and the original 125M stage (51M only if chained, unverified); other directions chaining this train.py too. Figure figures/e003_replay.png | scontrol hold 8453461-8453464, 8453466-8453469 (reversible); segment 6 running tasks left to checkpoint | paused: user decision needed. (a) fix (store/restore CPU+CUDA RNG in ckpt.pt), scancel the held arrays, rerun e004 125M x6 first (~86 GPU-h), then 350M; (b) (a) but 350M with 2 LRs per row (softmax 6e-4/1.2e-3, ASEntmax 3e-4/6e-4, Stieltjes 6e-4/1.2e-3; ~200 GPU-h, total ~290 of ~395 left); (c) release the hold and finish e003 as a repeated-data point (~110 GPU-h, not informative for scaling). Full 9-run 350M rerun + e004 rerun is ~386 GPU-h = the whole remaining budget, no margin. Recommend (b).
