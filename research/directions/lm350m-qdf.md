@@ -7,12 +7,9 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 900
-spent_gpu_hours: 333.11
+spent_gpu_hours: 429.66
 max_jobs_in_flight: 16
 jobs:
-- 8453457
-- 8453458
-- 8453459
 - 8453460
 - 8453461
 - 8453462
@@ -42,9 +39,12 @@ jobs_archived:
 - 8453387
 - 8453455
 - 8453456
-last_wake: '2026-11-10T04:30:00-05:00'
+- 8453457
+- 8453458
+- 8453459
+last_wake: '2026-11-10T13:40:00-05:00'
 next_id: 5
-wakes: 7
+wakes: 8
 ---
 # Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M params, but not 125M. Is 125M a fluke? (trying ~350M params)
 
@@ -131,3 +131,4 @@ One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobid
 2026-11-10 02:05  segment 2 (8453456_0-14) ended: all 15 exit 4 = planned wall-limit checkpoint, ckpt.pt written, no divergence | 8453456 archived | segment 3 (8453457) running | partial val: 125M softmax 1.2e-3 3.434 @4250, 350M softmax 6e-4 3.639 @1500 | nothing new submitted (backlog 3/4 wait on e003/e004)
 2026-11-10 03:10  e004 125M softmax_xs done (8453457_0/_1 exit 0, 17.4 GPU-h): lr 1.2e-3 val@2048 3.431 (2.5-ep 3.461), FineWeb 16k 3.424, ArXiv 2k/16k 4.051/4.370 (no ArXiv gain from fresh data), PG-19 16k 3.858; lr 6e-4 3.488; figure figures/e004_lengths.png | 8453457_2-14 still running, array stays in jobs | nothing new submitted (backlog 3/4 wait on e003/e004)
 2026-11-10 04:30  e003 350M asentmax_zi_xs 1.2e-3 diverged (8453457_11 exit 3, NaN at iter 1400 with no loss spike, last ckpt val 3.730 @1250; e002 same cell NaN @1710): second divergence, cell dropped, no retry (fix would change protocol); ASEntmax 350M = best of {3e-4, 6e-4}, caveat that 1.2e-3 led 3e-4 by 0.10 @1000 | prediction 'diverges again' (45 %) hit | cell cost 9.89 GPU-h | 8453457 stays in jobs (other tasks running) | nothing new submitted (backlog 3/4 wait on e003/e004)
+2026-11-10 13:40  e004 125M asentmax_zi_xs done (8453458_2/_3, 27.5 GPU-h): best lr 1.2e-3 val@2048 3.448 (softmax 3.431), ArXiv 16k 3.707 (2.5-ep 3.874), PG-19 16k 3.749 | e004 wstieltjes_q3_d2_xs 6e-4 done (8453459_4, 18.7 GPU-h): val@2048 3.519 (same-lr softmax 3.488, gap +0.031, 2.5-ep +0.029), ArXiv 16k 3.792 (2.5-ep 4.019) | provisional: fresh data helps all rows ~0.03 at 2048, sparse rows gain 0.17-0.23 at ArXiv 16k, overfitting does not explain the Stieltjes 2048 deficit at 6e-4 | Stieltjes 1.2e-3 resumes @4000 in its last segment 8453460_5 (~3.4 h incl. evals) | 350M segments 3-5 all planned exit 4, no new divergence | 8453457-8453459 archived | figure e004_lengths regenerated | nothing new submitted (backlog 3/4 wait on e003)
