@@ -32,6 +32,8 @@ rows_pos = '1024,4096,16384'      # 1-based query positions (query index pos-1)
 row_docs = 2
 check_L = 2048                    # >0: loss of doc 0 at check_L through the wrapped vs the stock forward
 table_pos = '512,2048,8192,16384'
+nope_sched_a = 0.0                # e004: NoPE heads' q *= 1 + a ln(max(i+1, T0) / T0)  (window d/s; 1 for i < T0)
+sched_T0 = 2048
 device = 'cuda'
 for arg in sys.argv[1:]:
     k, v = arg.lstrip('-').split('=', 1)
@@ -83,7 +85,15 @@ def chunked_forward(self, x):
         q0 = q
         q = self._apply_scale(q, x)
         st[7] = q[0].float().norm(dim=-1) / q0[0].float().norm(dim=-1).clamp_min(1e-12)   # scalar per (h, i)
+    if nope_sched_a != 0.0:
+        pos = torch.arange(1, T + 1, device=x.device, dtype=torch.float32).clamp(min=sched_T0)
+        sch = 1.0 + nope_sched_a * torch.log(pos / sched_T0)                                  # (T,)
+        hm = (self.nape_slopes.float() == 0.0).to(x.device) if self.pos_emb == 'nape' else torch.ones(self.n_head, dtype=torch.bool, device=x.device)
+        mult = torch.where(hm[:, None], sch[None, :], torch.ones_like(sch)[None, :])        # (H, T)
+        st[7] = st[7] * mult
     qf, kf = q[0].float(), k[0].float()                              # (H, T, D)
+    if nope_sched_a != 0.0:
+        qf = qf * mult[:, :, None]                                   # fp32, no extra bf16 rounding
     y = torch.empty_like(v[0])
     fill = float('-inf') if self.attn_type in ('softmax', 'entmax') else -1e30
     for c0 in range(0, T, chunk):
@@ -152,6 +162,7 @@ with torch.no_grad():
     rows_p = np.zeros((min(row_docs, n_docs), NL, len(nope), len(rows_pos), L), dtype=np.float32)
     rows_s = np.zeros_like(rows_p)
     losses = []
+    loss_binned = np.zeros((n_docs, nb), dtype=np.float32)
     for d in range(n_docs):
         t0 = time.time()
         for l, a in enumerate(attns):
@@ -160,7 +171,11 @@ with torch.no_grad():
             a.rows_p = torch.zeros(len(nope), len(rows_pos), L); a.rows_s = torch.full((len(nope), len(rows_pos), L), float('nan'))
         x, y = doc(d, L)
         with ctx:
-            loss = model(x, targets=y)[1].item()
+            logits, lt = model(x, targets=y)
+        loss = lt.item()
+        tok = F.cross_entropy(logits[0].float(), y[0], reduction='none')        # (L,) per-position loss
+        loss_binned[d] = tok.view(nb, 64).mean(-1).cpu().numpy()
+        del logits, tok
         losses.append(loss)
         for l, a in enumerate(attns):
             total[:, l] += a.acc
@@ -172,6 +187,8 @@ with torch.no_grad():
     mean = (total / n_docs).cpu().numpy()
 
 res['loss_per_doc'] = losses
+res['loss_by_range'] = {f'{a}-{b}': float(loss_binned[:, a // 64:b // 64].mean()) for a, b in
+                        ((0, 2048), (2048, 4096), (4096, 8192), (8192, 16384), (2048, 16384)) if b <= L}
 # table: mean over the 64 query positions ending at each table position; per head (mean over docs) and per group
 # (mean over layers and heads of the group; SE over documents from the 64-position bins)
 groups = {'alibi': [h for h in range(H) if h not in nope], 'nope': nope}
@@ -187,7 +204,7 @@ for pos in table_pos:
                       'se': float(per_doc[:, j].std(ddof=1) / math.sqrt(n_docs)) if n_docs > 1 else None}
                   for j, s in enumerate(STATS)}
     res['table'][pos] = ent
-np.savez_compressed(os.path.join(save_dir, 'stats.npz'), mean=mean, binned=binned, stats=np.array(STATS),
+np.savez_compressed(os.path.join(save_dir, 'stats.npz'), mean=mean, binned=binned, stats=np.array(STATS), loss_binned=loss_binned,
                     slopes=slopes.numpy(), nope=np.array(nope))
 np.savez_compressed(os.path.join(save_dir, 'rows.npz'), p=rows_p, s=rows_s, rows_pos=np.array(rows_pos),
                     nope=np.array(nope))
@@ -197,4 +214,5 @@ for pos in table_pos:
     t = res['table'][pos]
     print(f"pos {pos:>5}: " + '  '.join(f"{g} support {t[g]['support']['mean']:.1f} k90 {t[g]['k90']['mean']:.1f} "
                                         f"H {t[g]['entropy']['mean']:.3f}" for g in groups if groups[g]), flush=True)
+print('loss by range', {k: round(v, 4) for k, v in res['loss_by_range'].items()}, flush=True)
 print('wrote', save_dir, flush=True)
