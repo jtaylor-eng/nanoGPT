@@ -70,6 +70,7 @@ attn_scale_zero_init = 0.0
 seed = 1337
 wall_limit_s = 0       # >0: checkpoint and exit cleanly once this many seconds have elapsed (resume later)
 final_eval_iters = 0   # >0: extra val-loss estimate with this many batches after training -> final.json
+batch_log = ''         # tests only: append each training batch's start indices to this file
 data_root = ''         # dir holding train.bin/val.bin; '' = data/<dataset> relative to cwd (stock behaviour)
 # adamw optimizer
 learning_rate = 6e-4 # max learning rate
@@ -139,6 +140,9 @@ def get_batch(split):
     else:
         data = np.memmap(os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')
     ix = torch.randint(len(data) - block_size, (batch_size,))
+    if batch_log and split == 'train' and not _in_eval:
+        with open(batch_log, 'a') as f:
+            f.write(' '.join(map(str, ix.tolist())) + '\n')
     x = torch.stack([torch.from_numpy((data[i:i+block_size]).astype(np.int64)) for i in ix])
     y = torch.stack([torch.from_numpy((data[i+1:i+1+block_size]).astype(np.int64)) for i in ix])
     if device_type == 'cuda':
@@ -151,6 +155,8 @@ def get_batch(split):
 # init these up here, can override if init_from='resume' (i.e. from a checkpoint)
 iter_num = 0
 best_val_loss = 1e9
+resume_rng = None
+_in_eval = False
 
 # attempt to derive vocab_size from the dataset
 meta_path = os.path.join(data_dir, 'meta.pkl')
@@ -201,6 +207,7 @@ elif init_from == 'resume':
     model.load_state_dict(state_dict)
     iter_num = checkpoint['iter_num']
     best_val_loss = checkpoint['best_val_loss']
+    resume_rng = checkpoint.get('rng')
 elif init_from.startswith('gpt2'):
     print(f"Initializing from OpenAI GPT-2 weights: {init_from}")
     # initialize from OpenAI GPT-2 weights
@@ -238,6 +245,8 @@ if ddp:
 @torch.no_grad()
 def estimate_loss():
     out = {}
+    global _in_eval
+    _in_eval = True
     model.eval()
     for split in ['train', 'val']:
         losses = torch.zeros(eval_iters)
@@ -248,6 +257,7 @@ def estimate_loss():
             losses[k] = loss.item()
         out[split] = losses.mean()
     model.train()
+    _in_eval = False
     return out
 
 # learning rate decay scheduler (cosine with warmup)
@@ -275,7 +285,7 @@ def save_ckpt(tag='ckpt.pt'):
     # atomic: write to a temp name, then rename, so a stalled/killed write never leaves a truncated ckpt.pt
     path = os.path.join(out_dir, tag); tmp = path + '.tmp'
     torch.save({'model': raw_model.state_dict(), 'optimizer': optimizer.state_dict(), 'model_args': model_args,
-                'iter_num': iter_num, 'best_val_loss': best_val_loss, 'config': config}, tmp)
+                'iter_num': iter_num, 'best_val_loss': best_val_loss, 'config': config, 'rng': prefetch_rng}, tmp)
     os.replace(tmp, path)
 
 # logging
@@ -283,8 +293,25 @@ if wandb_log and master_process:
     import wandb
     wandb.init(project=wandb_project, name=wandb_run_name, config=config)
 
+# RNG state at each training-batch prefetch is stored in ckpt.pt, so a resumed run redraws exactly the batch the
+# uninterrupted run would have used next (without it, every resume reseeds and replays segment 1's batches).
+def next_train_batch():
+    global prefetch_rng
+    prefetch_rng = {'cpu': torch.get_rng_state(),
+                    'cuda': torch.cuda.get_rng_state() if device_type == 'cuda' else None}
+    return get_batch('train')
+if resume_rng is not None:
+    assert not ddp, "rng restore is single-process only (per-rank states are not saved)"
+    torch.set_rng_state(resume_rng['cpu'].cpu())
+    if resume_rng['cuda'] is not None and device_type == 'cuda':
+        torch.cuda.set_rng_state(resume_rng['cuda'].cpu())
+    print(f"restored RNG state from checkpoint at iter {iter_num}")
+elif init_from == 'resume':
+    torch.manual_seed(seed + seed_offset + 1000003 * iter_num)  # old ckpt without rng: at least do not replay
+    print(f"WARNING: checkpoint has no RNG state; reseeded with seed + 1000003*iter_num ({iter_num})")
+
 # training loop
-X, Y = get_batch('train') # fetch the very first batch
+X, Y = next_train_batch() # fetch the very first batch
 t0 = time.time()
 local_iter_num = 0 # number of iterations in the lifetime of this process
 raw_model = model.module if ddp else model # unwrap DDP container if needed
@@ -339,7 +366,7 @@ while True:
             logits, loss = model(X, Y)
             loss = loss / gradient_accumulation_steps # scale the loss to account for gradient accumulation
         # immediately async prefetch next batch while model is doing the forward pass on the GPU
-        X, Y = get_batch('train')
+        X, Y = next_train_batch()
         # backward pass, with gradient scaling if training in fp16
         scaler.scale(loss).backward()
     # clip the gradient
