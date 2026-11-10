@@ -7,10 +7,9 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 150
-spent_gpu_hours: 9.74
+spent_gpu_hours: 28.99
 max_jobs_in_flight: 24
 jobs:
-- 8453514
 - 8453515
 - 8453516
 - 8453517
@@ -20,13 +19,14 @@ jobs_archived:
 - 8368600
 - 8453490
 - 8453513
-last_wake: '2026-11-09T22:25:00-05:00'
+- 8453514
+last_wake: '2026-11-10T02:05:00-05:00'
 next_id: 4
 model: null
 effort: null
 max_turns: 100
 timeout_minutes: 60
-wakes: 2
+wakes: 3
 ---
 # Is the sparse maps' long-context gain sparsity or position-dependent temperature, and does it live on the NoPE heads?
 
@@ -92,3 +92,4 @@ construction. More NoPE heads give the map more rows where it can differ from so
 - 2026-11-09 18:05  e001 done (8368600, 0.55 GPU-h): all regression tests pass, bit-identical old rows; ssmax +0.6 % step time vs softmax, a2 splits free, no NaN; 4/4 predictions hit | data bug found by lm350m-qdf (env.sh reset DATA_SRC: all earlier 125M runs, incl. the Goal's 6/6 baselines, were 2.5 epochs of fineweb10B); ported fix 5c5d8c0; baselines now lm350m-qdf e004 (`125m_fw25`, running) | smoke 8453490 (debug-nextgen) ok on fineweb25B | e002 (ssmax_xs) + e003 (softmax/wstieltjes q3d2 x a4/a2) submitted as one 6-segment 4:15 chain 8453513-8453518 at 2a32fea, est ~65 GPU-h | next: score when the chain ends; e004/e005 gated on e003.
 - 2026-11-09 18:55  8453513 tasks 0/1/4 (ssmax_xs, softmax_xs_a4, wstieltjes_q3_d2_xs_a2) FAILED in 11 s on bad node a0339 (CUDA device busy/unavailable at model.to, no code fault); tasks 2/3 training at probe speed | retry in place: chain restarts them in 8453514, a0339 excluded on 8453514-8453518, spare segment 8453899 for task 4 | next: score e002/e003 when the chain ends.
 - 2026-11-09 22:25  8453513 segment 1 ended: tasks 2/3 (softmax_xs_a2, wstieltjes_q3_d2_xs_a4) hit the wall limit as planned (exit 4, 3.84 h each), checkpointed at iter 2148 / 1001 and resumed in 8453514; tasks 0/1/4 (a0339 failures) restarted from scratch in 8453514 on good nodes, all 5 training at probe speed (82k / 38k tok/s); 8453513 archived (~7.7 GPU-h) | nothing submitted, chain 8453514-8453518 + 8453899 covers all runs | next: score e002/e003 when the chain ends.
+- 2026-11-10 02:05  8453514 segment 2 closed: all 5 tasks exit 4:0 at 3.84-3.87 h (planned wall-limit checkpoint), resumed in 8453515; iters ssmax_xs 2170, softmax_xs_a4 2154, softmax_xs_a2 4390, wstieltjes a4 2030, a2 1020; no NaN, probe-speed throughput; 8453514 archived (19.25 GPU-h, spent 28.99 = 9.74 + sacct sum) | nothing submitted; existing chain 8453515-8453518 + 8453899 covers every run (Stieltjes a2 needs the spare) | next: score e002/e003 as runs finish (softmax_xs_a2 first, in 8453515).
