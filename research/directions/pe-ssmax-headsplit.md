@@ -7,32 +7,35 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 150
-spent_gpu_hours: 32.9
+spent_gpu_hours: 80.18
 max_jobs_in_flight: 24
 jobs:
-- 8453515
-- 8453516
 - 8453517
 - 8453518
 - 8453899
-- 8471995
-- 8471996
 - 8471997
 - 8471998
 - 8471999
+- 8488707
+- 8488708
 jobs_archived:
 - 8368600
 - 8453490
 - 8453513
 - 8453514
 - 8471861
-last_wake: '2026-11-10T02:00:01-05:00'
+- 8453515
+- 8453516
+- 8471995
+- 8471996
+- 8488648
+last_wake: '2026-11-10T13:25:27-05:00'
 next_id: 5
 model: null
 effort: null
 max_turns: 100
 timeout_minutes: 60
-wakes: 4
+wakes: 5
 ---
 # Is the sparse maps' long-context gain sparsity or position-dependent temperature, and does it live on the NoPE heads?
 
@@ -100,3 +103,4 @@ construction. More NoPE heads give the map more rows where it can differ from so
 - 2026-11-09 22:25  8453513 segment 1 ended: tasks 2/3 (softmax_xs_a2, wstieltjes_q3_d2_xs_a4) hit the wall limit as planned (exit 4, 3.84 h each), checkpointed at iter 2148 / 1001 and resumed in 8453514; tasks 0/1/4 (a0339 failures) restarted from scratch in 8453514 on good nodes, all 5 training at probe speed (82k / 38k tok/s); 8453513 archived (~7.7 GPU-h) | nothing submitted, chain 8453514-8453518 + 8453899 covers all runs | next: score e002/e003 when the chain ends.
 - 2026-11-10 02:05  8453514 segment 2 closed: all 5 tasks exit 4:0 at 3.84-3.87 h (planned wall-limit checkpoint), resumed in 8453515; iters ssmax_xs 2170, softmax_xs_a4 2154, softmax_xs_a2 4390, wstieltjes a4 2030, a2 1020; no NaN, probe-speed throughput; 8453514 archived (19.25 GPU-h, spent 28.99 = 9.74 + sacct sum) | nothing submitted; existing chain 8453515-8453518 + 8453899 covers every run (Stieltjes a2 needs the spare) | next: score e002/e003 as runs finish (softmax_xs_a2 first, in 8453515).
 - 2026-11-10 03:15  8453515_2 done: softmax_xs_a2 (2/10) finished, 0.94 h; vs 6/6 softmax_xs: val@2048 +0.042, FW 16k +0.398, ArXiv 2k -0.038, ArXiv 16k -0.206 (4.164 vs 4.370), PG-19 16k +0.007 -> more NoPE heads help ArXiv extrapolation but break FineWeb 16k; e003 interim: 'softmax worsens with NoPE' miss, 'val cost <= 0.01' miss for softmax, e004 gate hit | figure figures/arxiv_vs_length.png + plot_arxiv.py; results copied to results/lm1012/125m_fw25/ | e004 (asentmax_zi_xs_a4/a2) smoke 8471861 ok (debug-nextgen), chain 8471995-8471999 submitted at 03e9f85, ~28 GPU-h; committed total ~93 of 150 | next: score e002/e003 as the 8453515-8453518/8453899 chain finishes; e005 (a0) gated on a4 monotonicity.
+- 2026-11-10 13:35  finished: softmax_xs_a4 (8.80 GPU-h) and wstieltjes_q3_d2_xs_a4 (18.78 GPU-h); softmax ArXiv 16k 6/6 -> 4/8 -> 2/10 = 4.370 -> 4.349 -> 4.164 (monotone better), FW 16k 3.424 -> 3.464 -> 3.822 (monotone worse); wstieltjes a4 ArXiv 16k 3.813 (0.536 below softmax a4, 0.106 above 6/6 ASEntmax 3.707), val@2048 3.479 | ssmax_xs segment 4 (8453516_0) OOM on resume at an eval boundary (iter 4250, fragmentation), no segment left: retry with expandable_segments (+ mb8 fallback segment), smoke 8488648 ok, submitted 8488707/8488708 at 9c4bcad (~1.3 GPU-h) | e004 segments 1-2 closed (asentmax a4/a2 at iter ~3650), running in 8471997 | archived 8453515, 8453516, 8471995, 8471996, 8488648 | next: score e002 when the retry ends; e003 needs wstieltjes a2 (8453518/8453899) and the lm350m-qdf 6/6 Stieltjes cell; e005 (a0) decision after e003 closes.
