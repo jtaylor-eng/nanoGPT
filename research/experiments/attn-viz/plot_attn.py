@@ -57,7 +57,7 @@ for stat in ('support', 'k90', 'entropy', 'first64', 'local2k', 'dist', 'scale')
     if stat in ('support', 'k90', 'dist'):
         ax.set_yscale('log')
     ax.set_xlabel('query position'); ax.set_ylabel(LABEL[stat])
-    ax.set_title(f'125M, lr 1.2e-3, seed 1337, ArXiv, mean over 12 layers x 6 heads per group')
+    ax.set_title(os.environ.get('ATTN_TITLE', '125M, lr 1.2e-3, seed 1337, ArXiv, mean over 12 layers x 6 heads per group'))
     ax.grid(alpha=0.3, which='both', lw=0.5); ax.legend(fontsize=7, ncol=2)
     fig.tight_layout(); fig.savefig(os.path.join(figs, f'{stat}_vs_position.png'), dpi=110); plt.close(fig)
 

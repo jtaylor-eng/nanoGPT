@@ -18,7 +18,7 @@ export HF_HUB_OFFLINE=1 WANDB_MODE=offline TRITON_CACHE_DIR=$SCRATCH/.triton-cac
 source $VENV/bin/activate
 ROWS=${ROWS:-"softmax_xs/lr1.2e-3 asentmax_zi_xs/lr1.2e-3 wstieltjes_q3_d2_xs/lr1.2e-3 wstieltjes_q3_d3_xs/lr1.2e-3 wstieltjes_q3_d4_xs/lr1.2e-3 wstieltjes_q4_d2_xs/lr1.2e-3 wstieltjes_q4_d3_xs/lr1.2e-3"}
 R=$(echo $ROWS | tr ' ' '\n' | sed -n "${SLURM_ARRAY_TASK_ID:-1}p")
-D=$LM_RESULTS/125m/$R
+D=$LM_RESULTS/${TAG-125m}/$R   # TAG=t2048 for 51M T=2048, TAG= (empty) for 51M T=512 (rows at the top level)
 cd ${TMPDIR:-/tmp}
 echo "commit $(git -C $REPO rev-parse --short HEAD) dirty=$(git -C $REPO status --porcelain | wc -l) $(nvidia-smi --query-gpu=name --format=csv,noheader) row=$R $(date '+%F %T')"
 OUT=$D/${STATS_DIR:-attn_stats}
