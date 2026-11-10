@@ -7,7 +7,7 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 150
-spent_gpu_hours: 28.99
+spent_gpu_hours: 32.8
 max_jobs_in_flight: 24
 jobs:
 - 8453515
@@ -20,13 +20,13 @@ jobs_archived:
 - 8453490
 - 8453513
 - 8453514
-last_wake: '2026-11-10T02:05:00-05:00'
+last_wake: '2026-11-10T02:00:01-05:00'
 next_id: 4
 model: null
 effort: null
 max_turns: 100
 timeout_minutes: 60
-wakes: 3
+wakes: 4
 ---
 # Is the sparse maps' long-context gain sparsity or position-dependent temperature, and does it live on the NoPE heads?
 
