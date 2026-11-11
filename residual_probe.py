@@ -28,6 +28,10 @@ for arg in sys.argv[1:]:
 
 ckpt = torch.load(os.path.join(out_dir, 'ckpt.pt'), map_location='cuda')
 args = ckpt['model_args']
+# checkpoints from other branches may carry config keys this branch lacks; accept them only when switched off
+unknown = {k: v for k, v in args.items() if k not in GPTConfig.__dataclass_fields__}
+assert not any(unknown.values()), f"checkpoint uses features this branch lacks: {unknown}"
+args = {k: v for k, v in args.items() if k not in unknown}
 assert args['attn_type'] == 'stieltjes'
 val = np.memmap(os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')
 ctx = torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16)
