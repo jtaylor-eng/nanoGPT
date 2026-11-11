@@ -7,7 +7,7 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 900
-spent_gpu_hours: 539.65
+spent_gpu_hours: 540.32
 max_jobs_in_flight: 16
 jobs:
 - 8496390
@@ -52,9 +52,9 @@ jobs_archived:
 - 8496387
 - 8496388
 - 8496389
-last_wake: '2026-11-11T08:00:01-05:00'
+last_wake: '2026-11-11T10:05:00-05:00'
 next_id: 6
-wakes: 18
+wakes: 19
 ---
 # Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M params, but not 125M. Is 125M a fluke? (trying ~350M params)
 
@@ -153,3 +153,4 @@ One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobid
 2026-11-11 06:10  trigger 8496389_0/_1 = softmax no-op exit 0 (already recorded last wake), ~0 GPU-h | segment 4 (8496389_2-5) running: ASEntmax @4360/4310 (ends this segment), Stieltjes @3180/3190 | nothing new submitted (after e005: pause for user decision on 350M)
 2026-11-11 08:00  e005 asentmax_zi_xs done (8496389_2/_3 exit 0, 27.4 GPU-h for both runs): lr 1.2e-3 val@2048 3.405 (softmax 3.403, tie; e004 replayed 3.448), FineWeb 16k 3.415, ArXiv 2k/16k 3.901/3.604 (softmax 4.269), PG-19 16k 3.712; lr 6e-4 3.459 | 8496389_0/_1 softmax no-op | figure e005_lengths regenerated | Stieltjes (8496389_4/_5) in segment 4, ends in 8496390 | 8496389 stays in jobs | nothing new submitted (after e005: pause for user decision on 350M)
 2026-11-11 09:45  e005 segment 4 Stieltjes (8496389_4/_5) ended: both exit 4 = planned wall-limit checkpoint @4019/4028, 7.7 GPU-h; 8496390_2/_3 ASEntmax no-op exit 0 | 8496389 archived | segment 5 (8496390_4/_5) resumed, RNG restore logged, ~2.9 h + evals left | matched-iter val @4000 vs softmax: Stieltjes q3d2 -0.018 (1.2e-3) / -0.033 (6e-4), ASEntmax +0.059 / +0.044 (provisional) | nothing new submitted (after e005: pause for user decision on 350M)
+2026-11-11 10:05  trigger 8496390_2/_3 = ASEntmax no-op exit 0 (10 s each, TRAIN_DONE + evals present, already recorded 09:45), ~0 GPU-h | segment 5 Stieltjes (8496390_4/_5) running 40 min, resumed @4010/4020, fineweb25B confirmed | 8496390 stays in jobs, 8496391_4-5 pending | nothing new submitted (after e005: pause for user decision on 350M)
