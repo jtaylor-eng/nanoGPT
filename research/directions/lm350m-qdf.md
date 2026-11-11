@@ -7,7 +7,7 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 900
-spent_gpu_hours: 528.97
+spent_gpu_hours: 536.32
 max_jobs_in_flight: 16
 jobs:
 - 8496389
@@ -52,9 +52,9 @@ jobs_archived:
 - 8496386
 - 8496387
 - 8496388
-last_wake: '2026-11-11T06:10:00-05:00'
+last_wake: '2026-11-11T08:00:00-05:00'
 next_id: 6
-wakes: 16
+wakes: 17
 ---
 # Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M params, but not 125M. Is 125M a fluke? (trying ~350M params)
 
@@ -151,3 +151,4 @@ One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobid
 2026-11-11 02:45  e005 softmax_xs done (8496388_0/_1 exit 0, 17.3 GPU-h for both softmax runs): lr 1.2e-3 val@2048 3.403 (e004 replayed 3.431), FineWeb 16k 3.415, ArXiv 2k/16k 3.951/4.269, PG-19 16k 3.843; lr 6e-4 3.472 | figure figures/e005_lengths.png | 8496388_2-5 (ASEntmax, Stieltjes) running, 8496388 stays in jobs | nothing new submitted (after e005: pause for user decision on 350M)
 2026-11-11 05:45  e005 segment 3 sparse tasks (8496388_2-5) ended: all 4 exit 4 = planned wall-limit checkpoint, RNG restore logged, 15.4 GPU-h; stop iters ASEntmax 4138/4084, Stieltjes 3020/3023; 8496389_0/_1 softmax no-op exit 0 | matched-iter val vs softmax (lr 1.2e-3): ASEntmax +0.059 @4000, Stieltjes +0.035 @3000 | 8496388 archived | segment 4 (8496389_2-5) running, resumed | nothing new submitted (after e005: pause for user decision on 350M)
 2026-11-11 06:10  trigger 8496389_0/_1 = softmax no-op exit 0 (already recorded last wake), ~0 GPU-h | segment 4 (8496389_2-5) running: ASEntmax @4360/4310 (ends this segment), Stieltjes @3180/3190 | nothing new submitted (after e005: pause for user decision on 350M)
+2026-11-11 08:00  e005 asentmax_zi_xs done (8496389_2/_3 exit 0, 27.4 GPU-h for both runs): lr 1.2e-3 val@2048 3.405 (softmax 3.403, tie; e004 replayed 3.448), FineWeb 16k 3.415, ArXiv 2k/16k 3.901/3.604 (softmax 4.269), PG-19 16k 3.712; lr 6e-4 3.459 | 8496389_0/_1 softmax no-op | figure e005_lengths regenerated | Stieltjes (8496389_4/_5) in segment 4, ends in 8496390 | 8496389 stays in jobs | nothing new submitted (after e005: pause for user decision on 350M)
