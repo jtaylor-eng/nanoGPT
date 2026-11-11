@@ -7,10 +7,9 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 900
-spent_gpu_hours: 463.49
+spent_gpu_hours: 487.85
 max_jobs_in_flight: 16
 jobs:
-- 8496386
 - 8496387
 - 8496388
 - 8496389
@@ -52,9 +51,10 @@ jobs_archived:
 - 8496165
 - 8496354
 - 8496355
-last_wake: '2026-11-10T18:00:00-05:00'
+- 8496386
+last_wake: '2026-11-10T17:40:01-05:00'
 next_id: 6
-wakes: 11
+wakes: 12
 ---
 # Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M params, but not 125M. Is 125M a fluke? (trying ~350M params)
 
@@ -146,3 +146,4 @@ One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobid
 2026-11-10 16:50  e003 350M softmax_xs 3e-4/6e-4 done (8453460_6/_7, 44.7 GPU-h): val@2048 3.503/3.491, worse than 125M softmax 3.431 on every eval, train-val gap 0.32/0.50 | e004 125M Stieltjes 1.2e-3 trained: val@2048 3.486 (softmax 3.431, gap +0.055), ArXiv/PG-19 evals still running in 8453460_5 | BUG: train.py reseeds 1337 on every resume and ckpt.pt has no RNG state, so each segment replays segment 1's batch windows (CPU simulation: 99 % overlap). Unique data = one segment: 125M softmax/ASEntmax/Stieltjes 2.2x/3.5x/4.7x repeats, 350M 5.7x/8.8x/12.2x. Biased against the slow sparse kernels; confounds e002, e003, e004 and the original 125M stage (51M only if chained, unverified); other directions chaining this train.py too. Figure figures/e003_replay.png | scontrol hold 8453461-8453464, 8453466-8453469 (reversible); segment 6 running tasks left to checkpoint | paused: user decision needed. (a) fix (store/restore CPU+CUDA RNG in ckpt.pt), scancel the held arrays, rerun e004 125M x6 first (~86 GPU-h), then 350M; (b) (a) but 350M with 2 LRs per row (softmax 6e-4/1.2e-3, ASEntmax 3e-4/6e-4, Stieltjes 6e-4/1.2e-3; ~200 GPU-h, total ~290 of ~395 left); (c) release the hold and finish e003 as a repeated-data point (~110 GPU-h, not informative for scaling). Full 9-run 350M rerun + e004 rerun is ~386 GPU-h = the whole remaining budget, no margin. Recommend (b).
 2026-11-10 17:33  user decision: (a) Apply the RNG fix (save and restore CPU+CUDA RNG state in ckpt.pt), scancel the held arrays 8453461-8453464 and 8453466-8453469, rerun e004 125M x6 first (~86 GPU-h), then stop for a user decision on 350M. Before submitting, test that a resumed run draws the same batch indices as an uninterrupted one. Context checked 2026-11-10 from local run.logs: the 51M T=512 stage is clean (64/64 runs, 0 resumes); 51M T=2048 has 4 seed-1337 sparse runs with one resume each (asentmax 1.5e-3/3e-3 at iter 7300/7340, wstieltjes_q3_d2 1.5e-3/3e-3 at iter 5520 of 7620); softmax and all _s1/_s2 replicates are clean.
 2026-11-10 18:00  e004 done (8453460_5 exit 0, 82.42 GPU-h, replayed data): best LR 1.2e-3 all rows, val@2048 softmax 3.431 / ASEntmax 3.448 / Stieltjes q3d2 3.486, ArXiv 16k 4.370 / 3.707 / 3.981 (Stieltjes 6e-4: 3.792) | e003 failed: segment 6 (8453460_8-10,12-14) planned exit 4, held arrays 8453461-64, 8453466-69 scancelled per decision (a), 185.39 GPU-h | RNG fix aac000a (ckpt.pt stores batch-sampler CPU+CUDA RNG): tests/test_resume_rng.py tier 1 softmax/stieltjes/entmax 803/803 batches identical, losses bit-equal; tier 2 smoke 8496354->8496355 wall-stop + resume reproduces uninterrupted 8496164 losses exactly | e005 submitted 8496386-8496391 (125M x6 rerun, fw25B, tag 125m_fw25_rng, 6 x 4:15 afterany, est 78-92 GPU-h) | after e005: pause for user decision on 350M
+2026-11-10 22:05  e005 segment 1 (8496386_0-5) ended: all 6 exit 4 = planned wall-limit checkpoint, ckpt.pt written, fineweb25B confirmed; iters softmax 2194, ASEntmax 1377, Stieltjes 1004 per segment (segment allotment suffices) | val@1000 lr1.2e-3 softmax 3.921 / ASEntmax 3.907 / Stieltjes 3.913 | 8496386 archived | segment 2 (8496387) running, resumed | nothing new submitted (after e005: pause for user decision on 350M)
