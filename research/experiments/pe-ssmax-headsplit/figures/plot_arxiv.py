@@ -25,7 +25,10 @@ for path in sorted(glob.glob(os.path.join(RES, '*/lr1.2e-3/arxiv.json'))):
         xs = sorted(int(k) for k in L)
         ax.plot(xs, [L[str(x)]['val_loss'] for x in xs], STYLE.get(n_alibi, '-.'), marker='o', ms=3,
                 color=COLOR[fam], label=f'{row} ({n_alibi}/{12 - n_alibi})')
-for ax, t in zip(axes, ['ArXiv', 'FineWeb val']):
+for ax, t, top in zip(axes, ['ArXiv', 'FineWeb val'], [4.6, 4.0]):
+    ax.set_ylim(top=top)
+    ax.text(0.98, 0.98, 'clipped: softmax_xs_a0 (0/12) leaves the axis past 2k\n(16k: ArXiv 7.90, FineWeb 7.65)',
+            transform=ax.transAxes, ha='right', va='top', fontsize=7)
     ax.set_xscale('log', base=2)
     ax.axvline(2048, color='0.7', lw=0.8)
     ax.set_xlabel('eval length (tokens)')

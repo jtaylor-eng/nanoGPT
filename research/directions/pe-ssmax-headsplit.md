@@ -4,14 +4,12 @@ title: Is the sparse maps' long-context gain sparsity or position-dependent temp
   and does it live on the NoPE heads? (SSMax row + ALiBi/NoPE head split, 125M)
 project: nanogpt
 cluster: ascend
-status: active
+status: paused
 wake: on_jobs
 budget_gpu_hours: 150
-spent_gpu_hours: 100.07
+spent_gpu_hours: 101.54
 max_jobs_in_flight: 24
-jobs:
-- 8489959
-- 8489960
+jobs: []
 jobs_archived:
 - 8368600
 - 8453490
@@ -34,13 +32,15 @@ jobs_archived:
 - 8471999
 - 8489957
 - 8489958
-last_wake: '2026-11-10T18:00:01-05:00'
+- 8489959
+- 8489960
+last_wake: '2026-11-10T22:00:01-05:00'
 next_id: 6
 model: null
 effort: null
 max_turns: 100
 timeout_minutes: 60
-wakes: 14
+wakes: 15
 ---
 # Is the sparse maps' long-context gain sparsity or position-dependent temperature, and does it live on the NoPE heads?
 
@@ -118,3 +118,4 @@ construction. More NoPE heads give the map more rows where it can differ from so
 - 2026-11-10 17:40  e004 done (27.6 GPU-h): asentmax_zi_xs_a2 finished (8471998_1, 2.27 h; spare 8471999 no-op); ASEntmax ArXiv 16k 6/6 -> 4/8 -> 2/10 = 3.707 -> 3.722 -> 3.745 (flat, inside bounce), FW 16k 3.440 -> 3.472 -> 3.606, val@2048 spread 0.02; 4/6 predictions hit (miss: "a2 improves like softmax", "val cost >= 0.02") -> the split moves softmax only; sparse-map extrapolation does not live on more NoPE heads | figure + RESULTS.md regenerated; archived 8471998, 8471999 | nothing submitted (backlog empty after e005; Stieltjes a0 gate not met) | in flight: e005 softmax_xs_a0 8489957 iter 1830 (83k tok/s, finishes in segment 2-3) | next: score e005, then write the direction report and set status done.
 - 2026-11-10 18:05  trigger 8489957_0 (e005 softmax_xs_a0 segment 1): planned wall-limit exit 4 at 3.85 h, checkpoint iter 2180 of 4770, val 3.785 @2000, 83k tok/s, no NaN; resumed in 8489958 (iter 2240) | archived 8489957 (~3.85 GPU-h) | nothing finished, nothing submitted | in flight: 8489958-8489960 (finishes in segment 2-3) | next: score e005, then write the direction report and set status done.
 - 2026-11-10 22:05  trigger 8489958_0 (e005 softmax_xs_a0 segment 2): planned wall-limit exit 4 at 3.84 h, checkpoint iter 4365 of 4770, val 3.585 @4250 / 3.551 @4500 (a2 final val@2048 3.473), 84k tok/s, no NaN; resumed in 8489959 (~45 min train + evals left) | archived 8489958 | nothing finished, nothing submitted | in flight: 8489959 (+spare 8489960) | next: score e005, then write the direction report and set status done.
+- 2026-11-10 22:45  e005 done (softmax_xs_a0, 8.57 GPU-h; 8489959_0 0.84 h, spare 8489960 no-op): all-NoPE softmax is a cliff: val@2048 3.563 (6/6 3.431, 2/10 3.473), ArXiv 2k 4.053 -> 4k 5.005 -> 16k 7.895, FW 16k 7.645, PG-19 16k 7.258; 5/6 predictions hit (miss: cost 8.57 vs 8.6-10) -> softmax needs >= 2 ALiBi heads beyond train length; with e003/e004 the extrapolation is a property of the map, not the split | figure regenerated (y-axis clipped, a0 annotated), results copied to results/lm1012/125m_fw25/softmax_xs_a0/ | archived 8489959, 8489960 | backlog exhausted -> status paused. USER DECISION: submit Stieltjes a0 (`wstieltjes_q3_d2_xs_a0`, ~19 GPU-h of 48.5 left) despite its pre-registered gate (monotone 6/6->2/10) not being met? It would test whether a windowed sparse map avoids the all-NoPE cliff; else mark the direction done.
