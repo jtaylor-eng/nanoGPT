@@ -7,7 +7,7 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 900
-spent_gpu_hours: 509.77
+spent_gpu_hours: 515.64
 max_jobs_in_flight: 16
 jobs:
 - 8496388
@@ -52,9 +52,9 @@ jobs_archived:
 - 8496355
 - 8496386
 - 8496387
-last_wake: '2026-11-10T22:00:01-05:00'
+last_wake: '2026-11-11T01:40:01-05:00'
 next_id: 6
-wakes: 13
+wakes: 14
 ---
 # Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M params, but not 125M. Is 125M a fluke? (trying ~350M params)
 
@@ -148,3 +148,4 @@ One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobid
 2026-11-10 18:00  e004 done (8453460_5 exit 0, 82.42 GPU-h, replayed data): best LR 1.2e-3 all rows, val@2048 softmax 3.431 / ASEntmax 3.448 / Stieltjes q3d2 3.486, ArXiv 16k 4.370 / 3.707 / 3.981 (Stieltjes 6e-4: 3.792) | e003 failed: segment 6 (8453460_8-10,12-14) planned exit 4, held arrays 8453461-64, 8453466-69 scancelled per decision (a), 185.39 GPU-h | RNG fix aac000a (ckpt.pt stores batch-sampler CPU+CUDA RNG): tests/test_resume_rng.py tier 1 softmax/stieltjes/entmax 803/803 batches identical, losses bit-equal; tier 2 smoke 8496354->8496355 wall-stop + resume reproduces uninterrupted 8496164 losses exactly | e005 submitted 8496386-8496391 (125M x6 rerun, fw25B, tag 125m_fw25_rng, 6 x 4:15 afterany, est 78-92 GPU-h) | after e005: pause for user decision on 350M
 2026-11-10 22:05  e005 segment 1 (8496386_0-5) ended: all 6 exit 4 = planned wall-limit checkpoint, ckpt.pt written, fineweb25B confirmed; iters softmax 2194, ASEntmax 1377, Stieltjes 1004 per segment (segment allotment suffices) | val@1000 lr1.2e-3 softmax 3.921 / ASEntmax 3.907 / Stieltjes 3.913 | 8496386 archived | segment 2 (8496387) running, resumed | nothing new submitted (after e005: pause for user decision on 350M)
 2026-11-11 01:45  e005 segment 2 (8496387_0-5) ended: all 6 exit 4 = planned wall-limit checkpoint, RNG restore logged in every run | stop iters softmax 4335/4337, ASEntmax 2766/2713, Stieltjes 2012/2011 | val softmax 1.2e-3 3.412 @4250 (e004 replayed final 3.431), ASEntmax 3.532 @2750, Stieltjes 3.541 @2000 | 8496387 archived | segment 3 (8496388) running | nothing new submitted (after e005: pause for user decision on 350M)
+2026-11-11 02:45  e005 softmax_xs done (8496388_0/_1 exit 0, 17.3 GPU-h for both softmax runs): lr 1.2e-3 val@2048 3.403 (e004 replayed 3.431), FineWeb 16k 3.415, ArXiv 2k/16k 3.951/4.269, PG-19 16k 3.843; lr 6e-4 3.472 | figure figures/e005_lengths.png | 8496388_2-5 (ASEntmax, Stieltjes) running, 8496388 stays in jobs | nothing new submitted (after e005: pause for user decision on 350M)
