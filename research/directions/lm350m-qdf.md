@@ -4,14 +4,12 @@ title: Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M pa
   but not 125M. Is 125M a fluke? (trying ~350M params)
 project: nanogpt
 cluster: ascend
-status: active
+status: paused
 wake: on_jobs
 budget_gpu_hours: 900
-spent_gpu_hours: 540.32
+spent_gpu_hours: 545.62
 max_jobs_in_flight: 16
-jobs:
-- 8496390
-- 8496391
+jobs: []
 jobs_archived:
 - 8353512
 - 8365020
@@ -52,9 +50,11 @@ jobs_archived:
 - 8496387
 - 8496388
 - 8496389
-last_wake: '2026-11-11T10:05:00-05:00'
+- 8496390
+- 8496391
+last_wake: '2026-11-11T10:00:01-05:00'
 next_id: 6
-wakes: 19
+wakes: 20
 ---
 # Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M params, but not 125M. Is 125M a fluke? (trying ~350M params)
 
@@ -154,3 +154,4 @@ One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobid
 2026-11-11 08:00  e005 asentmax_zi_xs done (8496389_2/_3 exit 0, 27.4 GPU-h for both runs): lr 1.2e-3 val@2048 3.405 (softmax 3.403, tie; e004 replayed 3.448), FineWeb 16k 3.415, ArXiv 2k/16k 3.901/3.604 (softmax 4.269), PG-19 16k 3.712; lr 6e-4 3.459 | 8496389_0/_1 softmax no-op | figure e005_lengths regenerated | Stieltjes (8496389_4/_5) in segment 4, ends in 8496390 | 8496389 stays in jobs | nothing new submitted (after e005: pause for user decision on 350M)
 2026-11-11 09:45  e005 segment 4 Stieltjes (8496389_4/_5) ended: both exit 4 = planned wall-limit checkpoint @4019/4028, 7.7 GPU-h; 8496390_2/_3 ASEntmax no-op exit 0 | 8496389 archived | segment 5 (8496390_4/_5) resumed, RNG restore logged, ~2.9 h + evals left | matched-iter val @4000 vs softmax: Stieltjes q3d2 -0.018 (1.2e-3) / -0.033 (6e-4), ASEntmax +0.059 / +0.044 (provisional) | nothing new submitted (after e005: pause for user decision on 350M)
 2026-11-11 10:05  trigger 8496390_2/_3 = ASEntmax no-op exit 0 (10 s each, TRAIN_DONE + evals present, already recorded 09:45), ~0 GPU-h | segment 5 Stieltjes (8496390_4/_5) running 40 min, resumed @4010/4020, fineweb25B confirmed | 8496390 stays in jobs, 8496391_4-5 pending | nothing new submitted (after e005: pause for user decision on 350M)
+2026-11-11 12:55  e005 done (8496390_4/_5 exit 0; 8496391_4/_5 no-op exit 0; e005 82.22 GPU-h, prediction 8/9 hit): 125M unique data, lr 1.2e-3 best for all rows, val@2048 Stieltjes q3d2 3.396 / softmax 3.403 / ASEntmax 3.405 (three-way tie, spread 0.009 < +-0.05 bounce, seed 1337); ArXiv 16k 3.652 / 4.269 / 3.604; PG-19 16k 3.756 / 3.843 / 3.712; FineWeb 16k 3.455 / 3.415 / 3.415. The 125M Stieltjes train-length deficit (e004 +0.055, original stage +0.073) was replay/repeated data; ASEntmax keeps a ~0.045 lead over Stieltjes on every 16k eval | figure figures/e005_lengths.png | 8496390, 8496391 archived, no jobs in flight | paused: user decision on 350M (planned stop after e005). Remaining ~348 GPU-h. 350M costs from e001 tok/s (32.4k/21.0k/15.0k): softmax 21.4, ASEntmax 33.1, Stieltjes 46.3 GPU-h per run + ~4 % segment/eval overhead. (a) 350M 8 runs (3 LRs, minus ASEntmax 1.2e-3 which diverged twice under replay) ~280 GPU-h; (b) 350M 2 LRs per row (softmax and Stieltjes 6e-4/1.2e-3, ASEntmax 3e-4/6e-4) ~210 GPU-h; (c) 125M seeds 1 and 2 at lr 1.2e-3 for the 3 rows (backlog 4, triggered by the 0.009 spread) ~82 GPU-h; (d) (b)+(c) together ~292 GPU-h, fits with ~55 margin, 350M Stieltjes ~4 days wall incl. queue; (e) (a)+(c) ~362 GPU-h, needs ~+20 budget. Recommend (d): seeds settle whether the 125M tie is real, 2 LRs bracket the 125M optimum at 350M.
