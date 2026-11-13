@@ -4,21 +4,16 @@ title: Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M pa
   but not 125M. Is 125M a fluke? (trying ~350M params)
 project: nanogpt
 cluster: ascend
-status: active
+status: paused
 wake: on_jobs
 budget_gpu_hours: 900
-spent_gpu_hours: 591.2
+spent_gpu_hours: 698.15
 max_jobs_in_flight: 16
 model: claude-fable-5-2
 effort: high
 max_turns: 120
 timeout_minutes: 60
-jobs:
-- 8525684
-- 8525685
-- 8525686
-- 8525687
-- 8525688
+jobs: []
 jobs_archived:
 - 8353512
 - 8365020
@@ -65,9 +60,14 @@ jobs_archived:
 - 8524597
 - 8525287
 - 8525683
-last_wake: '2026-11-12T01:30:00-05:00'
+- 8525684
+- 8525685
+- 8525686
+- 8525687
+- 8525688
+last_wake: '2026-11-13T00:30:00-05:00'
 next_id: 9
-wakes: 22
+wakes: 36
 ---
 # Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M params, but not 125M. Is 125M a fluke? (trying ~350M params)
 
@@ -171,3 +171,4 @@ One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobid
 2026-11-11 16:16  user decision: 125M follow-ups before any 350M run (user, 2026-11-11). All on the fixed train.py (aac000a or later), fineweb25B 1 epoch, config lm_stieltjes_125m.py, same four evals, results under $LM_RESULTS/125m_fw25_rng/<row>/lr<lr>[_s<seed>]/, same chain pattern as e005. This overrides the brief's '3 lr, 1 seed per variant' line. (a) Seeds 1 and 2 at lr 1.2e-3 for softmax_xs, asentmax_zi_xs, wstieltjes_q3_d2_xs (6 runs, ~82 GPU-h). (b) lr 2.4e-3, seed 1337, for the same three rows (3 runs, ~43 GPU-h); the best LR was the top of the grid for every row in e005, so this brackets it; keep the DIVERGED guard. (c) Two Stieltjes variants at lr 1.2e-3, seed 1337: aswstieltjes_q3_d2_zi_xs (adaptive scale, like-for-like with ASEntmax; its learnable-qd result had 5.9x replay; ~24 GPU-h) and wstieltjes_q3_d1.5_xs (narrower window, untested at 125M; ~20 GPU-h). Both row names already parse in osc/rows.sh; probe/smoke each on debug-nextgen first. Total ~170 GPU-h of ~354 left. If max_jobs_in_flight binds, order is (a), (c), (b). One record per item with predictions before submission. Report seeds as mean and range per row and say whether the ASEntmax-minus-Stieltjes 16k gap (0.04-0.05 in e005) is outside the seed range. Do not submit 350M; pause for a user decision when a, b, c are scored.
 2026-11-11 17:00  user decision 16:16 executed: e006 (seeds 1, 2 at lr 1.2e-3 x 3 rows), e007 (lr 2.4e-3 x 3 rows), e008 (aswstieltjes_q3_d2_zi_xs, wstieltjes_q3_d1.5_xs at 1.2e-3) submitted as one chain 8525683-8525688 (6 x 4:15 segment arrays, 11 tasks, manifest order a, c, b) at 9e146ae, 125M fineweb25B 1 epoch, tag 125m_fw25_rng | smoke debug-nextgen 8524596_0-3 ok (both new rows, seed path, lr 2.4e-3 path; fineweb25B printed; tok/s 37.5k aswstieltjes, 38.3k d1.5, as e005) | residual probe 8524597, 8525287: num_iter 15 == 30 in every cell; beyond train length the floor is 1.8e-4 for both new rows and 1.2e-4 for the accepted e005 q3/d2 row at 16k (over the 1e-4 rule, not fixable by num_iter 30), kept NUM_ITER=15 | smoke cost 0.46 GPU-h | est 82.1 + 41.0 + 37.8 = 161 GPU-h of ~354 left | no 350M submitted; after e006-e008 are scored: pause for user decision
 2026-11-12 01:30  e006/e007/e008 segment 1 (8525683_0-10, queued 4.2 h, ran 21:10 -> 01:04) ended: all 11 exit 4 = planned wall-limit checkpoint, ckpt.pt written, fineweb25B + 2.5e9-token guard confirmed, no divergence at lr 2.4e-3, 42.2 GPU-h | stop iters softmax 2134-2159, ASEntmax 1370-1385, Stieltjes 987-1007 (allotted 4/5/6 segments suffice) | periodic val (12 iters, +-0.04 across seeds): softmax 2.4e-3 = 1.2e-3 from iter 750 (3.623 both @2000), ASEntmax 2.4e-3 +0.02 @1000, Stieltjes 2.4e-3 +0.06 @1000, aswstieltjes level with fixed-window @1000 (3.915 vs 3.913), d1.5 +0.07 @1000; seeds not readable yet | 8525683 archived | segment 2 (8525684_0-10) running since 01:04, resumed by iter continuity, RNG-restore line to be checked at segment end (stdout buffered) | nothing new submitted (after e006-e008 are scored: pause for user decision; no 350M)
+2026-11-13 00:30  e006, e007, e008 done (chain 8525684-8525688 finished 2026-11-12 20:00; 152.05 GPU-h for the chain: e006 82.64 incl. smoke, e007 32.11, e008 37.75; all resumes logged `restored RNG state`, fineweb25B confirmed) | e006 seeds {1337, 1, 2} at lr 1.2e-3, mean (range): val@2048 softmax 3.399 (0.007) / ASEntmax 3.399 (0.028) / Stieltjes q3d2 3.394 (0.005): tie holds; ArXiv 16k 4.256 (0.068) / 3.667 (0.136) / 3.663 (0.022); PG-19 16k 3.829 (0.029) / 3.728 (0.041) / 3.737 (0.038); FineWeb 16k 3.411 (0.006) / 3.516 (0.230) / 3.469 (0.073). The ASEntmax-minus-Stieltjes 16k gap (0.04-0.05 in e005) is NOT outside the seed range on any eval: seed 1337 was ASEntmax's best seed, mean gaps Stieltjes-minus-ASEntmax -0.047 / -0.004 / +0.008 (FineWeb / ArXiv / PG-19); softmax is 0.54-0.66 worse than both sparse rows at ArXiv 16k in every seed; prediction 7/10 | e007 lr 2.4e-3 (seed 1337): softmax val@2048 3.395 (1.2e-3: 3.403; best LR moves to 2.4e-3 by 0.008 = its seed range, ArXiv 16k 4.144, optimum not bracketed from above); Stieltjes q3d2 3.414 (worse, bracketed) and its ArXiv 16k collapses to 4.503 (1.2e-3: 3.652) with a narrower support; asentmax_zi_xs 2.4e-3 DIVERGED at iter 1690 (8525684_9 exit 3, NaN with no loss spike, 4.74 GPU-h; 8525685_9/8525686_9/8525687_9 exit 3 = DIVERGED guard; dropped, no retry as pre-registered) | e008 (seed 1337, 1.2e-3): aswstieltjes_q3_d2_zi_xs val@2048 3.410, FineWeb/ArXiv/PG-19 16k 3.440 / 3.619 / 3.720 (ArXiv -0.033 vs fixed window, outside its seed range; inside ASEntmax's seed range; single seed); wstieltjes_q3_d1.5_xs 3.433, 3.509 / 3.838 / 3.803: worse everywhere, dropped | figure figures/e006_e008_lengths.png | all ids archived, no jobs in flight, nothing submitted | paused: user decision (planned stop after e006-e008; no 350M without it). Remaining 201.85 GPU-h. 350M per run (e001 tok/s, e003 softmax measured 22.3): softmax 22.3, ASEntmax 34.4, Stieltjes 48.2 GPU-h. (a) 350M, 5 runs: softmax_xs and wstieltjes_q3_d2_xs at {6e-4, 1.2e-3}, asentmax_zi_xs at 6e-4 only (1.2e-3 went NaN twice at 350M, 2.4e-3 at 125M), ~175 GPU-h, 27 margin, ~3-4 days wall; (b) (a) plus asentmax_zi_xs 3e-4 so every row has 2 LRs, ~210 GPU-h, needs budget +~30; (c) close 125M first: softmax 4.8e-3 (8.7) + softmax seeds 1, 2 at 2.4e-3 (17.3) + aswstieltjes seeds 1, 2 (38.2) + Stieltjes 2.4e-3 at seed 1 to confirm the ArXiv collapse (18.7) = ~83 GPU-h, after which 350M needs a budget raise; (d) raise the budget to ~1050 and run (b) + (c), ~293 GPU-h; (e) stop here and write up 125M. Sub-choice for any 350M stage: softmax grid {6e-4, 1.2e-3} (as planned) or {1.2e-3, 2.4e-3} (125M softmax now prefers 2.4e-3). Recommend (a): the 125M question is answered (three-way tie at train length, no ordering between the sparse rows, softmax far behind on long documents), and 350M is the direction's goal; two LRs for Stieltjes because e007 shows its long-range result is LR-sensitive.

@@ -811,3 +811,6 @@ L=8192: val loss 3.7103 over 128 seqs (39s); first/last bucket 3.838/3.694
 L=16384: val loss 3.7118 over 128 seqs (150s); first/last bucket 3.788/3.728
 wrote /fs/scratch/PAS2836/jacktaylor/nanogpt_results/lm1012/125m_fw25_rng/asentmax_zi_xs/lr1.2e-3
 [11-11 07:36:44] pg19 exit 0
+[11-11 09:20:50] run_lm asentmax_zi_xs lr=1.2e-3 seed=1337 num_iter=30 host=a0138.ten.osc.edu job=8513825 commit=aac000a
+NVIDIA A100-PCIE-40GB, 40960 MiB
+[11-11 09:20:53] data DATA_SRC=/fs/scratch/PAS2836/jacktaylor/nanogpt_data/fineweb25B train_tokens=2500000000 min=2490000000
