@@ -4,7 +4,7 @@ title: Does the long-document loss advantage show up as retrieval at length and 
   LAMBADA? (needle tasks and lm-eval on the existing 125M checkpoints)
 project: nanogpt
 cluster: ascend
-status: done
+status: active
 wake: on_jobs
 budget_gpu_hours: 50
 spent_gpu_hours: 3.48
@@ -24,11 +24,11 @@ jobs_archived:
 - 8368483
 - 8453350
 - 8453572
-last_wake: '2026-11-09T18:50:00-05:00'
+last_wake: '2026-11-09T18:40:02-05:00'
 next_id: 6
 model: null
 effort: null
-wakes: 2
+wakes: 3
 ---
 # Does the long-document loss advantage show up as retrieval at length and on LAMBADA?
 
@@ -126,3 +126,4 @@ retrieval even at 2k, in which case the task is uninformative at this size and b
   exceed between-map gaps on one seed; no ASEntmax vs Stieltjes ranking. Predictions 7/10. Figures niah_vs_length.png,
   niah_depth.png. e006 gate (any row > 50 % at 16k) fails (max 6.0 %): backlog empty, status done. Retrieval at
   length needs the 350M checkpoints (lm350m-qdf); eval_niah.py runs on them unchanged. Spent 3.48 / 50 GPU-h.
+2026-11-15 12:44  user decision: (reopened 2026-11-15, user) Rerun e001's LAMBADA eval on the clean 125M checkpoints (no RNG replay) at $LM_RESULTS/125m_fw25_rng/<row>/<lr dir>/ckpt.pt, all 16 runs that have TRAIN_DONE: softmax_xs {lr1.2e-3, lr1.2e-3_s1, lr1.2e-3_s2, lr2.4e-3, lr6e-4}; asentmax_zi_xs {lr1.2e-3, lr1.2e-3_s1, lr1.2e-3_s2, lr6e-4} (lr2.4e-3 diverged: skip); wstieltjes_q3_d2_xs {lr1.2e-3, lr1.2e-3_s1, lr1.2e-3_s2, lr2.4e-3, lr6e-4}; aswstieltjes_q3_d2_zi_xs lr1.2e-3; wstieltjes_q3_d1.5_xs lr1.2e-3. Same script and harness as e001 (eval_downstream.py, lm-eval lambada_openai, 5153 items; HellaSwag stays, it is free). osc/eval_lmeval.sbatch hard-codes the 125m tag and run list: parameterise both. Metrics per run: last-word accuracy and last-word perplexity, each with SE. Primary table: softmax / ASEntmax / wStieltjes q3/d2 / AS-wStieltjes q3/d2 at lr 1.2e-3 seed 1337, plus 3-seed mean and range for the first three; then the remaining runs. debug-nextgen, about 0.6 GPU-h (176 s per checkpoint measured in e001); smoke one checkpoint first. Copy each lmeval.json to results/lm1012/125m_fw25_rng/<row>/<lr dir>/ on this branch; figure figures/lambada_125m_clean.png (accuracy and perplexity per row, seeds as points). Predictions already given to the user, score them: accuracy within 1 point across the four seed-1337 lr 1.2e-3 rows (70 %); every run in 21-25 % (75 %). Then set status done again.

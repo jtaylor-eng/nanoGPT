@@ -1,0 +1,17 @@
+# e006: clean 125M runs (tag 125m_fw25_rng, trained at 9e146ae, RNG-replay fix), all with TRAIN_DONE. Primary first.
+softmax_xs/lr1.2e-3
+asentmax_zi_xs/lr1.2e-3
+wstieltjes_q3_d2_xs/lr1.2e-3
+aswstieltjes_q3_d2_zi_xs/lr1.2e-3
+softmax_xs/lr1.2e-3_s1
+softmax_xs/lr1.2e-3_s2
+asentmax_zi_xs/lr1.2e-3_s1
+asentmax_zi_xs/lr1.2e-3_s2
+wstieltjes_q3_d2_xs/lr1.2e-3_s1
+wstieltjes_q3_d2_xs/lr1.2e-3_s2
+softmax_xs/lr2.4e-3
+softmax_xs/lr6e-4
+asentmax_zi_xs/lr6e-4
+wstieltjes_q3_d2_xs/lr2.4e-3
+wstieltjes_q3_d2_xs/lr6e-4
+wstieltjes_q3_d1.5_xs/lr1.2e-3
