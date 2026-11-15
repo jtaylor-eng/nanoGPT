@@ -9,12 +9,12 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 15
-spent_gpu_hours: 0
+spent_gpu_hours: 0.29
 max_jobs_in_flight: 4
-jobs: [8603546]
-jobs_archived: []
-last_wake: null
-next_id: 1
+jobs: [8603935, 8603936]
+jobs_archived: [8603546]
+last_wake: 2026-11-15T13:30:00
+next_id: 2
 model: claude-fable-5-2
 effort: high
 max_turns: 120
@@ -134,3 +134,4 @@ precision that fails the tolerance), or changing num_iter / q / d defaults of th
 
 ## Log
 One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobids> | eNNN done <metric> | paused: <reason>`
+2026-11-15 13:30  e001 submitted 8603935 (ks_time: micro + 125M step profile) 8603936 (ks_gate: attn_paths, real-input and random equivalence, e2e eval), debug-nextgen, sha 4773794 | smoke 8603546 cancelled after 17 min (0.29 GPU-h): all stages passed except bench micro (Triton backward needs a CUDA context in the autograd thread; fixed in the harness) | no kernel change yet | desktop venv is torch 2.10 / triton 3.6, not the OSC 2.5.1 / 3.1.0: gate verdicts are taken on the A100 only
