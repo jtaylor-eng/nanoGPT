@@ -78,6 +78,81 @@ def _stieltjes_fused(q, k, v, sm_scale, sq, num_iter, window, slopes):
     return _triton_stieltjes(q.contiguous(), k.contiguous(), v.contiguous(), causal=True, sm_scale=sm_scale,
                              stieltjes_q=sq, num_iter=num_iter, window=window, alibi_slopes=slopes)
 
+# --- adaptive-temperature softmax (arXiv 2410.01104, Fig. 7 "Our implementation of adaptive temperature in JAX") ---
+ADATEMP_POLY = (-0.037, 0.481, -2.3, 4.917, -1.791)   # poly_fit, highest degree first (jnp.polyval); beta = 1 / theta
+ADATEMP_CHUNK = 1 << 26                               # entries of the transient score block in _RowEntropy (256 MB fp32)
+
+
+def adatemp_beta(entropy):
+    """beta = where(H > 0.5, max(polyval(poly_fit, H), 1), 1): never raises the entropy, leaves low-entropy rows alone.
+    With these coefficients beta > 1 only for 0.87 < H < 5.95 nats (peak 2.39 at H = 4.1)."""
+    p = torch.zeros_like(entropy)
+    for c in ADATEMP_POLY:
+        p = p * entropy + c
+    return torch.where(entropy > 0.5, p.clamp(min=1.0), torch.ones_like(entropy))
+
+
+def adaptive_temperature_softmax(scores, causal):
+    """The paper's function on materialised scores (..., T, T), fp32: softmax(scores * beta(H(softmax(scores)))).
+    The gradient flows through beta (the paper's code has no stop_gradient). scores must be finite (unmasked): the
+    mask is applied after the multiplication, because d(-inf * beta)/d beta = -inf turns the backward into NaN."""
+    p = F.softmax(scores.masked_fill(~causal, float('-inf')), dim=-1)
+    entropy = torch.sum(-p * torch.log(p + 1e-9), dim=-1, keepdim=True)
+    return F.softmax((scores * adatemp_beta(entropy)).masked_fill(~causal, float('-inf')), dim=-1)
+
+
+class _RowEntropy(torch.autograd.Function):
+    """H_i = -sum_j p_ij log(p_ij + 1e-9), p = causal softmax(q k^T * scale), for q, k (B, H, T, D) -> (B, H, T) fp32.
+    No T x T map is kept: query rows go in chunks of ADATEMP_CHUNK entries (keys j < chunk end only) and the backward
+    recomputes each chunk, so the extra memory is one transient block (the paper's App. 'streamed' algorithm solves the
+    same problem inside a flash kernel). Analytic backward: dH/ds = p * (g - sum_j p g), g = -(log(p + eps) + p / (p + eps))."""
+
+    @staticmethod
+    def _p(q, k, r0, r1, scale):
+        s = (q[:, :, r0:r1] @ k[:, :, :r1].transpose(-2, -1)) * scale
+        future = torch.arange(r1, device=q.device)[None, :] > torch.arange(r0, r1, device=q.device)[:, None]
+        return F.softmax(s.masked_fill_(future, float('-inf')), dim=-1)
+
+    @staticmethod
+    def _rows(q):
+        B, H, T, _ = q.shape
+        return max(1, ADATEMP_CHUNK // (B * H * T))
+
+    @staticmethod
+    def forward(ctx, q, k, scale):
+        ctx.save_for_backward(q, k); ctx.scale = scale
+        T = q.shape[2]
+        with torch.autocast(q.device.type, enabled=False):
+            qf, kf = q.float(), k.float()
+            ent = qf.new_empty(q.shape[:3])
+            for r0 in range(0, T, _RowEntropy._rows(q)):
+                r1 = min(T, r0 + _RowEntropy._rows(q))
+                p = _RowEntropy._p(qf, kf, r0, r1, scale)
+                ent[:, :, r0:r1] = -(p * torch.log(p + 1e-9)).sum(-1)
+        return ent
+
+    @staticmethod
+    def backward(ctx, g_ent):
+        q, k = ctx.saved_tensors
+        T = q.shape[2]
+        with torch.autocast(q.device.type, enabled=False):
+            qf, kf = q.float(), k.float()
+            gq, gk = torch.zeros_like(qf), torch.zeros_like(kf)
+            for r0 in range(0, T, _RowEntropy._rows(q)):
+                r1 = min(T, r0 + _RowEntropy._rows(q))
+                p = _RowEntropy._p(qf, kf, r0, r1, ctx.scale)
+                g = -(torch.log(p + 1e-9) + p / (p + 1e-9))
+                ds = p * (g - (p * g).sum(-1, keepdim=True)) * (g_ent[:, :, r0:r1, None].float() * ctx.scale)
+                gq[:, :, r0:r1] = ds @ kf[:, :, :r1]
+                gk[:, :, :r1] += ds.transpose(-2, -1) @ qf[:, :, r0:r1]
+        return gq.to(q.dtype), gk.to(k.dtype), None
+
+
+@torch.compiler.disable
+def _row_entropy(q, k, scale):
+    return _RowEntropy.apply(q, k, scale)
+
+
 class LayerNorm(nn.Module):
     """ LayerNorm but with an optional bias. PyTorch doesn't support simply bias=False """
 
@@ -123,10 +198,17 @@ class CausalSelfAttention(nn.Module):
         self.stieltjes_impl = config.stieltjes_impl
         # adaptive length scale on the NoPE heads (all heads if no NAPE)
         self.attn_scale = config.attn_scale
-        if self.attn_scale not in ('none', 'as'):
+        if self.attn_scale not in ('none', 'as', 'ssmax', 'adatemp'):
             raise ValueError(f"attn_scale {self.attn_scale!r}")
-        if self.attn_scale == 'as':
+        if self.attn_scale != 'none':
             self.n_scaled = config.n_head - config.n_head // 2 if self.pos_emb == 'nape' else config.n_head
+        if self.attn_scale == 'ssmax':
+            # SSMax (arXiv 2501.19399) = asentmax attn_scale_type='nakanishi': NoPE-head queries times s_h * log(pos+2),
+            # s_h ~ N(1, 0.01) learnable per head. 1-D so configure_optimizers does not weight-decay it.
+            self.ssmax_s = nn.Parameter(torch.empty(self.n_scaled).normal_(1.0, 0.01))
+        if self.attn_scale == 'adatemp' and self.attn_type != 'softmax':
+            raise ValueError("attn_scale 'adatemp' (adaptive-temperature softmax) needs attn_type 'softmax'")
+        if self.attn_scale == 'as':
             self.scale_beta = nn.Linear(config.n_embd, self.n_scaled, bias=True)
             self.scale_gamma = nn.Linear(config.n_embd, self.n_scaled, bias=True)
             self.attn_scale_zero_init = float(config.attn_scale_zero_init)
@@ -155,9 +237,19 @@ class CausalSelfAttention(nn.Module):
             self.scale_beta.weight.zero_(); self.scale_gamma.weight.zero_(); self.scale_gamma.bias.zero_()
             self.scale_beta.bias.fill_(math.log(math.expm1(eps)))
 
-    def _apply_scale(self, q, x):
+    def _apply_scale(self, q, x, k=None):
         B, H, T, D = q.shape
+        if self.attn_scale == 'adatemp':
+            # adaptive-temperature softmax on the NoPE heads: their logits are q.k / sqrt(D) with no bias, so
+            # softmax(logits * beta) is the ordinary softmax path with the query times beta (per query, from the
+            # entropy of the unscaled row). ALiBi heads stay plain softmax.
+            qs = q[:, H - self.n_scaled:]
+            ent = _row_entropy(qs, k[:, H - self.n_scaled:], 1.0 / math.sqrt(self.head_dim))
+            return torch.cat((q[:, :H - self.n_scaled], qs * adatemp_beta(ent).unsqueeze(-1).to(q.dtype)), dim=1)
         log_pos = torch.log(torch.arange(2, T + 2, device=q.device, dtype=torch.float32)).view(1, 1, T, 1)
+        if self.attn_scale == 'ssmax':
+            scaler = (self.ssmax_s.float().view(1, -1, 1, 1) * log_pos).to(q.dtype)
+            return torch.cat((q[:, :H - self.n_scaled], q[:, H - self.n_scaled:] * scaler), dim=1)
         beta = F.softplus(self.scale_beta(x).float()).view(B, T, self.n_scaled, 1).transpose(1, 2)
         gamma = 2.0 * torch.tanh(self.scale_gamma(x).float()).view(B, T, self.n_scaled, 1).transpose(1, 2)
         scaler = (1.0 + beta * log_pos ** gamma).to(q.dtype)
@@ -182,6 +274,14 @@ class CausalSelfAttention(nn.Module):
     def _probs_head(self, q, k, h):
         # q, k: (B, 1, T, D) for head h; same math as _probs but with that head's slope only
         T = q.shape[2]
+        if self.attn_scale == 'adatemp' and h >= self.n_head - self.n_scaled:
+            # materialised reference of the training path (forward leaves q unscaled on this path)
+            causal = torch.ones(T, T, dtype=torch.bool, device=q.device).tril()
+            if self.nope_cap > 0:
+                causal = causal & torch.ones(T, T, dtype=torch.bool, device=q.device).triu(-(self.nope_cap - 1))
+            with torch.autocast(q.device.type, enabled=False):
+                s = (q.float() @ k.float().transpose(-2, -1)) * (1.0 / math.sqrt(self.head_dim))
+                return adaptive_temperature_softmax(s, causal)
         s = (q.float() @ k.float().transpose(-2, -1)) * (1.0 / math.sqrt(self.head_dim))
         if self.pos_emb == 'nape':
             s = s + nape_bias(self.nape_slopes[h:h + 1], T, q.device, torch.float32)
@@ -219,12 +319,13 @@ class CausalSelfAttention(nn.Module):
         k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
         q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
         v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-        if self.attn_scale == 'as':
-            q = self._apply_scale(q, x)
+        eager = self.collect_stats or self.force_per_head
+        if self.attn_scale in ('as', 'ssmax') or (self.attn_scale == 'adatemp' and not eager):
+            q = self._apply_scale(q, x, k)
         if self.capture_qk:
             self.last_qk = (q.detach(), k.detach())
 
-        if self.collect_stats or self.force_per_head:
+        if eager:
             # materialised eager path, one head at a time (a 16k x 16k fp32 map is 1 GB per head)
             ys, stats = [], []
             for h in range(self.n_head):
@@ -314,7 +415,8 @@ class GPTConfig:
     stieltjes_window: float = 0.0   # d; 0 = dense
     stieltjes_num_iter: int = 30
     stieltjes_impl: str = 'triton'  # 'triton' | 'eager'
-    attn_scale: str = 'none'        # 'none' | 'as' (adapt-softplus-tanh on NoPE heads)
+    attn_scale: str = 'none'        # 'none' | 'as' (adapt-softplus-tanh on NoPE heads) | 'ssmax' (s_h log(pos+2), NoPE heads)
+                                    # | 'adatemp' (adaptive-temperature softmax, arXiv 2410.01104, NoPE heads)
     attn_scale_zero_init: float = 0.0  # >0: zero-init the AS projections, scaler = 1 + eps at step 0
 
 class GPT(nn.Module):

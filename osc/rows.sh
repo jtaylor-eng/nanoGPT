@@ -1,6 +1,8 @@
 # row name -> train.py attention overrides (NAPE everywhere via config/lm_stieltjes.py)
 # Grammar:  <base>[_zi][_xs]
-#   base: softmax | softmax_as | entmax | asentmax | [as][w]stieltjes[_q<Q>][_d<D>]
+#   base: softmax | softmax_as | ssmax | adatemp | entmax | asentmax | [as][w]stieltjes[_q<Q>][_d<D>]
+#   ssmax = softmax with the SSMax temperature on the NoPE heads (attn_scale=ssmax: q * s_h * log(pos+2))
+#   adatemp = adaptive-temperature softmax (arXiv 2410.01104) on the NoPE heads (attn_scale=adatemp)
 #   as  = adaptive scale (attn_scale=as);  _zi = zero-init the scale (eps 0.05; all AS rows so far use it)
 #   w   = windowed Stieltjes; _q<Q> default 4; _d<D> default 2 for windowed, dense otherwise
 #   _xs = exponential (original ALiBi) NAPE slopes instead of the synthetic-task 1/h slopes
@@ -11,6 +13,8 @@ row_args() {
   case $name in
     softmax)     out="--attn_type=softmax" ;;
     softmax_as)  out="--attn_type=softmax --attn_scale=as" ;;
+    ssmax)       out="--attn_type=softmax --attn_scale=ssmax" ;;
+    adatemp)     out="--attn_type=softmax --attn_scale=adatemp" ;;
     entmax)      out="--attn_type=entmax --entmax_alpha=1.5" ;;
     asentmax)    out="--attn_type=entmax --entmax_alpha=1.5 --attn_scale=as" ;;
     *)

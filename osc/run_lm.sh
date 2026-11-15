@@ -14,6 +14,8 @@ ROOT=$LM_RESULTS; [ "$CFG" != "lm_stieltjes.py" ] && ROOT=$LM_RESULTS/${CFG#lm_s
 [ -n "${RESULTS_TAG:-}" ] && ROOT=$LM_RESULTS/$RESULTS_TAG   # e.g. 350m_fw25: keeps the fineweb10B results intact
 # 125M: the 40 GB card cannot hold micro-batch 16 at T=2048 for the sparse kernels; halve it and double accum
 [[ $CFG == *125m* ]] && [[ $row == *stieltjes* || $row == *entmax* ]] && EXTRA="--batch_size=8 --gradient_accumulation_steps=32" || EXTRA=""
+# MICRO_BATCH (per manifest line): explicit micro-batch at the same 256 sequences per step (adatemp, from its probe)
+[ -n "${MICRO_BATCH:-}" ] && EXTRA="--batch_size=$MICRO_BATCH --gradient_accumulation_steps=$((256 / MICRO_BATCH))"
 OUT=$ROOT/$row/lr$lr; [ "$seed" != "1337" ] && OUT=${OUT}_s$seed
 mkdir -p $OUT; LOG=$OUT/run.log
 [ -f $OUT/DIVERGED ] && { echo "[$(date '+%m-%d %H:%M:%S')] DIVERGED marker present; not resuming (deterministic NaN)" | tee -a $LOG; exit 3; }
