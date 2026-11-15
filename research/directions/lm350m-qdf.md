@@ -7,15 +7,20 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 900
-spent_gpu_hours: 698.15
+spent_gpu_hours: 698.48
 max_jobs_in_flight: 16
 model: claude-fable-5-2
 effort: high
 max_turns: 120
 timeout_minutes: 60
 jobs:
-- 8604171
-- 8604172
+- 8604302
+- 8604303
+- 8604304
+- 8604305
+- 8604306
+- 8604307
+- 8604308
 jobs_archived:
 - 8353512
 - 8365020
@@ -69,7 +74,9 @@ jobs_archived:
 - 8525688
 - 8604163
 - 8604164
-last_wake: '2026-11-15T13:45:00-05:00'
+- 8604171
+- 8604172
+last_wake: '2026-11-15T14:00:00-05:00'
 next_id: 11
 wakes: 37
 ---
@@ -179,3 +186,4 @@ One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobid
 2026-11-15 12:44  user decision: (extension 2026-11-15, user) Add two softmax-family rows to the BOTTOM row of figures/e006_e008_lengths.png: 125M, fineweb25B, results tag 125m_fw25_rng, seed 1337, same protocol and RNG fix as e005-e008. (1) SSMax: port row ssmax_xs from direction/pe-ssmax-headsplit (attn_scale=ssmax in model.py, the rows.sh entry, tests/test_split_ssmax.py; introduced at 2bf7b37; port the SSMax part only, not the a2/a4 head split) and train at lr 1.2e-3 and 2.4e-3 (8.95 GPU-h per run measured there). (2) Adaptive-temperature softmax, arXiv 2410.01104 (https://arxiv.org/pdf/2410.01104; local copy ~/Desktop/research/Stieltjes/context/adaptive_temp_softmax.pdf and context/adaptive_temp_softmax_latex/; a torch port of the paper's function is in ~/Desktop/research/Stieltjes/submodules/CLRS_Eval/clrs_eval/attn.py): TRAIN with the mechanism in the loop (user chose training over inference-only), read the paper for the implementation rather than relying on the port alone, apply it to the NoPE heads only (like SSMax and the AS rows; ALiBi heads plain softmax), add the row to rows.sh and model.py together with a test that the training path matches the materialised eager path (as tests/test_attn_paths.py does). It needs each row's entropy, so SDPA cannot be used, and materialised maps do not fit 40 GB at micro-batch 16: pick the implementation (smaller micro-batch with more accumulation at the same 524,288 tok/step, per-head eager, or a fused kernel) from a measured throughput and memory probe on debug-nextgen BEFORE any training and record the estimate in the record. Train at lr 1.2e-3; add lr 2.4e-3 only if the probe puts one run at <= 15 GPU-h. If one run would exceed 40 GPU-h do not submit it: pause with the probe numbers. Cap for this whole extension: 60 GPU-h. Then regenerate the figure with both new rows in the bottom row (top row unchanged) and report val@2048, FineWeb 16k, ArXiv 2k/16k, PG-19 16k per run. Predictions already given to the user, score them: SSMax lr 1.2e-3 val@2048 within 0.01 of softmax 3.403 (75 %); SSMax ArXiv 16k in 3.95-4.20 (65 %). The 350M decision (options a-e) stays open: pause for it again when this extension is scored.
 2026-11-15 13:45  extension 2026-11-15 started: ssmax row ported from pe-ssmax-headsplit 2bf7b37 (SSMax only) and adatemp row implemented (adaptive-temperature softmax, arXiv 2410.01104 Fig. 7 function, NoPE heads only, gradient through beta; streamed row entropy with analytic backward, no stored T x T map) at fa842c7 | tier 1 (desktop GPU): tests/test_ssmax_adatemp.py ALL OK (old rows bit-identical vs 2240e48; training path == materialised paper function, logits 5e-06, grads 1e-05), tests/test_attn_paths.py ALL OK both slope types | e009 (ssmax_xs 1.2e-3, 2.4e-3) and e010 (adatemp_xs) planned with predictions | tier 2 submitted on debug-nextgen: probe 8604163 (tests on OSC torch, tok/s + peak memory softmax/ssmax/adatemp at micro-batch 16/8, per-head materialised alternative, 16k eval paths) and smoke 8604164_0-1 (ssmax_xs 2.4e-3, adatemp_xs 1.2e-3, 30 iters), both queued behind other directions' debug jobs (2-job QoS cap) | no training submitted yet: the chain (`bash osc/submit_ext.sh` with ADATEMP_MB / ADATEMP_NSEG / ADATEMP_LR24 from the probe) goes in when the probe is read; rule: adatemp lr 2.4e-3 only if one run <= 15 GPU-h, no adatemp run above 40 GPU-h, extension cap 60 GPU-h | 350M decision (options a-e, log 2026-11-13) still open
 2026-11-15 13:50  8604163 / 8604164 scancelled while PENDING (0 GPU-h; debug-nextgen 2-job QoS cap held by other directions' jobs, ~18 queued tasks ahead), archived | same probe and smoke resubmitted on nextgen (25 idle nodes) with `PART=nextgen` at fdd868c: probe 8604171, smoke 8604172_0-1 | nothing else changed
+2026-11-15 14:00  probe 8604171 + smoke 8604172_0-1 done (nextgen, all exit 0, 0.33 GPU-h, archived): tests ALL OK on torch 2.5.1 / triton 3.1.0; tok/s at micro-batch 16: softmax_xs 84.2k (31.4 GB), ssmax_xs 83.0k (31.9 GB, 8.37 h/run), adatemp_xs streamed 35.0k (31.9 GB with expandable_segments, 19.84 h/run; OOM without the allocator flag), streamed micro-batch 8 32.8k (17.6 GB, 21.2 h); per-head materialised 13.2k at micro-batch 2 (52.5 h), OOM at 4; 16k eval paths fit (10.4 GB) | decision by the user's rule: adatemp one run ~20.5 GPU-h is > 15, so lr 2.4e-3 is NOT run; < 40, so lr 1.2e-3 is submitted (streamed, micro-batch 16 x 16) | e009 (ssmax_xs 1.2e-3, 2.4e-3) + e010 (adatemp_xs 1.2e-3) submitted as one chain 8604302-8604308 (7 x 4:15 segment arrays, afterany; ssmax tasks 0-1 in segments 1-4, adatemp task 2 in all 7) at 8d6f00e, 125M fineweb25B 1 epoch, tag 125m_fw25_rng, seed 1337 | est 17.9 + 20.5 = 38.4 GPU-h, extension total ~38.8 of the 60 cap; budget 900, spent 698.48 | next: score segment by segment, then figure e006_e008_lengths (script already draws the new rows) and pause again for the 350M decision (options a-e, log 2026-11-13)
