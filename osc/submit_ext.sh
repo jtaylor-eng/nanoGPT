@@ -16,10 +16,11 @@ export REPO=$(cd "$(dirname "$0")/.." && pwd)
 source $REPO/osc/env.sh
 cd $REPO; [ -z "$(git status --porcelain --untracked-files=no)" ] || { echo "dirty tree"; exit 1; }
 MB=${ADATEMP_MB:-16}
+PART=${PART:-debug-nextgen}   # PART=nextgen when the 2-job debug QoS cap is taken by other directions
 EXP=ALL,REPO=$REPO,DATA_SRC=$SCRATCH/nanogpt_data/fineweb25B,MIN_TRAIN_TOKENS=2490000000,PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 mkdir -p $LM_RESULTS/slurm; cd $LM_RESULTS/slurm
 if [ "${1:-}" = probe ]; then
-  j=$(sbatch --parsable --exclude=a0339 --export=ALL,REPO=$REPO $REPO/osc/probe_adatemp.sbatch)
+  j=$(sbatch --parsable --partition=$PART --exclude=a0339 --export=ALL,REPO=$REPO $REPO/osc/probe_adatemp.sbatch)
   mkdir -p $LM_RESULTS/probe_adatemp; echo "probe $j  commit $(git -C $REPO rev-parse --short HEAD)" | tee $LM_RESULTS/probe_adatemp/jobs.txt
   exit 0
 fi
@@ -28,7 +29,7 @@ if [ "${1:-}" = smoke ]; then
   M=$LM_RESULTS/$TAG/manifest.txt
   printf '%s\n' "$C ssmax_xs 2.4e-3" "MICRO_BATCH=$MB $C adatemp_xs 1.2e-3" > $M
   export SKIP_EVAL=1 TRAIN_EXTRA="--max_iters=30 --lr_decay_iters=30 --eval_interval=15 --eval_iters=2 --final_eval_iters=2 --log_interval=5"
-  j=$(sbatch --parsable --job-name=lm_smoke9 --partition=debug-nextgen --time=0:30:00 --exclude=a0339 --array=0-1 \
+  j=$(sbatch --parsable --job-name=lm_smoke9 --partition=$PART --time=0:30:00 --exclude=a0339 --array=0-1 \
       --export=$EXP,MANIFEST=$M,WALL_LIMIT_S=1500 $REPO/osc/lm_array.sbatch)
   echo "smoke array $j  manifest $M  commit $(git -C $REPO rev-parse --short HEAD)" | tee $LM_RESULTS/$TAG/jobs.txt
   exit 0
