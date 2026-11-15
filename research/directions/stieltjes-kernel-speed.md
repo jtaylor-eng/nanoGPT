@@ -6,7 +6,7 @@ type: direction
 cluster: ascend
 status: active
 wake: on_jobs
-budget_gpu_hours: 100
+budget_gpu_hours: 15
 spent_gpu_hours: 0
 max_jobs_in_flight: 4
 jobs: []
@@ -15,6 +15,8 @@ last_wake: null
 next_id: 1
 model: claude-fable-5-2
 effort: high
+max_turns: 120
+timeout_minutes: 60
 ---
 # How fast can the fused windowed-Stieltjes attention kernel run at 125M / T=2048 on an A100 with unchanged outputs and gradients? (profile, then optimise the Triton kernel)
 
@@ -24,21 +26,108 @@ direction on the next tick when `now`, otherwise only when a listed job finishes
 they feed the GPU-hour accounting). `budget_gpu_hours` is a hard stop. `model`/`effort`/`max_turns`/`timeout_minutes` override the registry defaults for this direction only (null = registry). Optional `max_wakes: N` pauses the direction after N wakes.
 
 ## Goal
-What question this direction answers and what result would settle it.
+Minimise the training step time of the Stieltjes rows with the map itself unchanged. User decision 2026-11-15: no
+fixed target, "as fast as it gets within the budget"; only changes that pass the correctness gate below count.
+
+Measured baselines (direction lm350m-qdf, 125M = 12L x 12H x 768, T=2048, 524,288 tokens per step, micro-batch 16 x
+grad-accum, bf16, torch.compile on, A100 40 GB `nextgen`, median `time ...ms` of the run logs, clean reruns e005-e008):
+
+| row | s/step | GPU-h per 4770-step run |
+|---|---|---|
+| softmax_xs (SDPA + NAPE bias) | 6.36 | 8.7 |
+| asentmax_zi_xs (`stieltjes/adasplash_entmax.py`, entmax_niter 10) | 10.0 | 13.6 |
+| wstieltjes_q3_d2_xs (num_iter 15) | 13.7 | 18.7 |
+| aswstieltjes_q3_d2_zi_xs (num_iter 15) | 14.0 | 19.1 |
+
+Primary metric: s/step of `wstieltjes_q3_d2_xs` at that configuration. Secondary: fwd and bwd kernel time at the
+training shape (B=16, H=12, N=2048, D=64, bf16, causal, NAPE slopes); eval forward throughput at N=16384 must not
+regress. Reference points: ASEntmax 10.0 s/step, softmax 6.36. The 350M Stieltjes runs cost 48 GPU-h each, so every
+10 % here is ~5 GPU-h per 350M run.
 
 ## Theory
-Why it might work. Cite the proposal / paper sections. Note the strongest counter-argument.
+`stieltjes/triton_stieltjes.py` (437 lines): forward = 1 row-max sweep + NUM_ITER Newton sweeps + 1 output sweep over
+K, each recomputing the QK^T tile (17 sweeps at num_iter 15); backward = 3 kernels (delta; dK,dV; dQ), each recomputing
+scores. bf16 tiles are 64x32 (`_pick_blocks`, measured fastest on A100 in asentmax job 7462343). Nothing has been
+profiled at the LM shape: it is not known how the 7.3 s/step over softmax splits between the Newton sweeps, the output
+sweep, the three backward kernels, and non-kernel overhead (`.contiguous()` copies, the `torch.compiler.disable`
+boundary in `model.py:_stieltjes_fused`, the AS scale). So the first experiment is a profile, and every later
+candidate is chosen from it. Strongest counter-argument: the sweeps may already be bound by the QK^T dot per tile, in
+which case only removing sweeps (which touches the solver) helps, and the correctness gate limits that.
+
+Do not rely on memory for Triton behaviour: read the docs / source of the installed version (triton 3.1.0, torch
+2.5.1+cu121 in `$SCRATCH/venvs/nanogpt`) for anything you depend on (`tl.dot` precision modes, `num_warps`,
+`num_stages`, `tl.range` loop options, autotuning), and treat every speed claim as unproven until it is a measured
+A/B on the A100.
+
+## Correctness gate (hard; a candidate that fails it is recorded as failed and not kept)
+Build this in e001, before any kernel edit:
+- Freeze the baseline: copy `stieltjes/triton_stieltjes.py` at the base commit to `stieltjes/triton_stieltjes_ref.py`
+  (never edited afterwards).
+- `tests/test_attn_paths.py` passes unchanged (fused vs eager `stieltjes_normalize`, outputs and gradients, fp32 and
+  bf16, `SLOPES=linear` and `SLOPES=exp`).
+- New `tests/test_kernel_equiv.py`: candidate vs eager AND candidate vs frozen baseline, on output and on dq, dk, dv:
+  - random q/k/v at N in {64, 300, 2048, 4096}; windowed (q3/d2, q4/d2, q3/d1.5), dense q4, one non-integer q
+    (e.g. 2.5); fp32 and bf16; with and without NAPE slopes; a non-multiple-of-tile N.
+  - real q/k/v captured from a trained model (the `capture_qk` hook in `model.py`, as `residual_probe.py` uses it):
+    checkpoint `$LM_RESULTS/125m_fw25_rng/wstieltjes_q3_d2_xs/lr1.2e-3/ckpt.pt` and the AS row
+    `aswstieltjes_q3_d2_zi_xs/lr1.2e-3/ckpt.pt`, all 12 layers, FineWeb val at N=2048 and ArXiv at N=16384 (eager
+    at 16k one head at a time). Trained heads have supports of ~20-40 keys; random logits do not exercise that.
+  - pass = candidate-vs-eager relative error within the existing tolerances of `test_attn_paths.py` AND not more than
+    1.2x the frozen baseline's error vs eager on the same input.
+- Solver residual: max over rows of `|S - 1|` (`stieltjes_solver_residual`) at num_iter 15 on the real inputs is not
+  worse than the frozen baseline's.
+- End to end: `eval_lengths.py` loss of the trained wstieltjes_q3_d2 checkpoint at 2048 (FineWeb) and 16384 (ArXiv)
+  with the candidate within 1e-3 of the frozen baseline.
+Allowed: anything that passes (tiling, loop structure, launch parameters, reusing work across sweeps, merging
+kernels, early exit that meets the residual bound, memory layout, the call site in `model.py`). Not allowed: changing
+the map (a different normalisation, a truncated support, fewer Newton sweeps that fail the residual bound, lower
+precision that fails the tolerance), or changing num_iter / q / d defaults of the rows.
 
 ## Hypothesis backlog
-Ordered. The agent takes from the top unless results change the plan, and records why
-when it deviates.
-1.
-2.
+1. **e001, profile + gate (no kernel change, <= 2 GPU-h).** `bench_kernel.py` (start from
+   `~/Desktop/research/Stieltjes/submodules/asentmax/experiments/osc/oneoff/kernel_bench.py`): median of >= 3 repeats
+   of fwd kernel, each of the 3 bwd kernels, and fwd+bwd, at the training shape and at (1, 12, 16384, 64) forward
+   only; fwd time vs NUM_ITER in {0, 5, 15, 30} to isolate the per-sweep cost; the entmax kernel at the same shape as
+   a reference. Then a 30-step timing of the full 125M step for softmax_xs, asentmax_zi_xs, wstieltjes_q3_d2_xs
+   (compile on, real FineWeb batches, micro-batch 16) with attention time separated from the rest (CUDA-synced timers
+   or the torch profiler). Output: a table that accounts for the 13.7 s. Prediction: the measured 125M step
+   reproduces 13.7 +- 0.7 s (80 %); the forward kernel is > 50 % of the Stieltjes attention time (60 %); attention is
+   > 60 % of the Stieltjes step (65 %).
+2. **e002+, one candidate per record, ordered by the e001 table** (largest measured share first). Candidate pool,
+   as hypotheses to test, not instructions: per-sweep cost of the Newton loop (what is recomputed per iteration that
+   could be kept); number of sweeps (better start, higher-order step, early exit; all bounded by the residual gate);
+   tile sizes, `num_warps`, `num_stages` per kernel at this shape; merging backward kernels that share a grid;
+   skipping tiles that cannot be in the support in the backward; copies and dtype conversions around the kernel.
+   Each record: the change, the microbench A/B, the gate result. Prediction to be written per record. Overall
+   pre-profile prediction (user was given these, score them at the end): >= 20 % lower s/step with the gate passed
+   55 %; reaching ASEntmax's 10.0 s/step 30 %.
+3. **Confirm end to end** whenever the microbench gain accumulates past 10 % and at the end: 30-step 125M timing of
+   wstieltjes_q3_d2_xs, aswstieltjes_q3_d2_zi_xs and a q4 row with the candidate vs the frozen baseline in the same
+   job on the same node, plus eval tok/s at 16384.
+4. **Stop** when two consecutive candidates each give < 3 % on the primary metric or the budget is spent: set
+   `status: done`, final table (candidate x {fwd ms, bwd ms, s/step, eval 16k tok/s, max rel err vs eager, max
+   residual}) and `figures/kernel_speed.png` (bar chart of s/step: softmax, ASEntmax, baseline kernel, final kernel).
+   State in the last log line the exact commit of the final kernel: the kernel's source of truth is the asentmax repo
+   (header line of the file), and the user copies it back; do not push to asentmax.
 
 ## Constraints
-- Files the agent may change:
-- Fixed protocol (data, eval, seeds, metric, checkpoint selection):
-- Per-experiment ceiling (GPU-hours, walltime):
+- Files the agent may change: `stieltjes/triton_stieltjes.py`; in `model.py` only `_stieltjes_fused` and the
+  Stieltjes branch of `CausalSelfAttention.forward` (softmax and entmax paths untouched); new files
+  `stieltjes/triton_stieltjes_ref.py`, `bench_kernel.py`, `tests/test_kernel_equiv.py`, `osc/kernel_*.sbatch`,
+  `research/`. `osc/env.sh` on this branch is stale (points at a purged venv and the old repo path): replace it once
+  with the current version, `git show fork/direction/lm350m-qdf:osc/env.sh`, and pass `REPO`, `VENV`, `DATA_SRC`
+  explicitly from the sbatch.
+- May not change: `train.py`, `eval_lengths.py`, `stieltjes/stieltjes_eager.py`, `stieltjes/adasplash_entmax.py`,
+  `osc/rows.sh`, `config/`, the venv (no Triton or torch upgrade).
+- Out of scope: the entmax kernel, the PER_HEAD learnable-(q, d) kernel on `direction/learnable-qd`, dense Stieltjes
+  beyond keeping it correct.
+- Compute: desktop `gpu-run` for the correctness tests only (its GPU has less shared memory, so `_pick_blocks` picks
+  32x32 tiles there and timings do not transfer). Every timing on an Ascend A100 40 GB: `debug-nextgen` (< 1 h, one
+  GPU); `nextgen` only if a job needs more than the debug limit. A/B pairs run inside one job on one node. No
+  training beyond <= 50-step timing probes. Per-experiment ceiling 2 GPU-h.
+- Checkpoints under `$LM_RESULTS/125m_fw25_rng/` are read-only. Data: `$SCRATCH/nanogpt_data/fineweb25B`, ArXiv /
+  PG-19 eval sets as in `osc/eval_arxiv.sbatch`. Outputs to `$LM_RESULTS/kernel_speed/`, copied into
+  `results/lm1012/kernel_speed/` on this branch.
 
 ## Log
 One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobids> | eNNN done <metric> | paused: <reason>`
