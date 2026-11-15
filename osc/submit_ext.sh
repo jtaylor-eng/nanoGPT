@@ -6,7 +6,7 @@
 #   e010 adatemp_xs lr 1.2e-3 (+ 2.4e-3 with ADATEMP_LR24=1)            manifest lines 2-3
 # Set from the e010 probe (osc/probe_adatemp.sbatch): ADATEMP_MB (micro-batch; accumulation = 256 / micro-batch, so every
 # row keeps 524,288 tok/step), ADATEMP_NSEG (4:15 segments for one adatemp run), ADATEMP_LR24.
-# ssmax: 3 segments (8.95 GPU-h measured on direction pe-ssmax-headsplit = 2.3 segments of 3.83 h + evals).
+# ssmax: 4 segments (8.37 h train at 83.0k tok/s in the e010 probe = 2.2 segments of 3.83 h, + evals, + one spare).
 # PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True: the pe-ssmax-headsplit ssmax_xs run hit a fragmentation OOM when it
 # resumed on an eval boundary at micro-batch 16 (8453516_0); allocator setting only, no numerical effect.
 # `probe`: debug-nextgen throughput / memory probe.  `smoke`: debug-nextgen, 30 iters, no evals, tag smoke_ext.
@@ -37,7 +37,7 @@ fi
 TAG=125m_fw25_rng; C="CONFIG=lm_stieltjes_125m.py RESULTS_TAG=$TAG"; mkdir -p $LM_RESULTS/$TAG
 M=$LM_RESULTS/$TAG/manifest_e009_e010.txt; : > $M
 for lr in 1.2e-3 2.4e-3; do echo "$C ssmax_xs $lr" >> $M; done
-NSEG=(3 3)
+NSEG=(4 4)
 : ${ADATEMP_NSEG:?set ADATEMP_NSEG from the probe}
 for lr in 1.2e-3 $([ -n "${ADATEMP_LR24:-}" ] && echo 2.4e-3); do echo "MICRO_BATCH=$MB $C adatemp_xs $lr" >> $M; NSEG+=($ADATEMP_NSEG); done
 max=0; for n in ${NSEG[@]}; do [ $n -gt $max ] && max=$n; done
