@@ -1,11 +1,13 @@
 ---
 slug: stieltjes-kernel-speed
-title: "How fast can the fused windowed-Stieltjes attention kernel run at 125M / T=2048 on an A100 with unchanged outputs and gradients? (profile, then optimise the Triton kernel)"
+title: How fast can the fused windowed-Stieltjes attention kernel run at 125M / T=2048
+  on an A100 with unchanged outputs and gradients? (profile, then optimise the Triton
+  kernel)
 project: nanogpt
 type: direction
 cluster: ascend
 status: active
-wake: on_jobs
+wake: now
 budget_gpu_hours: 15
 spent_gpu_hours: 0
 max_jobs_in_flight: 4
@@ -30,7 +32,8 @@ Minimise the training step time of the Stieltjes rows with the map itself unchan
 fixed target, "as fast as it gets within the budget"; only changes that pass the correctness gate below count.
 
 Measured baselines (direction lm350m-qdf, 125M = 12L x 12H x 768, T=2048, 524,288 tokens per step, micro-batch 16 x
-grad-accum, bf16, torch.compile on, A100 40 GB `nextgen`, median `time ...ms` of the run logs, clean reruns e005-e008):
+accum 16 for softmax and 8 x 32 for the sparse rows (`osc/run_lm.sh`: micro-batch 16 does not fit 40 GB with the
+sparse kernels; the memory that forces this is itself worth measuring in e001), bf16, torch.compile on, A100 40 GB `nextgen`, median `time ...ms` of the run logs, clean reruns e005-e008):
 
 | row | s/step | GPU-h per 4770-step run |
 |---|---|---|
@@ -40,7 +43,7 @@ grad-accum, bf16, torch.compile on, A100 40 GB `nextgen`, median `time ...ms` of
 | aswstieltjes_q3_d2_zi_xs (num_iter 15) | 14.0 | 19.1 |
 
 Primary metric: s/step of `wstieltjes_q3_d2_xs` at that configuration. Secondary: fwd and bwd kernel time at the
-training shape (B=16, H=12, N=2048, D=64, bf16, causal, NAPE slopes); eval forward throughput at N=16384 must not
+training shape (B=8, H=12, N=2048, D=64, bf16, causal, NAPE slopes); eval forward throughput at N=16384 must not
 regress. Reference points: ASEntmax 10.0 s/step, softmax 6.36. The 350M Stieltjes runs cost 48 GPU-h each, so every
 10 % here is ~5 GPU-h per 350M run.
 
@@ -89,7 +92,7 @@ precision that fails the tolerance), or changing num_iter / q / d defaults of th
    of fwd kernel, each of the 3 bwd kernels, and fwd+bwd, at the training shape and at (1, 12, 16384, 64) forward
    only; fwd time vs NUM_ITER in {0, 5, 15, 30} to isolate the per-sweep cost; the entmax kernel at the same shape as
    a reference. Then a 30-step timing of the full 125M step for softmax_xs, asentmax_zi_xs, wstieltjes_q3_d2_xs
-   (compile on, real FineWeb batches, micro-batch 16) with attention time separated from the rest (CUDA-synced timers
+   (compile on, real FineWeb batches, micro-batches as in `osc/run_lm.sh`: 16 softmax, 8 sparse; record peak memory) with attention time separated from the rest (CUDA-synced timers
    or the torch profiler). Output: a table that accounts for the 13.7 s. Prediction: the measured 125M step
    reproduces 13.7 +- 0.7 s (80 %); the forward kernel is > 50 % of the Stieltjes attention time (60 %); attention is
    > 60 % of the Stieltjes step (65 %).
