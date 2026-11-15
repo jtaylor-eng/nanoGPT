@@ -1,6 +1,7 @@
 """e006-e008: 125M loss vs eval length on fineweb25B without replay (125m_fw25_rng). Reads local results/lm1012.
 Top row (e006): 3 seeds {1337, 1, 2} at lr 1.2e-3, mean line + min-max band, thin lines = single seeds.
-Bottom row (e007, e008): seed 1337 only; lr 2.4e-3 (dashed) and the two Stieltjes variants vs the lr 1.2e-3 rows."""
+Bottom row (e007, e008): seed 1337 only; lr 2.4e-3 (dashed) and the two Stieltjes variants vs the lr 1.2e-3 rows.
+Bottom row also (e009, e010, extension 2026-11-15): ssmax_xs and adatemp_xs, drawn for every run whose json exists."""
 import json, os, sys
 import numpy as np
 import matplotlib; matplotlib.use("Agg")
@@ -10,9 +11,11 @@ ROOT = os.path.join(os.path.dirname(__file__), "../../../../results/lm1012/125m_
 SETS = [("lengths_16k", "FineWeb val"), ("arxiv", "ArXiv"), ("pg19", "PG-19")]
 TICKS = [512, 1024, 2048, 4096, 8192, 16384]
 C = {"softmax_xs": "#4c72b0", "asentmax_zi_xs": "#dd8452", "wstieltjes_q3_d2_xs": "#55a868",
-     "aswstieltjes_q3_d2_zi_xs": "#8172b3", "wstieltjes_q3_d1.5_xs": "#937860"}
+     "aswstieltjes_q3_d2_zi_xs": "#8172b3", "wstieltjes_q3_d1.5_xs": "#937860",
+     "ssmax_xs": "#c44e52", "adatemp_xs": "#17a2b8"}
 NAME = {"softmax_xs": "softmax", "asentmax_zi_xs": "ASEntmax", "wstieltjes_q3_d2_xs": "wStieltjes q3/d2",
-        "aswstieltjes_q3_d2_zi_xs": "AS-wStieltjes q3/d2", "wstieltjes_q3_d1.5_xs": "wStieltjes q3/d1.5"}
+        "aswstieltjes_q3_d2_zi_xs": "AS-wStieltjes q3/d2", "wstieltjes_q3_d1.5_xs": "wStieltjes q3/d1.5",
+        "ssmax_xs": "SSMax", "adatemp_xs": "adaptive-temp softmax"}
 
 
 def curve(row, sub, name):
@@ -38,10 +41,14 @@ for a, (name, title) in zip(ax[1], SETS):
         ("asentmax_zi_xs", "lr1.2e-3", "-", "o", 1.6),
         ("wstieltjes_q3_d2_xs", "lr1.2e-3", "-", "o", 1.6), ("wstieltjes_q3_d2_xs", "lr2.4e-3", "--", "o", 1.6),
         ("aswstieltjes_q3_d2_zi_xs", "lr1.2e-3", "-", "s", 2), ("wstieltjes_q3_d1.5_xs", "lr1.2e-3", "-", "^", 2),
+        ("ssmax_xs", "lr1.2e-3", "-", "D", 2), ("ssmax_xs", "lr2.4e-3", "--", "D", 2),
+        ("adatemp_xs", "lr1.2e-3", "-", "v", 2), ("adatemp_xs", "lr2.4e-3", "--", "v", 2),
     ]:
+        if not os.path.exists(f"{ROOT}/{row}/{sub}/{name}.json"):
+            continue
         x, y = curve(row, sub, name)
         a.plot(x, y, color=C[row], ls=ls, marker=mk, ms=4, lw=lw, label=f"{NAME[row]} lr {sub[2:]}")
-    a.set_title(f"e007 / e008: 125M {title}, seed 1337")
+    a.set_title(f"e007 - e010: 125M {title}, seed 1337")
 for a in ax.ravel():
     a.axvline(2048, color="0.7", lw=1, ls=":")
     a.set(xscale="log", xlabel="eval length (tokens)", ylabel="loss")
