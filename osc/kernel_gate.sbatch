@@ -10,9 +10,9 @@
 # Correctness gate for the candidate kernel (stieltjes/triton_stieltjes.py) against eager and the frozen baseline
 # (stieltjes/triton_stieltjes_ref.py). Direction stieltjes-kernel-speed. Submit with --export=ALL,TAG=e00N.
 #   1. tests/test_attn_paths.py, SLOPES=linear and exp
-#   2. tests/test_kernel_equiv.py --part=random
-#   3. tests/test_kernel_equiv.py --part=real  (trained wstieltjes_q3_d2_xs and aswstieltjes_q3_d2_zi_xs, 12 layers)
-#   4. eval_lengths.py with the baseline and the candidate: FineWeb 2048 and ArXiv 16384, |d loss| < 1e-3
+#   2. tests/test_kernel_equiv.py --part=real  (trained wstieltjes_q3_d2_xs and aswstieltjes_q3_d2_zi_xs, 12 layers)
+#   3. eval_lengths.py with the baseline and the candidate: FineWeb 2048 and ArXiv 16384, |d loss| < 1e-3
+#   4. tests/test_kernel_equiv.py --part=random
 # Checkpoints are read through symlinks in $TMPDIR (the run dirs are read-only for this direction).
 set -uo pipefail
 export SCRATCH=/fs/scratch/PAS2836/$USER
@@ -20,7 +20,7 @@ export REPO=$SCRATCH/wt/nanogpt/stieltjes-kernel-speed VENV=$SCRATCH/venvs/nanog
 source $REPO/osc/env.sh; source $VENV/bin/activate
 TAG=${TAG:?set TAG=e00N}; OUT=$LM_RESULTS/kernel_speed/$TAG; mkdir -p $OUT
 [ -z "$(git -C $REPO status --porcelain)" ] || { echo "dirty tree in $REPO"; exit 2; }
-export TRITON_CACHE_DIR=$TMPDIR/triton TORCHINDUCTOR_CACHE_DIR=$TMPDIR/inductor
+# Triton/inductor caches: env.sh defaults on scratch (persistent, keyed by source hash: the frozen kernel compiles once)
 cd $TMPDIR
 echo "commit $(git -C $REPO rev-parse HEAD) job $SLURM_JOB_ID host $(hostname) $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader) $(date '+%F %T')"
 CK=$LM_RESULTS/125m_fw25_rng
@@ -29,7 +29,6 @@ step() { local name=$1; shift; echo "== $name $(date '+%T')"; "$@"; local rc=$?;
 
 step attn_paths_linear env SLOPES=linear python $REPO/tests/test_attn_paths.py
 step attn_paths_exp env SLOPES=exp python $REPO/tests/test_attn_paths.py
-step equiv_random python $REPO/tests/test_kernel_equiv.py --part=random --out=$OUT/equiv_random.json
 step equiv_real python $REPO/tests/test_kernel_equiv.py --part=real \
   --ckpts=$CK/wstieltjes_q3_d2_xs/lr1.2e-3/ckpt.pt,$CK/aswstieltjes_q3_d2_zi_xs/lr1.2e-3/ckpt.pt \
   --fineweb_val=$DATA_SRC/val.bin --arxiv=$REPO/data/arxiv_long/arxiv_long.bin --out=$OUT/equiv_real.json
@@ -55,6 +54,8 @@ for name, L in (('fw2048', '2048'), ('arxiv16k', '16384')):
 json.dump(res, open(f'{d}/e2e.json', 'w'), indent=1)
 sys.exit(0 if ok else 1)
 PY
+# last: the most compile-heavy part (cold cache), so a walltime kill cannot take the real-input and e2e results with it
+step equiv_random python $REPO/tests/test_kernel_equiv.py --part=random --out=$OUT/equiv_random.json
 [ $fail -eq 0 ] && echo "GATE PASS $TAG" || echo "GATE FAIL $TAG"
 echo DONE $(date '+%T')
 exit $fail

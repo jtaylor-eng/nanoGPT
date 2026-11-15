@@ -103,10 +103,13 @@ def micro(argv):
         except AttributeError as e:
             print(f"{name}: per-kernel backward skipped ({e})", flush=True)
         kw = dict(causal=True, sm_scale=sm, stieltjes_q=sq, num_iter=NI, window=window, alibi_slopes=slopes)
-        o = mod.stieltjes_attention(q, k, v, **kw)
+        # `* 1.0`: the kernel must not be the first backward node. Its backward launches Triton through the CUDA driver
+        # API from the autograd worker thread, which has no current context until a torch CUDA op has run there
+        # ("Triton Error [CUDA]: invalid device context", smoke job 8603546). In training c_proj's backward runs first.
+        o = mod.stieltjes_attention(q, k, v, **kw) * 1.0
         put(f"{name} bwd (autograd, 3 kernels) {shape}", bench(lambda: torch.autograd.grad(o, (q, k, v), do, retain_graph=True)))
         del o
-        put(f"{name} fwd+bwd it={NI} {shape}", bench(lambda: torch.autograd.grad(mod.stieltjes_attention(q, k, v, **kw), (q, k, v), do)))
+        put(f"{name} fwd+bwd it={NI} {shape}", bench(lambda: torch.autograd.grad(mod.stieltjes_attention(q, k, v, **kw) * 1.0, (q, k, v), do)))
 
     # call site as in CausalSelfAttention.forward: q/k/v are transposed views of one c_attn output
     x = torch.randn(B, N, 3 * H * D, device=dev).to(torch.bfloat16).requires_grad_(True)
@@ -118,7 +121,7 @@ def micro(argv):
         return model._stieltjes_fused(qq, kk, vv, sm, sq, NI, window, slopes)
     with torch.no_grad():
         put(f"cand call site fwd (views + contiguous) {shape}", bench(site))
-    put(f"cand call site fwd+bwd (views) {shape}", bench(lambda: torch.autograd.grad(site(), x, do)))
+    put(f"cand call site fwd+bwd (views) {shape}", bench(lambda: torch.autograd.grad(site() * 1.0, x, do)))
 
     # references: AdaSplash entmax (niter 10) and SDPA softmax + NAPE bias, same shape; softmax also at micro-batch 16
     varlen = torch.full((B,), N, dtype=torch.long, device=dev)
@@ -126,7 +129,7 @@ def micro(argv):
     ent = lambda: sparse_attn(q, k, v, alpha=1.5, is_causal=True, varlen=varlen, niter=10, alibi_slopes=sl_e)
     with torch.no_grad():
         put(f"entmax fwd niter=10 {shape}", bench(ent))
-    put(f"entmax fwd+bwd niter=10 {shape}", bench(lambda: torch.autograd.grad(ent(), (q, k, v), do)))
+    put(f"entmax fwd+bwd niter=10 {shape}", bench(lambda: torch.autograd.grad(ent() * 1.0, (q, k, v), do)))
     mask = model.nape_bias(slopes, N, dev, q.dtype, causal_fill=float('-inf'))
     sd = lambda a, b, c_: F.scaled_dot_product_attention(a, b, c_, attn_mask=mask)
     with torch.no_grad():
@@ -147,6 +150,15 @@ def micro(argv):
             put(f"{name} fwd kernel it={NI} {shape}", bench(lambda: mod._forward(q, k, v, True, sm, sq, NI, mod.window_c(sq, window), slopes), repeats=3))
         varlen = torch.full((1,), NL, dtype=torch.long, device=dev)
         put(f"entmax fwd niter=10 {shape}", bench(lambda: sparse_attn(q, k, v, alpha=1.5, is_causal=True, varlen=varlen, niter=10, alibi_slopes=sl_e), repeats=3))
+    # fixed per-call cost of the Python wrapper (shows up 12 layers x 32 micro-steps = 384 times per 125M step)
+    try:
+        qs, ks, vs = mk(1, 64)
+        with torch.no_grad():
+            put("cand fwd wrapper it=0 B1 H12 N64 (launch overhead)", bench(lambda: cand._forward(qs, ks, vs, True, sm, sq, 0, cand.window_c(sq, window), slopes)))
+            put("ref fwd wrapper it=0 B1 H12 N64 (launch overhead)", bench(lambda: ref._forward(qs, ks, vs, True, sm, sq, 0, ref.window_c(sq, window), slopes)))
+            put("cand _pick_blocks (device query)", bench(lambda: cand._pick_blocks(D, 2, qs.device)))
+    except Exception as e:      # optional rows: never lose the table above
+        print(f"overhead rows skipped: {e!r}", flush=True)
     res['peak_mem_gb'] = torch.cuda.max_memory_allocated() / 2**30
     if fl['out']:
         with open(fl['out'], 'w') as f:

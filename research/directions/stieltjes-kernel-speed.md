@@ -7,11 +7,11 @@ project: nanogpt
 type: direction
 cluster: ascend
 status: active
-wake: now
+wake: on_jobs
 budget_gpu_hours: 15
 spent_gpu_hours: 0
 max_jobs_in_flight: 4
-jobs: []
+jobs: [8603546]
 jobs_archived: []
 last_wake: null
 next_id: 1

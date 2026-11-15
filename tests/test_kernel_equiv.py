@@ -48,7 +48,9 @@ def fused(mod, q, k, v, do, sq, window, num_iter, slopes):
     q, k, v = (t.detach().clone().requires_grad_(True) for t in (q, k, v))
     o = mod.stieltjes_attention(q, k, v, causal=True, sm_scale=q.shape[-1] ** -0.5, stieltjes_q=sq,
                                 num_iter=num_iter, window=window, alibi_slopes=slopes)
-    o.backward(do)
+    # `* 1.0` (exact): a torch CUDA op must run in the autograd worker thread before the kernel's backward launches
+    # Triton there, otherwise the thread can have no CUDA context ("invalid device context", smoke job 8603546)
+    (o * 1.0).backward(do)
     return [o.detach().float(), q.grad.float(), k.grad.float(), v.grad.float()]
 
 
@@ -117,8 +119,13 @@ def random_part():
     Ns = (64, 300) if args.quick else (64, 300, 2048, 4096)
     for dtype in (torch.float32, torch.bfloat16):
         for name, sq, window in maps:
-            # with NAPE slopes for every map; without slopes for the main windowed row and the dense row
-            for use_slopes in ((True, False) if name in ('w_q3_d2', 'dense_q4') else (True,)):
+            # fp32 kernels (64x64 tiles, ieee tl.dot) take ~2.7 min per (q, NUM_ITER, slopes) to compile on an Ascend node
+            # (smoke job 8603546), bf16 ones seconds: fp32 covers the main windowed row and the dense row with slopes
+            # (+ the real inputs); bf16, the training dtype, covers everything.
+            if dtype == torch.float32 and name not in ('w_q3_d2', 'dense_q4'):
+                continue
+            # with NAPE slopes for every map; without slopes for the main windowed row and the dense row (bf16)
+            for use_slopes in ((True, False) if (name in ('w_q3_d2', 'dense_q4') and dtype != torch.float32) else (True,)):
                 for N in Ns:
                     B = 2 if N <= 300 else 1
                     q = (torch.randn(B, H, N, D, device=dev) * 3).to(dtype)     # logit std ~3: the window truncates

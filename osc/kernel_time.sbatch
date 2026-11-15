@@ -20,7 +20,7 @@ export REPO=$SCRATCH/wt/nanogpt/stieltjes-kernel-speed VENV=$SCRATCH/venvs/nanog
 source $REPO/osc/env.sh; source $REPO/osc/rows.sh; source $VENV/bin/activate
 TAG=${TAG:?set TAG=e00N}; PLAN=${PLAN:-profile}; OUT=$LM_RESULTS/kernel_speed/$TAG; mkdir -p $OUT
 [ -z "$(git -C $REPO status --porcelain)" ] || { echo "dirty tree in $REPO"; exit 2; }
-export TRITON_CACHE_DIR=$TMPDIR/triton TORCHINDUCTOR_CACHE_DIR=$TMPDIR/inductor
+# Triton/inductor caches: env.sh defaults on scratch (persistent, keyed by source hash: the frozen kernel compiles once)
 cd $TMPDIR
 echo "commit $(git -C $REPO rev-parse HEAD) job $SLURM_JOB_ID host $(hostname) $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader) plan=$PLAN $(date '+%F %T')"
 
