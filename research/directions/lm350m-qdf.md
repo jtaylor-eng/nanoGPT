@@ -7,14 +7,13 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 900
-spent_gpu_hours: 727.02
+spent_gpu_hours: 728.02
 max_jobs_in_flight: 16
 model: claude-fable-5-2
 effort: high
 max_turns: 120
 timeout_minutes: 60
 jobs:
-- 8604304
 - 8604305
 - 8604306
 - 8604307
@@ -76,9 +75,10 @@ jobs_archived:
 - 8604172
 - 8604302
 - 8604303
-last_wake: '2026-11-16T01:09:32-05:00'
+- 8604304
+last_wake: '2026-11-16T02:05:00-05:00'
 next_id: 11
-wakes: 39
+wakes: 40
 ---
 # Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M params, but not 125M. Is 125M a fluke? (trying ~350M params)
 
@@ -189,3 +189,4 @@ One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobid
 2026-11-15 14:00  probe 8604171 + smoke 8604172_0-1 done (nextgen, all exit 0, 0.33 GPU-h, archived): tests ALL OK on torch 2.5.1 / triton 3.1.0; tok/s at micro-batch 16: softmax_xs 84.2k (31.4 GB), ssmax_xs 83.0k (31.9 GB, 8.37 h/run), adatemp_xs streamed 35.0k (31.9 GB with expandable_segments, 19.84 h/run; OOM without the allocator flag), streamed micro-batch 8 32.8k (17.6 GB, 21.2 h); per-head materialised 13.2k at micro-batch 2 (52.5 h), OOM at 4; 16k eval paths fit (10.4 GB) | decision by the user's rule: adatemp one run ~20.5 GPU-h is > 15, so lr 2.4e-3 is NOT run; < 40, so lr 1.2e-3 is submitted (streamed, micro-batch 16 x 16) | e009 (ssmax_xs 1.2e-3, 2.4e-3) + e010 (adatemp_xs 1.2e-3) submitted as one chain 8604302-8604308 (7 x 4:15 segment arrays, afterany; ssmax tasks 0-1 in segments 1-4, adatemp task 2 in all 7) at 8d6f00e, 125M fineweb25B 1 epoch, tag 125m_fw25_rng, seed 1337 | est 17.9 + 20.5 = 38.4 GPU-h, extension total ~38.8 of the 60 cap; budget 900, spent 698.48 | next: score segment by segment, then figure e006_e008_lengths (script already draws the new rows) and pause again for the 350M decision (options a-e, log 2026-11-13)
 2026-11-16 00:48  e009 done (ssmax_xs, 125M fineweb25B 1 epoch, seed 1337; 8604302_0/_1, 8604303_0/_1 planned exit 4, 8604304_0/_1 exit 0; 17.52 GPU-h incl. smoke; prediction 7/8, both user-facing claims hit): lr 1.2e-3 (selected by val) val@2048 3.402 (softmax 3.403), FineWeb 16k 3.442 (3.415), ArXiv 2k/16k 3.915/3.979 (3.951/4.269), PG-19 16k 3.778 (3.843); lr 2.4e-3 val@2048 3.407, FineWeb 16k 3.427, ArXiv 2k/16k 3.939/4.225 (softmax 2.4e-3: 4.144), PG-19 16k 3.846. SSMax ties at train length, closes ~45 % of the softmax-to-sparse ArXiv 16k gap (flat curve past 2k; still 0.24 above the worst sparse seed 3.741), is +0.027 worse than softmax at FineWeb 16k, and loses the long-document gain at 2.4e-3 | e010 adatemp_xs 1.2e-3 in flight: segments 1-2 (8604302_2, 8604303_2) planned exit 4 at iter 915/1824, RNG restore logged, segment 3 (8604304_2) at iter 2570, 34.8k tok/s, no NaN/OOM; periodic val tracks softmax within 0.006 (3.561 vs 3.555 @2500, paired windows); training ends in segment 6 (8604307), ETA ~10:30 on 11-16, projected ~20.9 GPU-h, extension ~38.4 of 60 | figure figures/e006_e008_lengths.png regenerated with the two SSMax curves | 8604302, 8604303 archived; 8604304-8604308 stay in jobs (8604305_0/_1 will no-op) | nothing new submitted: when e010 is scored, pause for the 350M decision (options a-e, log 2026-11-13; an ssmax_xs 350M row would cost ~22 GPU-h)
 2026-11-16 01:09  trigger 8604304_0/_1 = ssmax_xs final segment, exit 0, already scored at 00:48 (e009 done, 17.52 GPU-h); nothing new finished | e010 adatemp_xs 1.2e-3: segment 3 (8604304_2) running 3.55 h at iter 2670 of 4770, 34.8k tok/s, 32.4 GB, no NaN/OOM, wall-limit checkpoint due ~01:27; segments 4-7 (8604305-8604308) pending on Dependency, 8604305_0/_1 will no-op; training ends in segment 6, ETA ~10:30 | 8604304-8604308 stay in jobs | nothing new submitted: when e010 is scored, figure e006_e008_lengths and pause for the 350M decision (options a-e, log 2026-11-13)
+2026-11-16 02:05  e010 adatemp_xs 1.2e-3 segment 3 (8604304_2, 3.84 h) ended: exit 4 = planned wall-limit checkpoint at iter 2739, RNG restore from 1824 logged, fineweb25B confirmed, no NaN/OOM | 8604305_0/_1 = ssmax no-ops (9 s, exit 0; e009 already scored 00:48) | segment 4 (8604305_2) running since 01:26, resumed, iter 2880, 35.1k tok/s | periodic val @2750 adatemp 3.554 vs softmax 3.552 (+0.002, paired windows) | 8604304 archived; 8604305-8604308 stay in jobs | training ends in segment 6 (8604307), ETA ~10:45, e010 finished cost 11.79 GPU-h, projected ~20.9 | nothing new submitted: when e010 is scored, figure e006_e008_lengths and pause for the 350M decision (options a-e, log 2026-11-13)
