@@ -1,0 +1,29 @@
+{
+ "kernel": "cand_noskip",
+ "timers": 0,
+ "script": "train.py",
+ "args": [
+  "/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/config/lm_stieltjes_125m.py",
+  "--data_root=/tmp/fw",
+  "--attn_type=stieltjes",
+  "--stieltjes_q=3.0",
+  "--stieltjes_window=2.0",
+  "--nape_slope_type=exp",
+  "--stieltjes_num_iter=15",
+  "--learning_rate=1.2e-3",
+  "--min_lr=1.2e-4",
+  "--out_dir=/tmp/out_wst_q3d2_trained_noskip",
+  "--init_from=resume",
+  "--max_iters=4773",
+  "--eval_interval=100000",
+  "--eval_iters=1",
+  "--final_eval_iters=0",
+  "--log_interval=1",
+  "--batch_size=8",
+  "--gradient_accumulation_steps=32"
+ ],
+ "wall_s": 35.620382286957465,
+ "peak_alloc_gb": 16.63956117630005,
+ "peak_reserved_gb": 22.51953125,
+ "timers_ms": {}
+}

@@ -1,0 +1,94 @@
+{
+ "device": "NVIDIA A100-PCIE-40GB",
+ "max_shared_mem": 166912,
+ "torch": "2.5.1+cu121",
+ "triton": "3.1.0",
+ "tiles_bf16": [
+  64,
+  32
+ ],
+ "rows": {
+  "ref fwd kernel it=0 B2 H12 N512": 1.5597846009768546,
+  "ref fwd kernel it=5 B2 H12 N512": 1.0553396004252136,
+  "ref fwd kernel it=15 B2 H12 N512": 1.0618318198248744,
+  "ref fwd kernel it=30 B2 H12 N512": 0.9776903013698757,
+  "ref bwd delta kernel B2 H12 N512": 0.03382446011528373,
+  "ref bwd dkdv kernel B2 H12 N512": 0.04255268024280667,
+  "ref bwd dq kernel B2 H12 N512": 0.038769959937781096,
+  "ref bwd (autograd, 3 kernels) B2 H12 N512": 0.3225338994525373,
+  "ref fwd+bwd it=15 B2 H12 N512": 1.531086799222976,
+  "cand fwd kernel it=0 B2 H12 N512": 1.1131850583478808,
+  "cand fwd kernel it=5 B2 H12 N512": 1.078956238925457,
+  "cand fwd kernel it=15 B2 H12 N512": 1.1178708611987531,
+  "cand fwd kernel it=30 B2 H12 N512": 1.1374691384844482,
+  "cand bwd delta kernel B2 H12 N512": 0.03458245890215039,
+  "cand bwd dkdv kernel B2 H12 N512": 0.043948900420218706,
+  "cand bwd dq kernel B2 H12 N512": 0.03882845863699913,
+  "cand bwd (autograd, 3 kernels) B2 H12 N512": 0.2960182004608214,
+  "cand fwd+bwd it=15 B2 H12 N512": 2.0949263591319323,
+  "cand noskip fwd kernel it=15 B2 H12 N512": 1.1909886612556875,
+  "cand call site fwd (views + contiguous) B2 H12 N512": 1.2336883996613324,
+  "cand call site fwd+bwd (views) B2 H12 N512": 1.8039239989593625,
+  "entmax fwd niter=10 B2 H12 N512": 0.45174984028562903,
+  "entmax fwd+bwd niter=10 B2 H12 N512": 0.5894922208972275,
+  "softmax SDPA+bias fwd B2 H12 N512": 0.049777261447161436,
+  "softmax SDPA+bias fwd+bwd B2 H12 N512": 0.16793500166386366,
+  "ref fwd kernel it=15 B1 H12 N2048": 2.2818747395649552,
+  "cand fwd kernel it=15 B1 H12 N2048": 2.3291472997516394,
+  "entmax fwd niter=10 B1 H12 N2048": 2.40550055867061,
+  "cand fwd wrapper it=0 B1 H12 N64 (launch overhead)": 0.968377161771059,
+  "ref fwd wrapper it=0 B1 H12 N64 (launch overhead)": 1.0749719408340752,
+  "cand _pick_blocks (device query)": 0.968515241984278
+ },
+ "compiled": {
+  "ref fwd kernel it=0 compiled": {
+   "shared_bytes": 25600,
+   "num_warps": 4,
+   "ptx_chars": 71474,
+   "cubin_bytes": 91616
+  },
+  "ref fwd kernel it=5 compiled": {
+   "shared_bytes": 25600,
+   "num_warps": 4,
+   "ptx_chars": 221567,
+   "cubin_bytes": 302048
+  },
+  "ref fwd kernel it=15 compiled": {
+   "shared_bytes": 25600,
+   "num_warps": 4,
+   "ptx_chars": 521092,
+   "cubin_bytes": 719968
+  },
+  "ref fwd kernel it=30 compiled": {
+   "shared_bytes": 25600,
+   "num_warps": 4,
+   "ptx_chars": 993621,
+   "cubin_bytes": 1372384
+  },
+  "cand fwd kernel it=0 compiled": {
+   "shared_bytes": 25600,
+   "num_warps": 4,
+   "ptx_chars": 71614,
+   "cubin_bytes": 92000
+  },
+  "cand fwd kernel it=5 compiled": {
+   "shared_bytes": 25600,
+   "num_warps": 4,
+   "ptx_chars": 106927,
+   "cubin_bytes": 139872
+  },
+  "cand fwd kernel it=15 compiled": {
+   "shared_bytes": 25600,
+   "num_warps": 4,
+   "ptx_chars": 106928,
+   "cubin_bytes": 139872
+  },
+  "cand fwd kernel it=30 compiled": {
+   "shared_bytes": 25600,
+   "num_warps": 4,
+   "ptx_chars": 106928,
+   "cubin_bytes": 139872
+  }
+ },
+ "peak_mem_gb": 0.03201723098754883
+}

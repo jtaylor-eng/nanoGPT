@@ -1,0 +1,63 @@
+commit 4d26cd9116fd7d7ccb9bbc9d87e0f30687f114ae job 8614500 host a0144.ten.osc.edu NVIDIA A100-PCIE-40GB, 40960 MiB plan=ab_trained 2026-11-16 06:34:30
+== micro 06:34:30
+{'device': 'NVIDIA A100-PCIE-40GB', 'max_shared_mem': 166912, 'torch': '2.5.1+cu121', 'triton': '3.1.0', 'tiles_bf16': [64, 32], 'rows': {}}
+ref fwd kernel it=0 B2 H12 N512                           1.56 ms
+ref fwd kernel it=0 compiled                         {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 71474, 'cubin_bytes': 91616}
+ref fwd kernel it=5 B2 H12 N512                           1.06 ms
+ref fwd kernel it=5 compiled                         {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 221567, 'cubin_bytes': 302048}
+ref fwd kernel it=15 B2 H12 N512                          1.06 ms
+ref fwd kernel it=15 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 521092, 'cubin_bytes': 719968}
+ref fwd kernel it=30 B2 H12 N512                          0.98 ms
+ref fwd kernel it=30 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 993621, 'cubin_bytes': 1372384}
+ref bwd delta kernel B2 H12 N512                          0.03 ms
+ref bwd dkdv kernel B2 H12 N512                           0.04 ms
+ref bwd dq kernel B2 H12 N512                             0.04 ms
+ref bwd (autograd, 3 kernels) B2 H12 N512                 0.32 ms
+ref fwd+bwd it=15 B2 H12 N512                             1.53 ms
+icc: remark #10441: The Intel(R) C++ Compiler Classic (ICC) is deprecated and will be removed from product release in the second half of 2023. The Intel(R) oneAPI DPC++/C++ Compiler (ICX) is the recommended compiler moving forward. Please transition to use this compiler. Use '-diag-disable=10441' to disable this message.
+cand fwd kernel it=0 B2 H12 N512                          1.11 ms
+cand fwd kernel it=0 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 71614, 'cubin_bytes': 92000}
+cand fwd kernel it=5 B2 H12 N512                          1.08 ms
+cand fwd kernel it=5 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 106927, 'cubin_bytes': 139872}
+cand fwd kernel it=15 B2 H12 N512                         1.12 ms
+cand fwd kernel it=15 compiled                       {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 106928, 'cubin_bytes': 139872}
+cand fwd kernel it=30 B2 H12 N512                         1.14 ms
+cand fwd kernel it=30 compiled                       {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 106928, 'cubin_bytes': 139872}
+cand bwd delta kernel B2 H12 N512                         0.03 ms
+cand bwd dkdv kernel B2 H12 N512                          0.04 ms
+cand bwd dq kernel B2 H12 N512                            0.04 ms
+cand bwd (autograd, 3 kernels) B2 H12 N512                0.30 ms
+cand fwd+bwd it=15 B2 H12 N512                            2.09 ms
+cand noskip fwd kernel it=15 B2 H12 N512                  1.19 ms
+cand call site fwd (views + contiguous) B2 H12 N512       1.23 ms
+cand call site fwd+bwd (views) B2 H12 N512                1.80 ms
+entmax fwd niter=10 B2 H12 N512                           0.45 ms
+entmax fwd+bwd niter=10 B2 H12 N512                       0.59 ms
+softmax SDPA+bias fwd B2 H12 N512                         0.05 ms
+softmax SDPA+bias fwd+bwd B2 H12 N512                     0.17 ms
+ref fwd kernel it=15 B1 H12 N2048                         2.28 ms
+cand fwd kernel it=15 B1 H12 N2048                        2.33 ms
+entmax fwd niter=10 B1 H12 N2048                          2.41 ms
+icc: remark #10441: The Intel(R) C++ Compiler Classic (ICC) is deprecated and will be removed from product release in the second half of 2023. The Intel(R) oneAPI DPC++/C++ Compiler (ICX) is the recommended compiler moving forward. Please transition to use this compiler. Use '-diag-disable=10441' to disable this message.
+cand fwd wrapper it=0 B1 H12 N64 (launch overhead)        0.97 ms
+ref fwd wrapper it=0 B1 H12 N64 (launch overhead)         1.07 ms
+cand _pick_blocks (device query)                          0.97 ms
+== micro rc=0 06:34:54
+== real 06:34:58
+{'device': 'NVIDIA A100-PCIE-40GB', 'torch': '2.5.1+cu121', 'triton': '3.1.0', 'num_iter': 15, 'batch': 8}
+number of parameters: 123.59M
+{"tag": "wstieltjes_q3_d2_xs fineweb N=2048", "layer": 0, "shape": [8, 12, 2048, 64], "dtype": "torch.bfloat16", "identical_noskip": [true, true, true], "identical_ref": [true, true, true], "resid_max": 2.8014183044433594e-05, "resid_max_ref": 2.8014183044433594e-05, "live_at_exit": 0.5556344696969697, "ms_ref": 22.751735416629042, "ms_noskip": 9.87190246399093, "ms_skip": 8.723975641519896}
+{"tag": "wstieltjes_q3_d2_xs fineweb N=2048", "layer": 11, "shape": [8, 12, 2048, 64], "dtype": "torch.bfloat16", "identical_noskip": [true, true, true], "identical_ref": [true, true, true], "resid_max": 2.384185791015625e-06, "resid_max_ref": 2.384185791015625e-06, "live_at_exit": 0.31431502525252525, "ms_ref": 22.78912333228315, "ms_noskip": 9.895963000197863, "ms_skip": 6.033397027446578}
+MEAN wstieltjes_q3_d2_xs fineweb N=2048 {"layers": 2, "ms_ref": 22.770429374456096, "ms_noskip": 9.883932732094397, "ms_skip": 7.378686334483238, "live_at_exit": 0.4349747474747475, "identical_noskip": true, "identical_ref": true}
+number of parameters: 123.59M
+{"tag": "wstieltjes_q3_d2_xs arxiv N=16384", "layer": 0, "shape": [1, 12, 16384, 64], "dtype": "torch.bfloat16", "identical_noskip": [true, true, true], "identical_ref": [true, true, true], "resid_max": 0.0001232624053955078, "resid_max_ref": 0.0001232624053955078, "live_at_exit": 0.46111735976005186, "ms_ref": 174.03764134117714, "ms_noskip": 77.0161256659776, "ms_skip": 60.37256720010191}
+{"tag": "wstieltjes_q3_d2_xs arxiv N=16384", "layer": 11, "shape": [1, 12, 16384, 64], "dtype": "torch.bfloat16", "identical_noskip": [true, true, true], "identical_ref": [true, true, true], "resid_max": 4.291534423828125e-06, "resid_max_ref": 4.291534423828125e-06, "live_at_exit": 0.35484684054798965, "ms_ref": 175.0071293208748, "ms_noskip": 76.99770100104313, "ms_skip": 53.45025579445064}
+MEAN wstieltjes_q3_d2_xs arxiv N=16384 {"layers": 2, "ms_ref": 174.522385331026, "ms_noskip": 77.00691333351037, "ms_skip": 56.911411497276276, "live_at_exit": 0.40798210015402075, "identical_noskip": true, "identical_ref": true}
+== real rc=0 06:35:25
+== step wst_q3d2_trained_noskip (resume at iter 4771) 06:35:28
+== step wst_q3d2_trained_noskip rc=0 3 iters 06:36:07
+== step wst_q3d2_trained_cand (resume at iter 4771) 06:36:10
+== step wst_q3d2_trained_cand rc=0 3 iters 06:36:44
+wst_q3d2_trained_cand {"steps": 0, "s_per_step": null, "peak_alloc_gb": 16.63956117630005, "peak_reserved_gb": 22.51953125}
+wst_q3d2_trained_noskip {"steps": 0, "s_per_step": null, "peak_alloc_gb": 16.63956117630005, "peak_reserved_gb": 22.51953125}
+DONE 06:36:47
