@@ -4,19 +4,16 @@ title: Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M pa
   but not 125M. Is 125M a fluke? (trying ~350M params)
 project: nanogpt
 cluster: ascend
-status: active
+status: paused
 wake: on_jobs
 budget_gpu_hours: 900
-spent_gpu_hours: 731.35
+spent_gpu_hours: 736.24
 max_jobs_in_flight: 16
 model: claude-fable-5-2
 effort: high
 max_turns: 120
 timeout_minutes: 60
-jobs:
-- 8604306
-- 8604307
-- 8604308
+jobs: []
 jobs_archived:
 - 8353512
 - 8365020
@@ -76,9 +73,12 @@ jobs_archived:
 - 8604303
 - 8604304
 - 8604305
-last_wake: '2026-11-16T05:25:00-05:00'
+- 8604306
+- 8604307
+- 8604308
+last_wake: '2026-11-16T10:35:00-05:00'
 next_id: 11
-wakes: 42
+wakes: 44
 ---
 # Windowed stieltjes does better at 51M than softmax and ASEntmax at 51M params, but not 125M. Is 125M a fluke? (trying ~350M params)
 
@@ -191,3 +191,4 @@ One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobid
 2026-11-16 01:09  trigger 8604304_0/_1 = ssmax_xs final segment, exit 0, already scored at 00:48 (e009 done, 17.52 GPU-h); nothing new finished | e010 adatemp_xs 1.2e-3: segment 3 (8604304_2) running 3.55 h at iter 2670 of 4770, 34.8k tok/s, 32.4 GB, no NaN/OOM, wall-limit checkpoint due ~01:27; segments 4-7 (8604305-8604308) pending on Dependency, 8604305_0/_1 will no-op; training ends in segment 6, ETA ~10:30 | 8604304-8604308 stay in jobs | nothing new submitted: when e010 is scored, figure e006_e008_lengths and pause for the 350M decision (options a-e, log 2026-11-13)
 2026-11-16 02:05  e010 adatemp_xs 1.2e-3 segment 3 (8604304_2, 3.84 h) ended: exit 4 = planned wall-limit checkpoint at iter 2739, RNG restore from 1824 logged, fineweb25B confirmed, no NaN/OOM | 8604305_0/_1 = ssmax no-ops (9 s, exit 0; e009 already scored 00:48) | segment 4 (8604305_2) running since 01:26, resumed, iter 2880, 35.1k tok/s | periodic val @2750 adatemp 3.554 vs softmax 3.552 (+0.002, paired windows) | 8604304 archived; 8604305-8604308 stay in jobs | training ends in segment 6 (8604307), ETA ~10:45, e010 finished cost 11.79 GPU-h, projected ~20.9 | nothing new submitted: when e010 is scored, figure e006_e008_lengths and pause for the 350M decision (options a-e, log 2026-11-13)
 2026-11-16 05:25  e010 adatemp_xs 1.2e-3 segment 4 (8604305_2, 3.84 h) ended: exit 4 = planned wall-limit checkpoint at iter 3660, RNG restore from 2739 logged, fineweb25B confirmed, no NaN/OOM | 8604305_0/_1 = ssmax no-ops (9 s, exit 0; recorded 02:05) | segment 5 (8604306_2) running since 05:17, resumed, iter 3670, 35.0k tok/s | periodic val adatemp vs softmax (paired windows): 3.502 / 3.498 @3000, 3.501 / 3.498 @3250, 3.431 / 3.426 @3500 (+0.003 to +0.005) | 8604305 archived; 8604306-8604308 stay in jobs | training ends in segment 6 (8604307), ETA ~10:40, e010 finished cost 15.63 GPU-h, projected ~21.0 | nothing new submitted: when e010 is scored, figure e006_e008_lengths and pause for the 350M decision (options a-e, log 2026-11-13)
+2026-11-16 10:35  e010 done (adatemp_xs 1.2e-3, 125M fineweb25B 1 epoch, seed 1337; 8604306_2 planned exit 4 at iter 4580, 8604307_2 exit 0 = train to 4770 + 4 evals, 8604308_2 no-op exit 0; all 5 resumes logged `restored RNG state`, no NaN/OOM; 20.57 GPU-h incl. probe + smoke, predicted 20.5; prediction 9/10): val@2048 3.406 (softmax 3.403, paired +0.003), FineWeb 16k 3.415 (3.415), ArXiv 2k/16k 3.945/4.231 (3.951/4.269; softmax 3-seed range at 16k 4.215-4.283), PG-19 16k 3.826 (3.843). Adaptive-temperature softmax = softmax at 125M: ArXiv 2k -> 16k +0.287 (softmax +0.318, ssmax +0.064), closes 6 % of the softmax-to-sparse ArXiv 16k gap vs ssmax ~45 %; NoPE heads sharper than softmax at 512 (entropy 4.06 vs 4.54) and more diffuse at 16k (7.94 vs 7.66), beyond the 5.95 nats where the paper's beta returns to 1; 2.4x softmax cost per step; lr 2.4e-3 not run (user cost rule) | extension 2026-11-15 scored: e009 17.52 + e010 20.57 = 38.09 of the 60 GPU-h cap; figure figures/e006_e008_lengths.png regenerated with adatemp (bottom row); RESULTS.md regenerated | 8604306-8604308 archived, no jobs in flight, nothing submitted | paused: user decision on 350M (required by the 2026-11-15 instruction). Spent 736.24, remaining 163.76 GPU-h. 350M per run: softmax 22.3 (measured e003), ASEntmax 34.4, Stieltjes q3/d2 48.2 (e001 tok/s), ssmax ~22 (softmax speed at 125M, not probed at 350M), adatemp ~54 (2.4x softmax, not probed). Options of 2026-11-13 against the current remainder: (a) 5 runs, softmax_xs and wstieltjes_q3_d2_xs at {6e-4, 1.2e-3} + asentmax_zi_xs 6e-4, ~175 GPU-h: now 12 over, needs budget +~30 (to ~930); (b) (a) + asentmax_zi_xs 3e-4, ~210, needs +~60; (c) close 125M first (softmax 4.8e-3, softmax seeds at 2.4e-3, aswstieltjes seeds, Stieltjes 2.4e-3 seed 1), ~83, fits, then 350M needs a raise; (d) raise to ~1050-1100 and run (b) + (c), ~293; (e) stop here and write up 125M; (f) new, fits the 900 budget: 4 runs softmax_xs {6e-4, 1.2e-3}, wstieltjes_q3_d2_xs 1.2e-3, asentmax_zi_xs 6e-4, ~127 GPU-h, optionally + ssmax_xs 1.2e-3 (~22) = ~149, margin 15. Caveats for any 350M stage: asentmax_zi_xs 1.2e-3 went NaN twice at 350M (both on repeated data) and 6e-4 was 0.054 worse than 1.2e-3 at 125M, so a 6e-4-only ASEntmax cell may be off its optimum; one Stieltjes LR in (f) drops the LR-sensitivity check that e007 motivated. Recommend (a) with +30 GPU-h, or (f) with ssmax if the budget stays at 900.
