@@ -818,6 +818,7 @@ def aliascheck(argv):
     stay a loop-carried variable of its own. On triton 3.6 it does when the loop updates it through a new op (the
     `lam_hw` pattern) and does not when the loop re-binds it by plain assignment (it keeps its initial value), which is
     why e006's `lam_p1` starts as `lam + 0.0`. Exit 1 unless the two patterns the kernel uses behave."""
+    global triton, tl     # triton 3.1.0 resolves a jitted function's names in the module globals, not in this closure
     import triton
     import triton.language as tl
 

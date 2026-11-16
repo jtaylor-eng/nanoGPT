@@ -1,0 +1,90 @@
+commit 834ba22dbacd8cb4016219c4f709fb1858792b91 job 8615008 host a0164.ten.osc.edu NVIDIA A100-PCIE-40GB, 40960 MiB
+NVIDIA A100-PCIE-40GB, 40960 MiB plan=ab_trained 2026-11-16 08:20:07
+== aliascheck 08:20:07
+triton 3.1.0 torch 2.5.1+cu121 NVIDIA A100-PCIE-40GB
+Traceback (most recent call last):
+  File "/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/bench_kernel.py", line 870, in <module>
+    modes[mode](sys.argv[2:])
+  File "/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/bench_kernel.py", line 855, in aliascheck
+    k_alias[(1,)](x, y, 5, BM=4, COPY=copy, INIF=inif)
+  File "/fs/scratch/PAS2836/jacktaylor/venvs/nanogpt/lib/python3.12/site-packages/triton/runtime/jit.py", line 345, in <lambda>
+    return lambda *args, **kwargs: self.run(grid=grid, warmup=False, *args, **kwargs)
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/fs/scratch/PAS2836/jacktaylor/venvs/nanogpt/lib/python3.12/site-packages/triton/runtime/jit.py", line 662, in run
+    kernel = self.compile(
+             ^^^^^^^^^^^^^
+  File "/fs/scratch/PAS2836/jacktaylor/venvs/nanogpt/lib/python3.12/site-packages/triton/compiler/compiler.py", line 276, in compile
+    module = src.make_ir(options, codegen_fns, context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/fs/scratch/PAS2836/jacktaylor/venvs/nanogpt/lib/python3.12/site-packages/triton/compiler/compiler.py", line 113, in make_ir
+    return ast_to_ttir(self.fn, self, context=context, options=options, codegen_fns=codegen_fns)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+triton.compiler.errors.CompilationError: at 1:25:
+def k_alias(X, Y, n, BM: tl.constexpr, COPY: tl.constexpr, INIF: tl.constexpr):
+                         ^
+NameError('tl is not defined')
+== aliascheck rc=1 08:20:13
+== micro 08:20:13
+{'device': 'NVIDIA A100-PCIE-40GB', 'max_shared_mem': 166912, 'torch': '2.5.1+cu121', 'triton': '3.1.0', 'tiles_bf16': [64, 32], 'rows': {}}
+ref fwd kernel it=0 B2 H12 N512                           1.81 ms
+ref fwd kernel it=0 compiled                         {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 71474, 'cubin_bytes': 91616}
+ref fwd kernel it=5 B2 H12 N512                           1.20 ms
+ref fwd kernel it=5 compiled                         {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 221567, 'cubin_bytes': 302048}
+ref fwd kernel it=15 B2 H12 N512                          1.07 ms
+ref fwd kernel it=15 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 521092, 'cubin_bytes': 719968}
+ref fwd kernel it=30 B2 H12 N512                          1.08 ms
+ref fwd kernel it=30 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 993621, 'cubin_bytes': 1372384}
+ref bwd delta kernel B2 H12 N512                          0.03 ms
+ref bwd dkdv kernel B2 H12 N512                           0.04 ms
+ref bwd dq kernel B2 H12 N512                             0.04 ms
+ref bwd (autograd, 3 kernels) B2 H12 N512                 0.32 ms
+ref fwd+bwd it=15 B2 H12 N512                             1.55 ms
+cand fwd kernel it=0 B2 H12 N512                          1.09 ms
+cand fwd kernel it=0 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 71616, 'cubin_bytes': 92000}
+cand fwd kernel it=5 B2 H12 N512                          1.09 ms
+cand fwd kernel it=5 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 112352, 'cubin_bytes': 147552}
+cand fwd kernel it=15 B2 H12 N512                         1.12 ms
+cand fwd kernel it=15 compiled                       {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 112353, 'cubin_bytes': 147552}
+cand fwd kernel it=30 B2 H12 N512                         1.10 ms
+cand fwd kernel it=30 compiled                       {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 112378, 'cubin_bytes': 147552}
+cand bwd delta kernel B2 H12 N512                         0.04 ms
+cand bwd dkdv kernel B2 H12 N512                          0.05 ms
+cand bwd dq kernel B2 H12 N512                            0.07 ms
+cand bwd (autograd, 3 kernels) B2 H12 N512                0.34 ms
+cand fwd+bwd it=15 B2 H12 N512                            1.91 ms
+cand noskip fwd kernel it=15 B2 H12 N512                  1.22 ms
+cand nobskip bwd (autograd, 3 kernels) B2 H12 N512        0.34 ms
+cand nobskip fwd+bwd it=15 B2 H12 N512                    2.35 ms
+cand noexit fwd kernel it=15 B2 H12 N512                  1.39 ms
+cand noexit fwd+bwd it=15 B2 H12 N512                     1.59 ms
+cand call site fwd (views + contiguous) B2 H12 N512       1.25 ms
+cand call site fwd+bwd (views) B2 H12 N512                1.87 ms
+entmax fwd niter=10 B2 H12 N512                           0.45 ms
+entmax fwd+bwd niter=10 B2 H12 N512                       0.60 ms
+softmax SDPA+bias fwd B2 H12 N512                         0.05 ms
+softmax SDPA+bias fwd+bwd B2 H12 N512                     0.18 ms
+ref fwd kernel it=15 B1 H12 N2048                         2.28 ms
+cand fwd kernel it=15 B1 H12 N2048                        1.15 ms
+entmax fwd niter=10 B1 H12 N2048                          2.41 ms
+cand fwd wrapper it=0 B1 H12 N64 (launch overhead)        1.10 ms
+ref fwd wrapper it=0 B1 H12 N64 (launch overhead)         0.97 ms
+cand _pick_blocks (device query)                          0.99 ms
+== micro rc=0 08:20:38
+== real 08:20:42
+{'device': 'NVIDIA A100-PCIE-40GB', 'torch': '2.5.1+cu121', 'triton': '3.1.0', 'num_iter': 15, 'batch': 8}
+number of parameters: 123.59M
+{"tag": "wstieltjes_q3_d2_xs fineweb N=2048", "layer": 0, "shape": [8, 12, 2048, 64], "dtype": "torch.bfloat16", "identical_noskip": [true, true, true], "identical_ref": [true, true, true], "identical_noexit": [true, true, true], "resid_max": 2.8014183044433594e-05, "resid_max_ref": 2.8014183044433594e-05, "live_at_exit": 0.5556344696969697, "sweeps_run_p2": 8.236002922058105, "blocks_exit_early_p2": 0.9752604365348816, "sweeps_run_p4": 8.0322265625, "blocks_exit_early_p4": 1.0, "ms_ref": 22.89982166257687, "ms_noskip": 6.084685258927846, "ms_noexit": 8.454802309580403, "ms_skip": 5.822498228305697, "grad_identical_nobskip": [true, true, true], "grad_identical_ref": [true, true, true], "grad_identical_noexit": [true, true, true], "ms_fb_ref": 26.042962571539515, "ms_fb_nobskip": 9.324853849830106, "ms_fb_noexit": 10.813268217885785, "ms_fb_skip": 8.165907936927397}
+{"tag": "wstieltjes_q3_d2_xs fineweb N=2048", "layer": 11, "shape": [8, 12, 2048, 64], "dtype": "torch.bfloat16", "identical_noskip": [true, true, true], "identical_ref": [true, true, true], "identical_noexit": [true, true, true], "resid_max": 2.384185791015625e-06, "resid_max_ref": 2.384185791015625e-06, "live_at_exit": 0.31431502525252525, "sweeps_run_p2": 8.280599594116211, "blocks_exit_early_p2": 0.9384765625, "sweeps_run_p4": 7.9814453125, "blocks_exit_early_p4": 0.978515625, "ms_ref": 22.852433501005482, "ms_noskip": 5.997806705470959, "ms_noexit": 5.895792425144464, "ms_skip": 4.118830319494009, "grad_identical_nobskip": [true, true, true], "grad_identical_ref": [true, true, true], "grad_identical_noexit": [true, true, true], "ms_fb_ref": 25.94692618268627, "ms_fb_nobskip": 7.5963351725866755, "ms_fb_noexit": 7.480662579550163, "ms_fb_skip": 5.679492681255479}
+MEAN wstieltjes_q3_d2_xs fineweb N=2048 {"layers": 2, "ms_ref": 22.876127581791174, "ms_noskip": 6.041245982199403, "ms_skip": 4.970664273899853, "live_at_exit": 0.4349747474747475, "identical_noskip": true, "identical_ref": true, "ms_fb_ref": 25.994944377112894, "ms_fb_nobskip": 8.460594511208392, "ms_fb_skip": 6.922700309091438, "grad_identical_nobskip": true, "grad_identical_ref": true, "ms_noexit": 7.175297367362433, "ms_fb_noexit": 9.146965398717974, "identical_noexit": true, "grad_identical_noexit": true, "sweeps_run_p2": 8.258301258087158, "blocks_exit_early_p2": 0.9568684995174408, "sweeps_run_p4": 8.0068359375, "blocks_exit_early_p4": 0.9892578125}
+number of parameters: 123.59M
+{"tag": "wstieltjes_q3_d2_xs arxiv N=16384", "layer": 0, "shape": [1, 12, 16384, 64], "dtype": "torch.bfloat16", "identical_noskip": [true, true, true], "identical_ref": [true, true, true], "identical_noexit": [true, true, true], "resid_max": 0.0001232624053955078, "resid_max_ref": 0.0001232624053955078, "live_at_exit": 0.46111735976005186, "sweeps_run_p2": 8.730794906616211, "blocks_exit_early_p2": 0.9820963740348816, "sweeps_run_p4": 8.5859375, "blocks_exit_early_p4": 1.0, "ms_ref": 174.38296801022565, "ms_noskip": 50.45202460605651, "ms_noexit": 59.215164405759424, "ms_skip": 46.29477466611812, "grad_identical_nobskip": [true, true, true], "grad_identical_ref": [true, true, true], "grad_identical_noexit": [true, true, true], "ms_fb_ref": 200.4147553234361, "ms_fb_nobskip": 72.59336125571281, "ms_fb_noexit": 74.25884498904149, "ms_fb_skip": 61.02883000858128}
+{"tag": "wstieltjes_q3_d2_xs arxiv N=16384", "layer": 11, "shape": [1, 12, 16384, 64], "dtype": "torch.bfloat16", "identical_noskip": [true, true, true], "identical_ref": [true, true, true], "identical_noexit": [true, true, true], "resid_max": 4.291534423828125e-06, "resid_max_ref": 4.291534423828125e-06, "live_at_exit": 0.35484684054798965, "sweeps_run_p2": 10.682291984558105, "blocks_exit_early_p2": 0.7626953125, "sweeps_run_p4": 10.327474594116211, "blocks_exit_early_p4": 0.8170573115348816, "ms_ref": 174.71377567077676, "ms_noskip": 59.24393440363929, "ms_noexit": 52.28145125147421, "ms_skip": 42.94316666588808, "grad_identical_nobskip": [true, true, true], "grad_identical_ref": [true, true, true], "grad_identical_noexit": [true, true, true], "ms_fb_ref": 200.5524340008075, "ms_fb_nobskip": 68.75713350018486, "ms_fb_noexit": 64.0760064998176, "ms_fb_skip": 54.749503592029214}
+MEAN wstieltjes_q3_d2_xs arxiv N=16384 {"layers": 2, "ms_ref": 174.5483718405012, "ms_noskip": 54.8479795048479, "ms_skip": 44.6189706660031, "live_at_exit": 0.40798210015402075, "identical_noskip": true, "identical_ref": true, "ms_fb_ref": 200.4835946621218, "ms_fb_nobskip": 70.67524737794884, "ms_fb_skip": 57.88916680030525, "grad_identical_nobskip": true, "grad_identical_ref": true, "ms_noexit": 55.74830782861682, "ms_fb_noexit": 69.16742574442955, "identical_noexit": true, "grad_identical_noexit": true, "sweeps_run_p2": 9.706543445587158, "blocks_exit_early_p2": 0.8723958432674408, "sweeps_run_p4": 9.456706047058105, "blocks_exit_early_p4": 0.9085286557674408}
+== real rc=0 08:21:50
+== step wst_q3d2_trained_noexit (resume at iter 4771) 08:21:53
+== step wst_q3d2_trained_noexit rc=0 3 iters 08:22:26
+== step wst_q3d2_trained_cand (resume at iter 4771) 08:22:30
+== step wst_q3d2_trained_cand rc=0 3 iters 08:23:00
+wst_q3d2_trained_cand {"steps": 0, "s_per_step": null, "peak_alloc_gb": 16.64175844192505, "peak_reserved_gb": 22.521484375}
+wst_q3d2_trained_noexit {"steps": 0, "s_per_step": null, "peak_alloc_gb": 16.64175844192505, "peak_reserved_gb": 22.521484375}
+DONE 08:23:02

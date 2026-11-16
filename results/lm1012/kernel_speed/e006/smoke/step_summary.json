@@ -1,0 +1,14 @@
+{
+ "wst_q3d2_trained_cand": {
+  "steps": 0,
+  "s_per_step": null,
+  "peak_alloc_gb": 16.64175844192505,
+  "peak_reserved_gb": 22.521484375
+ },
+ "wst_q3d2_trained_noexit": {
+  "steps": 0,
+  "s_per_step": null,
+  "peak_alloc_gb": 16.64175844192505,
+  "peak_reserved_gb": 22.521484375
+ }
+}

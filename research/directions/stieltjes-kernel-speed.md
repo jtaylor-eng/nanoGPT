@@ -11,7 +11,8 @@ wake: on_jobs
 budget_gpu_hours: 15
 spent_gpu_hours: 3.83
 max_jobs_in_flight: 4
-jobs: []
+jobs:
+- 8615008
 jobs_archived:
 - 8603546
 - 8603935
