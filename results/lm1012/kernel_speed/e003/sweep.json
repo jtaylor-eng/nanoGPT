@@ -1,0 +1,1809 @@
+{
+ "device": "NVIDIA A100-PCIE-40GB",
+ "torch": "2.5.1+cu121",
+ "triton": "3.1.0",
+ "shape": [
+  8,
+  12,
+  2048,
+  64
+ ],
+ "long_shape": [
+  1,
+  12,
+  16384,
+  64
+ ],
+ "default": [
+  64,
+  32,
+  4,
+  3
+ ],
+ "rows": [
+  {
+   "kern": "fwd",
+   "tag": "tiles",
+   "BM": 32,
+   "BN": 16,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.6308973580016755,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 15.340742350364215
+  },
+  {
+   "kern": "fwd",
+   "tag": "tiles",
+   "BM": 32,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.030243346991483122,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 13.804593035180506
+  },
+  {
+   "kern": "fwd",
+   "tag": "tiles",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.9256187159917317,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 10.763557102435675
+  },
+  {
+   "kern": "fwd",
+   "tag": "tiles",
+   "BM": 32,
+   "BN": 128,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 1.5103562060394324,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 12.75204616080549
+  },
+  {
+   "kern": "fwd",
+   "tag": "tiles",
+   "BM": 64,
+   "BN": 16,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.6732476719771512,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 12.176106787978135
+  },
+  {
+   "kern": "fwd",
+   "tag": "tiles",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.009923085977789015,
+   "identical": [
+    true,
+    true,
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 10.175497790394155
+  },
+  {
+   "kern": "fwd",
+   "tag": "tiles",
+   "BM": 64,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 1.3598580899997614,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.0078125,
+   "ms": 11.72870332340929
+  },
+  {
+   "kern": "fwd",
+   "tag": "tiles",
+   "BM": 64,
+   "BN": 128,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 2.510709775961004,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 12.55127750078423
+  },
+  {
+   "kern": "fwd",
+   "tag": "tiles",
+   "BM": 128,
+   "BN": 16,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.9122479170328006,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 11.07446736164598
+  },
+  {
+   "kern": "fwd",
+   "tag": "tiles",
+   "BM": 128,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 1.3566279940423556,
+   "identical": [
+    true,
+    true,
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 11.851316256382104
+  },
+  {
+   "kern": "fwd",
+   "tag": "tiles",
+   "BM": 128,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 2.297406461031642,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 11.56342405164124
+  },
+  {
+   "kern": "fwd",
+   "tag": "tiles",
+   "BM": 128,
+   "BN": 128,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 4.9079177439562045,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 24.144683801569045
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 2,
+   "num_stages": 1,
+   "first_call_s": 1.3311302300426178,
+   "identical": [
+    false,
+    true,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.0078125,
+   "ms": 15.707940799184142
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 2,
+   "num_stages": 2,
+   "first_call_s": 1.5014253440313041,
+   "identical": [
+    false,
+    true,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.0078125,
+   "ms": 12.616426531167235
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 2,
+   "num_stages": 3,
+   "first_call_s": 1.4541616030037403,
+   "identical": [
+    false,
+    true,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.0078125,
+   "ms": 12.50191865619854
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 2,
+   "num_stages": 4,
+   "first_call_s": 1.5150263370014727,
+   "identical": [
+    false,
+    true,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.0078125,
+   "ms": 12.59656545082708
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 1,
+   "first_call_s": 0.8156020250171423,
+   "identical": [
+    true,
+    true,
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 10.883071162498783
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 2,
+   "first_call_s": 0.02026761299930513,
+   "identical": [
+    true,
+    true,
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 10.13510402602454
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 4,
+   "first_call_s": 0.9346821180079132,
+   "identical": [
+    true,
+    true,
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 10.35405317834841
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 8,
+   "num_stages": 1,
+   "first_call_s": 0.6930528560187668,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 15.796943961177021
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 8,
+   "num_stages": 2,
+   "first_call_s": 0.049169049016200006,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 14.894436845609631
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.045997072011232376,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 14.799546592661905
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 8,
+   "num_stages": 4,
+   "first_call_s": 0.8025962199899368,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 14.61384263044844
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 2,
+   "num_stages": 1,
+   "first_call_s": 1.4138710970291868,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 14.447838820550325
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 2,
+   "num_stages": 2,
+   "first_call_s": 1.4440884840441868,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 13.202259534349043
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 2,
+   "num_stages": 3,
+   "first_call_s": 1.5247172189992853,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 12.914713532275831
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 2,
+   "num_stages": 4,
+   "first_call_s": 1.6151474880171008,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 18.574829809256784
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 1,
+   "first_call_s": 0.8452035990194418,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 12.43518268711341
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 2,
+   "first_call_s": 0.8673670499701984,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 10.64304585015634
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 4,
+   "first_call_s": 0.989746777981054,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 11.656905085380588
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 8,
+   "num_stages": 1,
+   "first_call_s": 0.6462041179765947,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 17.01158304374827
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 8,
+   "num_stages": 2,
+   "first_call_s": 0.6793869810062461,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 3.519999746847665e+20,
+   "ms": 15.660086479038
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.7353844200260937,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 16.005627000704408
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 8,
+   "num_stages": 4,
+   "first_call_s": 0.7243070980184712,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 15.38220780919521
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 128,
+   "BN": 16,
+   "num_warps": 2,
+   "num_stages": 1,
+   "first_call_s": 1.6475103130214848,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 15.869044079445302
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 128,
+   "BN": 16,
+   "num_warps": 2,
+   "num_stages": 2,
+   "first_call_s": 1.6729166230070405,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 13.87820951841322
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 128,
+   "BN": 16,
+   "num_warps": 2,
+   "num_stages": 3,
+   "first_call_s": 1.6991427430184558,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 13.468224069521087
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 128,
+   "BN": 16,
+   "num_warps": 2,
+   "num_stages": 4,
+   "first_call_s": 1.6904184489976615,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 13.613196898950264
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 128,
+   "BN": 16,
+   "num_warps": 4,
+   "num_stages": 1,
+   "first_call_s": 0.8661709339939989,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 12.899229612817326
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 128,
+   "BN": 16,
+   "num_warps": 4,
+   "num_stages": 2,
+   "first_call_s": 0.8985392579925247,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 11.127109404942775
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 128,
+   "BN": 16,
+   "num_warps": 4,
+   "num_stages": 4,
+   "first_call_s": 0.9575839290046133,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 11.309141082973737
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 128,
+   "BN": 16,
+   "num_warps": 8,
+   "num_stages": 1,
+   "first_call_s": 0.6489603029913269,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 14.785993667491883
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 128,
+   "BN": 16,
+   "num_warps": 8,
+   "num_stages": 2,
+   "first_call_s": 0.6702020340017043,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 14.708397593090517
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 128,
+   "BN": 16,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.7544213089859113,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 14.019889748721782
+  },
+  {
+   "kern": "fwd",
+   "tag": "opts",
+   "BM": 128,
+   "BN": 16,
+   "num_warps": 8,
+   "num_stages": 4,
+   "first_call_s": 0.750607107009273,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 14.244744177891075
+  },
+  {
+   "kern": "delta",
+   "tag": "tiles",
+   "BM": 32,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.012535861053038388,
+   "identical": [
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 2.384185791015625e-05,
+   "ms": 1.780976300360635
+  },
+  {
+   "kern": "delta",
+   "tag": "tiles",
+   "BM": 32,
+   "BN": 32,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.3384348970139399,
+   "identical": [
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 2.384185791015625e-05,
+   "ms": 3.0439029599074274
+  },
+  {
+   "kern": "delta",
+   "tag": "tiles",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.47552061098394915,
+   "identical": [
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 3.814697265625e-06,
+   "ms": 0.9561002592090517
+  },
+  {
+   "kern": "delta",
+   "tag": "tiles",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.38462885504122823,
+   "identical": [
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 2.384185791015625e-05,
+   "ms": 1.467591980472207
+  },
+  {
+   "kern": "delta",
+   "tag": "tiles",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.0008978060213848948,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 0.8888609998393804
+  },
+  {
+   "kern": "delta",
+   "tag": "tiles",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.38741507701342925,
+   "identical": [
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 2.384185791015625e-05,
+   "ms": 1.7594109999481589
+  },
+  {
+   "kern": "delta",
+   "tag": "tiles",
+   "BM": 64,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.6792832170031033,
+   "identical": [
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 3.814697265625e-06,
+   "ms": 0.9340390400029719
+  },
+  {
+   "kern": "delta",
+   "tag": "tiles",
+   "BM": 64,
+   "BN": 64,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.48858016601298004,
+   "identical": [
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 3.814697265625e-06,
+   "ms": 1.2888832006137818
+  },
+  {
+   "kern": "delta",
+   "tag": "tiles",
+   "BM": 128,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.6609235599753447,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 0.903432359918952
+  },
+  {
+   "kern": "delta",
+   "tag": "tiles",
+   "BM": 128,
+   "BN": 32,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.44583058601710945,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 0.9531785594299436
+  },
+  {
+   "kern": "delta",
+   "tag": "tiles",
+   "BM": 128,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 1.2031380450353026,
+   "identical": [
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 3.814697265625e-06,
+   "ms": 0.8997444401029497
+  },
+  {
+   "kern": "delta",
+   "tag": "tiles",
+   "BM": 128,
+   "BN": 64,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.6768881289754063,
+   "identical": [
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 3.814697265625e-06,
+   "ms": 1.0094153799582273
+  },
+  {
+   "kern": "delta",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 1,
+   "first_call_s": 0.4228366760071367,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 0.9478247200604528
+  },
+  {
+   "kern": "delta",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 2,
+   "first_call_s": 0.00989129499066621,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 0.878820139914751
+  },
+  {
+   "kern": "delta",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 4,
+   "first_call_s": 0.4629829869954847,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 0.8780519000720233
+  },
+  {
+   "kern": "dkdv",
+   "tag": "tiles",
+   "BM": 32,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.011555759992916137,
+   "identical": [
+    false,
+    true
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.03125,
+   "ms": 1.6083404992241412
+  },
+  {
+   "kern": "dkdv",
+   "tag": "tiles",
+   "BM": 32,
+   "BN": 32,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.43566010700305924,
+   "identical": [
+    false,
+    true
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.03125,
+   "ms": 3.1669239792972803
+  },
+  {
+   "kern": "dkdv",
+   "tag": "tiles",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 1.014496955962386,
+   "identical": [
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.03125,
+   "ms": 2.362036859849468
+  },
+  {
+   "kern": "dkdv",
+   "tag": "tiles",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.8851410680217668,
+   "identical": [
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.03125,
+   "ms": 4.842639799462631
+  },
+  {
+   "kern": "dkdv",
+   "tag": "tiles",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.0014548720209859312,
+   "identical": [
+    true,
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 1.4997279399540275
+  },
+  {
+   "kern": "dkdv",
+   "tag": "tiles",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.6340596309746616,
+   "identical": [
+    true,
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 3.7635161192156374
+  },
+  {
+   "kern": "dkdv",
+   "tag": "tiles",
+   "BM": 64,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 1.1172264110064134,
+   "identical": [
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.03125,
+   "ms": 1.3447651406750083
+  },
+  {
+   "kern": "dkdv",
+   "tag": "tiles",
+   "BM": 64,
+   "BN": 64,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 1.0149680500035174,
+   "identical": [
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.03125,
+   "ms": 2.8224300395231694
+  },
+  {
+   "kern": "dkdv",
+   "tag": "tiles",
+   "BM": 128,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 1.1809874480240978,
+   "identical": [
+    false,
+    true
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.03125,
+   "ms": 1.450092539889738
+  },
+  {
+   "kern": "dkdv",
+   "tag": "tiles",
+   "BM": 128,
+   "BN": 32,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.9943767319782637,
+   "identical": [
+    false,
+    true
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.03125,
+   "ms": 3.137473880778998
+  },
+  {
+   "kern": "dkdv",
+   "tag": "tiles",
+   "BM": 128,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 1.7460966579965316,
+   "identical": [
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.03125,
+   "ms": 2.591689940309152
+  },
+  {
+   "kern": "dkdv",
+   "tag": "tiles",
+   "BM": 128,
+   "BN": 64,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 1.2177241559838876,
+   "identical": [
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.03125,
+   "ms": 1.7376655607949942
+  },
+  {
+   "kern": "dkdv",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 1,
+   "first_call_s": 1.0237335310084745,
+   "identical": [
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.03125,
+   "ms": 1.4002685796003789
+  },
+  {
+   "kern": "dkdv",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 2,
+   "first_call_s": 1.0943280009669252,
+   "identical": [
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.03125,
+   "ms": 1.418622420169413
+  },
+  {
+   "kern": "dkdv",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 4,
+   "first_call_s": 1.13170953997178,
+   "identical": [
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.03125,
+   "ms": 1.3416376593522727
+  },
+  {
+   "kern": "dq",
+   "tag": "tiles",
+   "BM": 32,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.01937156799249351,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 1.2619646405801177
+  },
+  {
+   "kern": "dq",
+   "tag": "tiles",
+   "BM": 32,
+   "BN": 32,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.37956956500420347,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 2.4729357205796987
+  },
+  {
+   "kern": "dq",
+   "tag": "tiles",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.5729266200214624,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 1.0563066403847188
+  },
+  {
+   "kern": "dq",
+   "tag": "tiles",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.4228683050023392,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 1.4601808798033744
+  },
+  {
+   "kern": "dq",
+   "tag": "tiles",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.0011043839622288942,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 1.053446059813723
+  },
+  {
+   "kern": "dq",
+   "tag": "tiles",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.4887705629807897,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 1.9212244800291955
+  },
+  {
+   "kern": "dq",
+   "tag": "tiles",
+   "BM": 64,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.7985396389849484,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 1.076355701079592
+  },
+  {
+   "kern": "dq",
+   "tag": "tiles",
+   "BM": 64,
+   "BN": 64,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.7044393380056135,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 1.880660499446094
+  },
+  {
+   "kern": "dq",
+   "tag": "tiles",
+   "BM": 128,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.9300975319929421,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 1.113090879516676
+  },
+  {
+   "kern": "dq",
+   "tag": "tiles",
+   "BM": 128,
+   "BN": 32,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.5800346679752693,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 1.2966337602119893
+  },
+  {
+   "kern": "dq",
+   "tag": "tiles",
+   "BM": 128,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 1.3935054060420953,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 1.2585815007332712
+  },
+  {
+   "kern": "dq",
+   "tag": "tiles",
+   "BM": 128,
+   "BN": 64,
+   "num_warps": 8,
+   "num_stages": 3,
+   "first_call_s": 0.7845370930153877,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 1.160952360369265
+  },
+  {
+   "kern": "dq",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 1,
+   "first_call_s": 0.5346706990385428,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 1.1001996591221541
+  },
+  {
+   "kern": "dq",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 2,
+   "first_call_s": 0.009223311033565551,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 1.0654718591831625
+  },
+  {
+   "kern": "dq",
+   "tag": "opts",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 4,
+   "first_call_s": 0.5862860379857011,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 1.134584640385583
+  },
+  {
+   "kern": "fwd",
+   "tag": "confirm",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.010010728961788118,
+   "identical": [
+    true,
+    true,
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 10.10023404029198
+  },
+  {
+   "kern": "fwd",
+   "tag": "confirm",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 2,
+   "first_call_s": 0.01031715504359454,
+   "identical": [
+    true,
+    true,
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 10.118281539762393
+  },
+  {
+   "kern": "fwd",
+   "tag": "confirm",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 4,
+   "first_call_s": 0.010621696012094617,
+   "identical": [
+    true,
+    true,
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 10.392595280427486
+  },
+  {
+   "kern": "fwd",
+   "tag": "confirm",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 2,
+   "first_call_s": 0.010537839028984308,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 10.71901845978573
+  },
+  {
+   "kern": "delta",
+   "tag": "confirm",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.0009724759729579091,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 0.8869371796026826
+  },
+  {
+   "kern": "delta",
+   "tag": "confirm",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 4,
+   "first_call_s": 0.0009579890174791217,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 0.8865698799490929
+  },
+  {
+   "kern": "delta",
+   "tag": "confirm",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 2,
+   "first_call_s": 0.0009544519707560539,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 0.8790517598390579
+  },
+  {
+   "kern": "dkdv",
+   "tag": "confirm",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.0015732640167698264,
+   "identical": [
+    true,
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 1.4945622393861413
+  },
+  {
+   "kern": "dkdv",
+   "tag": "confirm",
+   "BM": 64,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 4,
+   "first_call_s": 0.0014976420206949115,
+   "identical": [
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.03125,
+   "ms": 1.3503866805694997
+  },
+  {
+   "kern": "dkdv",
+   "tag": "confirm",
+   "BM": 64,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.0014151270152069628,
+   "identical": [
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.03125,
+   "ms": 1.3470951199997216
+  },
+  {
+   "kern": "dq",
+   "tag": "confirm",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.0011142430012114346,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 1.0689241194631904
+  },
+  {
+   "kern": "dq",
+   "tag": "confirm",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.0010921109933406115,
+   "identical": [
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 1.0674257203936577
+  },
+  {
+   "kern": "fwd",
+   "tag": "long N=16384",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 3,
+   "first_call_s": 0.07825664797564968,
+   "identical": [
+    true,
+    true,
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 79.02408372111884
+  },
+  {
+   "kern": "fwd",
+   "tag": "long N=16384",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 2,
+   "first_call_s": 0.0798222579760477,
+   "identical": [
+    true,
+    true,
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 79.05964757914522
+  },
+  {
+   "kern": "fwd",
+   "tag": "long N=16384",
+   "BM": 64,
+   "BN": 32,
+   "num_warps": 4,
+   "num_stages": 4,
+   "first_call_s": 0.08025959000224248,
+   "identical": [
+    true,
+    true,
+    true
+   ],
+   "bit_identical": true,
+   "max_abs_diff": 0.0,
+   "ms": 80.86506086069026
+  },
+  {
+   "kern": "fwd",
+   "tag": "long N=16384",
+   "BM": 32,
+   "BN": 64,
+   "num_warps": 4,
+   "num_stages": 2,
+   "first_call_s": 0.08147299801930785,
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "bit_identical": false,
+   "max_abs_diff": 0.015625,
+   "ms": 82.50536114376571
+  }
+ ],
+ "best_fwd": [
+  [
+   64,
+   32,
+   4,
+   2
+  ],
+  [
+   64,
+   32,
+   4,
+   3
+  ],
+  [
+   64,
+   32,
+   4,
+   4
+  ],
+  [
+   32,
+   64,
+   4,
+   2
+  ]
+ ],
+ "best_bwd": {
+  "delta": [
+   [
+    64,
+    32,
+    4,
+    4
+   ],
+   [
+    64,
+    32,
+    4,
+    2
+   ]
+  ],
+  "dkdv": [
+   [
+    64,
+    64,
+    4,
+    4
+   ],
+   [
+    64,
+    64,
+    4,
+    3
+   ]
+  ],
+  "dq": [
+   [
+    64,
+    32,
+    4,
+    3
+   ],
+   [
+    32,
+    64,
+    4,
+    3
+   ]
+  ]
+ }
+}
