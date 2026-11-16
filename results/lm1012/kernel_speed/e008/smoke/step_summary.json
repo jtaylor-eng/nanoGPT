@@ -1,0 +1,32 @@
+{
+ "softmax_mb16": {
+  "steps": 0,
+  "s_per_step": null,
+  "peak_alloc_gb": 31.37716007232666,
+  "peak_reserved_gb": 38.2109375
+ },
+ "softmax_mb8": {
+  "steps": 0,
+  "s_per_step": null,
+  "peak_alloc_gb": 17.29824161529541,
+  "peak_reserved_gb": 19.544921875
+ },
+ "wst_q3d2_trained_cand": {
+  "steps": 0,
+  "s_per_step": null,
+  "peak_alloc_gb": 16.64175844192505,
+  "peak_reserved_gb": 22.521484375
+ },
+ "wst_q3d2_trained_cand_mb16": {
+  "steps": 0,
+  "s_per_step": null,
+  "peak_alloc_gb": 30.7431378364563,
+  "peak_reserved_gb": 36.59375
+ },
+ "wst_q3d2_trained_nocache": {
+  "steps": 0,
+  "s_per_step": null,
+  "peak_alloc_gb": 16.64175844192505,
+  "peak_reserved_gb": 22.521484375
+ }
+}
