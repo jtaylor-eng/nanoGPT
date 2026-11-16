@@ -1,0 +1,65 @@
+{
+ "kernel": "cand",
+ "timers": 1,
+ "script": "train.py",
+ "args": [
+  "/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/config/lm_stieltjes_125m.py",
+  "--data_root=/tmp/fw",
+  "--attn_type=stieltjes",
+  "--stieltjes_q=3.0",
+  "--stieltjes_window=2.0",
+  "--nape_slope_type=exp",
+  "--stieltjes_num_iter=15",
+  "--learning_rate=1.2e-3",
+  "--min_lr=1.2e-4",
+  "--out_dir=/tmp/out_wst_q3d2_cand_timed",
+  "--max_iters=9",
+  "--eval_interval=100000",
+  "--eval_iters=1",
+  "--final_eval_iters=0",
+  "--log_interval=1",
+  "--batch_size=8",
+  "--gradient_accumulation_steps=32"
+ ],
+ "wall_s": 152.61832793802023,
+ "peak_alloc_gb": 16.18648624420166,
+ "peak_reserved_gb": 19.31640625,
+ "timers_ms": {
+  "kernel_fwd_eval": {
+   "calls": 24,
+   "steady_calls": 24,
+   "median": 24.024407495744526,
+   "mean": 30.334784052683972,
+   "steady_sum_s": 0.7280348172644153
+  },
+  "call_fwd_eval": {
+   "calls": 24,
+   "steady_calls": 24,
+   "median": 24.27444700151682,
+   "mean": 30.860367793745052,
+   "steady_sum_s": 0.7406488270498812
+  },
+  "kernel_fwd": {
+   "calls": 3840,
+   "steady_calls": 1919,
+   "median": 24.074467015452683,
+   "mean": 24.82065821869455,
+   "steady_sum_s": 47.63084312167484
+  },
+  "call_fwd": {
+   "calls": 3840,
+   "steady_calls": 1919,
+   "median": 24.32703203521669,
+   "mean": 25.081256781731415,
+   "steady_sum_s": 48.13093176414259
+  },
+  "kernel_bwd": {
+   "calls": 3840,
+   "steady_calls": 1908,
+   "median": 3.708552452735603,
+   "mean": 3.6633817546252176,
+   "steady_sum_s": 6.989732387824915
+  }
+ },
+ "steady_window_s": 71.26593614998274
+}

@@ -1,0 +1,49 @@
+commit 55569fb2eea3f42e98d8a92d5e9f04379d886801 job 8612613 host a0130.ten.osc.edu NVIDIA A100-PCIE-40GB, 40960 MiB 2026-11-16 01:03:54
+== micro rc=0 01:04:54
+{'device': 'NVIDIA A100-PCIE-40GB', 'max_shared_mem': 166912, 'torch': '2.5.1+cu121', 'triton': '3.1.0', 'tiles_bf16': [64, 32], 'rows': {}}
+ref fwd kernel it=0 B8 H12 N2048                          2.03 ms
+ref fwd kernel it=0 compiled                         {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 71474, 'cubin_bytes': 91616}
+ref fwd kernel it=5 B8 H12 N2048                          4.69 ms
+ref fwd kernel it=5 compiled                         {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 221567, 'cubin_bytes': 302048}
+ref fwd kernel it=15 B8 H12 N2048                        22.68 ms
+ref fwd kernel it=15 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 521092, 'cubin_bytes': 719968}
+ref fwd kernel it=30 B8 H12 N2048                        63.45 ms
+ref fwd kernel it=30 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 993621, 'cubin_bytes': 1372384}
+ref bwd delta kernel B8 H12 N2048                         0.87 ms
+ref bwd dkdv kernel B8 H12 N2048                          1.48 ms
+ref bwd dq kernel B8 H12 N2048                            1.06 ms
+ref bwd (autograd, 3 kernels) B8 H12 N2048                3.46 ms
+ref fwd+bwd it=15 B8 H12 N2048                           25.87 ms
+cand fwd kernel it=0 B8 H12 N2048                         1.50 ms
+cand fwd kernel it=0 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 71439, 'cubin_bytes': 91616}
+cand fwd kernel it=5 B8 H12 N2048                         4.11 ms
+cand fwd kernel it=5 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 104242, 'cubin_bytes': 137056}
+cand fwd kernel it=15 B8 H12 N2048                       10.05 ms
+cand fwd kernel it=15 compiled                       {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 104244, 'cubin_bytes': 137056}
+cand fwd kernel it=30 B8 H12 N2048                       19.31 ms
+cand fwd kernel it=30 compiled                       {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 104244, 'cubin_bytes': 137056}
+cand bwd delta kernel B8 H12 N2048                        0.89 ms
+cand bwd dkdv kernel B8 H12 N2048                         1.48 ms
+cand bwd dq kernel B8 H12 N2048                           1.05 ms
+cand bwd (autograd, 3 kernels) B8 H12 N2048               3.46 ms
+cand fwd+bwd it=15 B8 H12 N2048                          13.74 ms
+cand call site fwd (views + contiguous) B8 H12 N2048     10.45 ms
+cand call site fwd+bwd (views) B8 H12 N2048              14.37 ms
+entmax fwd niter=10 B8 H12 N2048                         12.48 ms
+entmax fwd+bwd niter=10 B8 H12 N2048                     15.94 ms
+softmax SDPA+bias fwd B8 H12 N2048                        2.15 ms
+softmax SDPA+bias fwd+bwd B8 H12 N2048                    7.28 ms
+softmax SDPA+bias fwd+bwd B16 H12 N2048                  14.33 ms
+ref fwd kernel it=15 B1 H12 N16384                      173.88 ms
+cand fwd kernel it=15 B1 H12 N16384                      80.44 ms
+entmax fwd niter=10 B1 H12 N16384                        95.06 ms
+cand fwd wrapper it=0 B1 H12 N64 (launch overhead)        1.10 ms
+ref fwd wrapper it=0 B1 H12 N64 (launch overhead)         1.09 ms
+cand _pick_blocks (device query)                          1.01 ms
+== equiv_quick rc=0 01:06:44
+2
+OK  rand w_q2.5_d2 nape bfloat16 N=64 it=15      cand-vs-eager out 1.4e-03 dq 2.4e-03 dk 2.3e-03 dv 1.8e-03 | ref-vs-eager 1.4e-03 2.4e-03 2.3e-03 1.8e-03 | cand-vs-ref max 0.0e+00 | resid cand 1.3e-06 ref 1.3e-06
+OK  rand w_q2.5_d2 nape bfloat16 N=300 it=15     cand-vs-eager out 1.5e-03 dq 2.3e-03 dk 2.3e-03 dv 1.9e-03 | ref-vs-eager 1.5e-03 2.3e-03 2.3e-03 1.9e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.4e-06 ref 2.4e-06
+SUMMARY {"cases": 20, "failed": 0, "ref_outside_tol": 0, "max_err_cand": [0.0021353508345782757, 0.002504316158592701, 0.00245517841540277, 0.0021348788868635893], "max_err_ref": [0.0021353508345782757, 0.002504316158592701, 0.00245517841540277, 0.0021348788868635893], "max_ratio": 1.0, "max_cand_vs_ref": 0.0, "max_resid_cand": 2.5033950805664062e-06, "max_resid_ref": 2.5033950805664062e-06, "device": "NVIDIA A100-PCIE-40GB", "tiles_bf16": [64, 32], "tiles_fp32": [64, 64]}
+GATE PASS
+DONE 01:06:44

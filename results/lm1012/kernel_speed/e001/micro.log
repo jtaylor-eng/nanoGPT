@@ -1,0 +1,32 @@
+{'device': 'NVIDIA A100-PCIE-40GB', 'max_shared_mem': 166912, 'torch': '2.5.1+cu121', 'triton': '3.1.0', 'tiles_bf16': [64, 32], 'rows': {}}
+ref fwd kernel it=0 B8 H12 N2048                          1.51 ms
+ref fwd kernel it=5 B8 H12 N2048                          4.67 ms
+ref fwd kernel it=15 B8 H12 N2048                        22.76 ms
+ref fwd kernel it=30 B8 H12 N2048                        63.47 ms
+ref bwd delta kernel B8 H12 N2048                         0.86 ms
+ref bwd dkdv kernel B8 H12 N2048                          1.47 ms
+ref bwd dq kernel B8 H12 N2048                            1.04 ms
+ref bwd (autograd, 3 kernels) B8 H12 N2048                3.43 ms
+ref fwd+bwd it=15 B8 H12 N2048                           25.84 ms
+cand fwd kernel it=0 B8 H12 N2048                         1.48 ms
+cand fwd kernel it=5 B8 H12 N2048                         4.64 ms
+cand fwd kernel it=15 B8 H12 N2048                       22.68 ms
+cand fwd kernel it=30 B8 H12 N2048                       63.39 ms
+cand bwd delta kernel B8 H12 N2048                        0.87 ms
+cand bwd dkdv kernel B8 H12 N2048                         1.45 ms
+cand bwd dq kernel B8 H12 N2048                           1.03 ms
+cand bwd (autograd, 3 kernels) B8 H12 N2048               3.40 ms
+cand fwd+bwd it=15 B8 H12 N2048                          25.84 ms
+cand call site fwd (views + contiguous) B8 H12 N2048     22.89 ms
+cand call site fwd+bwd (views) B8 H12 N2048              26.39 ms
+entmax fwd niter=10 B8 H12 N2048                         12.12 ms
+entmax fwd+bwd niter=10 B8 H12 N2048                     15.49 ms
+softmax SDPA+bias fwd B8 H12 N2048                        2.07 ms
+softmax SDPA+bias fwd+bwd B8 H12 N2048                    7.08 ms
+softmax SDPA+bias fwd+bwd B16 H12 N2048                  13.97 ms
+ref fwd kernel it=15 B1 H12 N16384                      173.68 ms
+cand fwd kernel it=15 B1 H12 N16384                     173.19 ms
+entmax fwd niter=10 B1 H12 N16384                        92.40 ms
+cand fwd wrapper it=0 B1 H12 N64 (launch overhead)        1.02 ms
+ref fwd wrapper it=0 B1 H12 N64 (launch overhead)         1.15 ms
+cand _pick_blocks (device query)                          0.98 ms

@@ -1,0 +1,53 @@
+commit 0ff1481a0c331e5a5ff7cb374e28377e03814eee job 8603546 host a0128.ten.osc.edu NVIDIA A100-PCIE-40GB, 40960 MiB 2026-11-15 13:10:35
+== step wst 13:10:35
+== step wst rc=0 8 iters 13:11:05
+== step wstref 13:11:05
+== step wstref rc=0 8 iters 13:11:21
+== step ent 13:11:21
+== step ent rc=0 8 iters 13:11:42
+== eval ref rc=0 L=2048: val loss 8.7748 over 8 seqs (1s); first/last bucket 9.073/8.514 13:11:47
+== eval cand rc=0 L=2048: val loss 8.7748 over 8 seqs (1s); first/last bucket 9.073/8.514 13:11:52
+ent {"steps": 5, "s_per_step": 0.01954, "peak_alloc_gb": 1.4603118896484375, "peak_reserved_gb": 2.0859375, "kernel_fwd_ms": 0.49838703125715256, "kernel_bwd_ms": 0.2557455445639789, "call_fwd_ms": 0.6736560026183724, "share_call_fwd": 0.14650172948692103, "share_kernel_fwd": 0.10808225678081565, "share_kernel_bwd": 0.051517571599980064, "share_attention": 0.19801930108690108}
+wst {"steps": 5, "s_per_step": 0.02215, "peak_alloc_gb": 1.4532756805419922, "peak_reserved_gb": 2.083984375, "kernel_fwd_ms": 1.3923770748078823, "kernel_bwd_ms": 0.29872602317482233, "call_fwd_ms": 1.4966829912737012, "share_call_fwd": 0.3469220168761844, "share_kernel_fwd": 0.320670049225587, "share_kernel_bwd": 0.051260209563089694, "share_attention": 0.3981822264392741}
+wstref {"steps": 5, "s_per_step": 0.028390000000000002, "peak_alloc_gb": 1.4524822235107422, "peak_reserved_gb": 1.677734375}
+== summary rc=0 13:11:54
+== micro rc=1 13:12:11
+ref fwd kernel it=30 B2 H12 N512                          1.79 ms
+ref bwd delta kernel B2 H12 N512                          0.03 ms
+ref bwd dkdv kernel B2 H12 N512                           0.05 ms
+ref bwd dq kernel B2 H12 N512                             0.04 ms
+Traceback (most recent call last):
+  File "/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/bench_kernel.py", line 243, in <module>
+    {'micro': micro, 'wrap': wrap, 'summary': summary}[mode](sys.argv[2:])
+  File "/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/bench_kernel.py", line 107, in micro
+    put(f"{name} bwd (autograd, 3 kernels) {shape}", bench(lambda: torch.autograd.grad(o, (q, k, v), do, retain_graph=True)))
+                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/bench_kernel.py", line 36, in bench
+    fn()
+  File "/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/bench_kernel.py", line 107, in <lambda>
+    put(f"{name} bwd (autograd, 3 kernels) {shape}", bench(lambda: torch.autograd.grad(o, (q, k, v), do, retain_graph=True)))
+                                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/fs/scratch/PAS2836/jacktaylor/venvs/nanogpt/lib/python3.12/site-packages/torch/autograd/__init__.py", line 496, in grad
+    result = _engine_run_backward(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/fs/scratch/PAS2836/jacktaylor/venvs/nanogpt/lib/python3.12/site-packages/torch/autograd/graph.py", line 825, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/fs/scratch/PAS2836/jacktaylor/venvs/nanogpt/lib/python3.12/site-packages/torch/autograd/function.py", line 307, in apply
+    return user_fn(self, *args)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/stieltjes/triton_stieltjes_ref.py", line 396, in backward
+    _bwd_delta_kernel[grid_m](
+  File "/fs/scratch/PAS2836/jacktaylor/venvs/nanogpt/lib/python3.12/site-packages/triton/runtime/jit.py", line 345, in <lambda>
+    return lambda *args, **kwargs: self.run(grid=grid, warmup=False, *args, **kwargs)
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/fs/scratch/PAS2836/jacktaylor/venvs/nanogpt/lib/python3.12/site-packages/triton/runtime/jit.py", line 691, in run
+    kernel.run(grid_0, grid_1, grid_2, stream, kernel.function, kernel.packed_metadata, launch_metadata,
+  File "/fs/scratch/PAS2836/jacktaylor/venvs/nanogpt/lib/python3.12/site-packages/triton/backends/nvidia/driver.py", line 365, in __call__
+    self.launch(*args, **kwargs)
+RuntimeError: Triton Error [CUDA]: invalid device context
+== equiv_real rc=0 13:13:41
+OK  real smoke arxiv N=16384 L1 bf16             cand-vs-eager out 1.7e-03 dq 1.8e-03 dk 2.5e-03 dv 2.3e-03 | ref-vs-eager 1.7e-03 1.8e-03 2.5e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 6.6e-06 ref 6.6e-06
+SUMMARY {"cases": 6, "failed": 0, "ref_outside_tol": 0, "max_err_cand": [0.002110634697601199, 0.0024681754875928164, 0.0025317836552858353, 0.0023369290865957737], "max_err_ref": [0.002110634697601199, 0.0024681754875928164, 0.0025317836552858353, 0.0023369290865957737], "max_ratio": 1.0, "max_cand_vs_ref": 0.0, "max_resid_cand": 3.6716461181640625e-05, "max_resid_ref": 3.6716461181640625e-05, "device": "NVIDIA A100-PCIE-40GB", "tiles_bf16": [64, 32], "tiles_fp32": [64, 64]}
+GATE PASS
+[2026-11-15T13:27:53.350] error: *** JOB 8603546 ON a0128 CANCELLED AT 2026-11-15T13:27:53 DUE to SIGNAL Terminated ***

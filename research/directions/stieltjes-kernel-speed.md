@@ -9,16 +9,23 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 15
-spent_gpu_hours: 0.29
+spent_gpu_hours: 1.13
 max_jobs_in_flight: 4
-jobs: [8603935, 8603936]
-jobs_archived: [8603546]
-last_wake: 2026-11-15T13:30:00
-next_id: 2
+jobs:
+- 8612640
+- 8612641
+jobs_archived:
+- 8603546
+- 8603935
+- 8603936
+- 8612613
+last_wake: '2026-11-16T01:10:00-05:00'
+next_id: 3
 model: claude-fable-5-2
 effort: high
 max_turns: 120
 timeout_minutes: 60
+wakes: 1
 ---
 # How fast can the fused windowed-Stieltjes attention kernel run at 125M / T=2048 on an A100 with unchanged outputs and gradients? (profile, then optimise the Triton kernel)
 
@@ -135,3 +142,4 @@ precision that fails the tolerance), or changing num_iter / q / d defaults of th
 ## Log
 One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobids> | eNNN done <metric> | paused: <reason>`
 2026-11-15 13:30  e001 submitted 8603935 (ks_time: micro + 125M step profile) 8603936 (ks_gate: attn_paths, real-input and random equivalence, e2e eval), debug-nextgen, sha 4773794 | smoke 8603546 cancelled after 17 min (0.29 GPU-h): all stages passed except bench micro (Triton backward needs a CUDA context in the autograd thread; fixed in the harness) | no kernel change yet | desktop venv is torch 2.10 / triton 3.6, not the OSC 2.5.1 / 3.1.0: gate verdicts are taken on the A100 only
+2026-11-16 01:10  e001 done: wstieltjes_q3_d2_xs 13.58 s/step (softmax_xs 6.26, asentmax_zi_xs 9.88), forward kernel 66.8 % of the step (24.1 ms x 384 calls), backward 9.8 %, non-attention 22.7 %; forward cost per Newton sweep grows with NUM_ITER (0.63 / 1.42 / 2.07 ms at 5 / 15 / 30: the unrolled tl.static_range loop); gate built and passing on the baseline (72 real + 38 random cases, e2e FineWeb 2048 3.402708, ArXiv 16k 3.651948, 7,660 tok/s) | e002 submitted 8612640 (ks_time PLAN=ab) 8612641 (ks_gate), debug-nextgen, sha 55569fb: Newton loop as a runtime tl.range loop, nothing else | smoke 8612613 (0.05 GPU-h, tier 2, desktop GPU busy): forward 22.68 -> 10.05 ms at the training shape, 173.9 -> 80.4 ms at 16k, bit-identical on 20 quick cases | spent 1.13 of 15 GPU-h
