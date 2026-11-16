@@ -1,4 +1,4 @@
-# Direction stieltjes-kernel-speed CANDIDATE. Base: jtaylor-eng/asentmax@c7093f0 synthetic/src/kernels/adasplash/triton_stieltjes.py (frozen copy: triton_stieltjes_ref.py). Diverges: e002 Newton loop is a runtime loop (tl.range), not unrolled (tl.static_range); e004 windowed forward skips key tiles outside every row's support (SKIP).
+# Direction stieltjes-kernel-speed CANDIDATE. Base: jtaylor-eng/asentmax@c7093f0 synthetic/src/kernels/adasplash/triton_stieltjes.py (frozen copy: triton_stieltjes_ref.py). Diverges: e002 Newton loop is a runtime loop (tl.range), not unrolled (tl.static_range); e004 windowed forward skips key tiles outside every row's support (SKIP); e005 the three backward kernels skip the tiles the forward flagged dead at the final λ (SKIP in the backward kernels, FLAGS_OUT in the forward).
 """
 Fused (flash-style) Stieltjes attention, dense or windowed. Triton.
 
@@ -19,6 +19,11 @@ Windowed map only (SKIP): a (query block, key tile) whose every row is outside t
 in Live and skipped by later sweeps; a skipped tile would have added exact zeros to f, f', S and O. The flag is
 trusted in a sweep only while no row's λ is more than μ below its running maximum (λ rises monotonically except for
 rounding), otherwise the block sweeps every tile, so the result does not depend on the flags.
+With FLAGS_OUT the output sweep leaves in Live the flags at the final λ (a tile it processed is re-flagged from the
+final λ with the 2μ margin; a tile it skipped was trusted, so it is outside the window at the final λ by >= μ). The
+backward kernels use the saved λ, so a tile flagged dead has r = w = 0 on every row and adds exact zeros to δ, dQ, dK,
+dV: they skip it. (As in the forward, a skipped tile no longer turns a non-finite dO / V into NaN on rows that give it
+zero weight; every row still has a live tile, so a non-finite input still reaches every row's gradient.)
 Backward (implicit-function gradient through Σ_A w = 1 over the support A):
     r_ij = (λ_i - s_ij)^{-q-1} [ij in A],  δ_i = Σ_j dP_ij r_ij / Σ_j r_ij
     dS_ij = (q / S_i) r_ij (dP_ij - δ_i);   dQ = dS K scale,  dK = dS^T Q scale,  dV = P^T dO
@@ -102,7 +107,7 @@ def _fwd_kernel(
     Live, NB, NT, dthr2, mu,
     sq: tl.constexpr, NUM_ITER: tl.constexpr, EPS: tl.constexpr,
     HEAD_DIM: tl.constexpr, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr,
-    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr, SKIP: tl.constexpr,
+    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr, SKIP: tl.constexpr, FLAGS_OUT: tl.constexpr,
 ):
     start_m = tl.program_id(0)
     off_hz = tl.program_id(1)
@@ -182,6 +187,10 @@ def _fwd_kernel(
             w, _r = _weights(qk, lam, c, sq, EPS)
             s_row += tl.sum(w, axis=1)
             acc += tl.dot(w.to(v_block.dtype), v_block, input_precision="ieee")
+            if FLAGS_OUT:
+                # for the backward: the flag at the FINAL λ (same 2μ margin; a skipped tile keeps a flag that holds by μ)
+                alive = tl.max((((lam - tl.max(qk, axis=1)) < dthr2) & row_ok).to(tl.int32), axis=0)
+                tl.store(live_base + start_n // BLOCK_N, alive.to(tl.uint8))
     acc = acc / tl.maximum(s_row, EPS)[:, None]
 
     o_ptrs = O + off_z * stride_oz + off_h * stride_oh + offs_m[:, None] * stride_om + offs_d[None, :] * stride_ok
@@ -204,9 +213,10 @@ def _bwd_delta_kernel(
     stride_vz, stride_vh, stride_vn, stride_vk,
     stride_doz, stride_doh, stride_dom, stride_dok,
     sm_scale, c, N_CTX, H,
+    Live, NB, NT,
     sq: tl.constexpr, EPS: tl.constexpr,
     HEAD_DIM: tl.constexpr, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr,
-    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr,
+    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr, SKIP: tl.constexpr,
 ):
     """δ_i = Σ_j dP_ij r_ij / Σ_j r_ij,  dP = dO V^T."""
     start_m = tl.program_id(0)
@@ -229,15 +239,21 @@ def _bwd_delta_kernel(
 
     num = tl.zeros([BLOCK_M], dtype=tl.float32)
     den = tl.zeros([BLOCK_M], dtype=tl.float32)
+    live_base = Live + (off_hz * NB + start_m) * NT      # SKIP: the forward's tile flags at the final λ
     for start_n in tl.range(0, hi, BLOCK_N):
-        offs_n = start_n + tl.arange(0, BLOCK_N)
-        k_block = tl.load(k_base + offs_n[:, None] * stride_kn + offs_d[None, :] * stride_kk, mask=offs_n[:, None] < N_CTX, other=0.0)
-        v_block = tl.load(v_base + offs_n[:, None] * stride_vn + offs_d[None, :] * stride_vk, mask=offs_n[:, None] < N_CTX, other=0.0)
-        qk = _scores(q_block, k_block, offs_m, offs_n, sm_scale, alibi_slope, N_CTX, CAUSAL, USE_ALIBI)
-        _w, r = _weights(qk, lam, c, sq, EPS)
-        dP = tl.dot(do_block, tl.trans(v_block), input_precision="ieee")
-        num += tl.sum(dP * r, axis=1)
-        den += tl.sum(r, axis=1)
+        if SKIP:
+            go = tl.load(live_base + start_n // BLOCK_N) != 0
+        else:
+            go = True
+        if go:
+            offs_n = start_n + tl.arange(0, BLOCK_N)
+            k_block = tl.load(k_base + offs_n[:, None] * stride_kn + offs_d[None, :] * stride_kk, mask=offs_n[:, None] < N_CTX, other=0.0)
+            v_block = tl.load(v_base + offs_n[:, None] * stride_vn + offs_d[None, :] * stride_vk, mask=offs_n[:, None] < N_CTX, other=0.0)
+            qk = _scores(q_block, k_block, offs_m, offs_n, sm_scale, alibi_slope, N_CTX, CAUSAL, USE_ALIBI)
+            _w, r = _weights(qk, lam, c, sq, EPS)
+            dP = tl.dot(do_block, tl.trans(v_block), input_precision="ieee")
+            num += tl.sum(dP * r, axis=1)
+            den += tl.sum(r, axis=1)
     tl.store(Delta + off_hz * N_CTX + offs_m, num / tl.maximum(den, 1e-30), mask=offs_m < N_CTX)
 
 
@@ -251,9 +267,10 @@ def _bwd_dkdv_kernel(
     stride_dkz, stride_dkh, stride_dkn, stride_dkk,
     stride_dvz, stride_dvh, stride_dvn, stride_dvk,
     sm_scale, c, N_CTX, H,
+    Live, NB, NT,
     sq: tl.constexpr, EPS: tl.constexpr,
     HEAD_DIM: tl.constexpr, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr,
-    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr,
+    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr, SKIP: tl.constexpr,
 ):
     """Fixed K/V block, sweep Q blocks:  dK = Σ dS^T Q scale,  dV = Σ P^T dO."""
     start_n = tl.program_id(0)
@@ -275,20 +292,30 @@ def _bwd_dkdv_kernel(
 
     dk = tl.zeros([BLOCK_N, HEAD_DIM], dtype=tl.float32)
     dv = tl.zeros([BLOCK_N, HEAD_DIM], dtype=tl.float32)
+    live_base = Live + off_hz * NB * NT + start_n        # SKIP: the forward's tile flags at the final λ, this key tile
     for start_m in tl.range(lo, N_CTX, BLOCK_M):
-        offs_m = start_m + tl.arange(0, BLOCK_M)
-        q_block = tl.load(q_base + offs_m[:, None] * stride_qm + offs_d[None, :] * stride_qk, mask=offs_m[:, None] < N_CTX, other=0.0)
-        do_block = tl.load(do_base + offs_m[:, None] * stride_dom + offs_d[None, :] * stride_dok, mask=offs_m[:, None] < N_CTX, other=0.0)
-        lam = tl.load(Lam + off_hz * N_CTX + offs_m, mask=offs_m < N_CTX, other=0.0)
-        coef = tl.load(Coef + off_hz * N_CTX + offs_m, mask=offs_m < N_CTX, other=0.0)   # q / S
-        delta = tl.load(Delta + off_hz * N_CTX + offs_m, mask=offs_m < N_CTX, other=0.0)
-        qk = _scores(q_block, k_block, offs_m, offs_n, sm_scale, alibi_slope, N_CTX, CAUSAL, USE_ALIBI)
-        w, r = _weights(qk, lam, c, sq, EPS)
-        dP = tl.dot(do_block, tl.trans(v_block), input_precision="ieee")
-        dS = (coef[:, None] * r * (dP - delta[:, None])).to(q_block.dtype)
-        dk += tl.dot(tl.trans(dS), q_block, input_precision="ieee") * sm_scale
-        p = w * (coef * (1.0 / sq))[:, None]
-        dv += tl.dot(tl.trans(p.to(do_block.dtype)), do_block, input_precision="ieee")
+        if SKIP:
+            # the Q blocks here start at lo = start_n * BLOCK_N, which need not be a multiple of BLOCK_M: rows
+            # start_m .. start_m + BLOCK_M - 1 lie in the forward's blocks b0 and b1 (b1 past the end = padding rows)
+            b0 = start_m // BLOCK_M
+            b1 = tl.minimum((start_m + BLOCK_M - 1) // BLOCK_M, NB - 1)
+            go = (tl.load(live_base + b0 * NT) != 0) | (tl.load(live_base + b1 * NT) != 0)
+        else:
+            go = True
+        if go:
+            offs_m = start_m + tl.arange(0, BLOCK_M)
+            q_block = tl.load(q_base + offs_m[:, None] * stride_qm + offs_d[None, :] * stride_qk, mask=offs_m[:, None] < N_CTX, other=0.0)
+            do_block = tl.load(do_base + offs_m[:, None] * stride_dom + offs_d[None, :] * stride_dok, mask=offs_m[:, None] < N_CTX, other=0.0)
+            lam = tl.load(Lam + off_hz * N_CTX + offs_m, mask=offs_m < N_CTX, other=0.0)
+            coef = tl.load(Coef + off_hz * N_CTX + offs_m, mask=offs_m < N_CTX, other=0.0)   # q / S
+            delta = tl.load(Delta + off_hz * N_CTX + offs_m, mask=offs_m < N_CTX, other=0.0)
+            qk = _scores(q_block, k_block, offs_m, offs_n, sm_scale, alibi_slope, N_CTX, CAUSAL, USE_ALIBI)
+            w, r = _weights(qk, lam, c, sq, EPS)
+            dP = tl.dot(do_block, tl.trans(v_block), input_precision="ieee")
+            dS = (coef[:, None] * r * (dP - delta[:, None])).to(q_block.dtype)
+            dk += tl.dot(tl.trans(dS), q_block, input_precision="ieee") * sm_scale
+            p = w * (coef * (1.0 / sq))[:, None]
+            dv += tl.dot(tl.trans(p.to(do_block.dtype)), do_block, input_precision="ieee")
 
     tl.store(DK + off_z * stride_dkz + off_h * stride_dkh + offs_n[:, None] * stride_dkn + offs_d[None, :] * stride_dkk, dk.to(k_block.dtype), mask=offs_n[:, None] < N_CTX)
     tl.store(DV + off_z * stride_dvz + off_h * stride_dvh + offs_n[:, None] * stride_dvn + offs_d[None, :] * stride_dvk, dv.to(v_block.dtype), mask=offs_n[:, None] < N_CTX)
@@ -303,9 +330,10 @@ def _bwd_dq_kernel(
     stride_doz, stride_doh, stride_dom, stride_dok,
     stride_dqz, stride_dqh, stride_dqm, stride_dqk,
     sm_scale, c, N_CTX, H,
+    Live, NB, NT,
     sq: tl.constexpr, EPS: tl.constexpr,
     HEAD_DIM: tl.constexpr, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr,
-    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr,
+    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr, SKIP: tl.constexpr,
 ):
     """Fixed Q block, sweep K/V blocks:  dQ = Σ dS K scale."""
     start_m = tl.program_id(0)
@@ -329,15 +357,21 @@ def _bwd_dq_kernel(
         hi = tl.minimum((start_m + 1) * BLOCK_M, N_CTX)
 
     dq = tl.zeros([BLOCK_M, HEAD_DIM], dtype=tl.float32)
+    live_base = Live + (off_hz * NB + start_m) * NT      # SKIP: the forward's tile flags at the final λ
     for start_n in tl.range(0, hi, BLOCK_N):
-        offs_n = start_n + tl.arange(0, BLOCK_N)
-        k_block = tl.load(k_base + offs_n[:, None] * stride_kn + offs_d[None, :] * stride_kk, mask=offs_n[:, None] < N_CTX, other=0.0)
-        v_block = tl.load(v_base + offs_n[:, None] * stride_vn + offs_d[None, :] * stride_vk, mask=offs_n[:, None] < N_CTX, other=0.0)
-        qk = _scores(q_block, k_block, offs_m, offs_n, sm_scale, alibi_slope, N_CTX, CAUSAL, USE_ALIBI)
-        _w, r = _weights(qk, lam, c, sq, EPS)
-        dP = tl.dot(do_block, tl.trans(v_block), input_precision="ieee")
-        dS = (coef * r * (dP - delta[:, None])).to(q_block.dtype)
-        dq += tl.dot(dS, k_block, input_precision="ieee") * sm_scale
+        if SKIP:
+            go = tl.load(live_base + start_n // BLOCK_N) != 0
+        else:
+            go = True
+        if go:
+            offs_n = start_n + tl.arange(0, BLOCK_N)
+            k_block = tl.load(k_base + offs_n[:, None] * stride_kn + offs_d[None, :] * stride_kk, mask=offs_n[:, None] < N_CTX, other=0.0)
+            v_block = tl.load(v_base + offs_n[:, None] * stride_vn + offs_d[None, :] * stride_vk, mask=offs_n[:, None] < N_CTX, other=0.0)
+            qk = _scores(q_block, k_block, offs_m, offs_n, sm_scale, alibi_slope, N_CTX, CAUSAL, USE_ALIBI)
+            _w, r = _weights(qk, lam, c, sq, EPS)
+            dP = tl.dot(do_block, tl.trans(v_block), input_precision="ieee")
+            dS = (coef * r * (dP - delta[:, None])).to(q_block.dtype)
+            dq += tl.dot(dS, k_block, input_precision="ieee") * sm_scale
 
     tl.store(DQ + off_z * stride_dqz + off_h * stride_dqh + offs_m[:, None] * stride_dqm + offs_d[None, :] * stride_dqk, dq.to(q_block.dtype), mask=offs_m[:, None] < N_CTX)
 
@@ -379,6 +413,7 @@ def window_c(q: float, window) -> float:
 
 SKIP_TILES = True       # windowed forward: skip key tiles outside every row's support (False = the e002 kernel)
 SKIP_MU_REL = 1e-3      # μ / d. A negative value never trusts a flag (every tile swept): the test of the fallback path
+SKIP_BWD = True         # backward kernels skip the tiles flagged dead at the final λ (False = the e004 kernel)
 
 
 def _forward(q, k, v, causal, sm_scale, sq, num_iter, c, alibi_slopes, return_live=False):
@@ -414,6 +449,7 @@ def _forward(q, k, v, causal, sm_scale, sq, num_iter, c, alibi_slopes, return_li
         live, NB, NT, dthr2, mu,
         sq=sq, NUM_ITER=num_iter, EPS=1e-6, HEAD_DIM=D,
         BLOCK_M=BLOCK_M, BLOCK_N=BLOCK_N, CAUSAL=causal, USE_ALIBI=use_alibi, SKIP=skip,
+        FLAGS_OUT=bool(skip and SKIP_BWD),
     )
     if return_live:
         return o, lam, S, alibi_slopes, BLOCK_M, BLOCK_N, (live if skip else None)
@@ -423,8 +459,10 @@ def _forward(q, k, v, causal, sm_scale, sq, num_iter, c, alibi_slopes, return_li
 class StieltjesAttention(torch.autograd.Function):
     @staticmethod
     def forward(ctx, q, k, v, causal, sm_scale, sq, num_iter, c, alibi_slopes):
-        o, lam, S, slopes, BLOCK_M, BLOCK_N = _forward(q, k, v, causal, sm_scale, sq, num_iter, c, alibi_slopes)
+        o, lam, S, slopes, BLOCK_M, BLOCK_N, live = _forward(q, k, v, causal, sm_scale, sq, num_iter, c, alibi_slopes,
+                                                             return_live=True)
         ctx.save_for_backward(q, k, v, lam, S, slopes)
+        ctx.live = live if SKIP_BWD else None     # tile flags at the final λ (None: dense map, num_iter 0, or switched off)
         ctx.meta = (causal, sm_scale, sq, c, alibi_slopes is not None, BLOCK_M, BLOCK_N)
         return o
 
@@ -434,8 +472,13 @@ class StieltjesAttention(torch.autograd.Function):
         causal, sm_scale, sq, c, use_alibi, BLOCK_M, BLOCK_N = ctx.meta
         B, H, N, D = q.shape
         do = do.contiguous()
+        live = ctx.live
+        bskip = live is not None
+        if not bskip:
+            live = lam                              # never read (constexpr-eliminated)
+        NB, NT = triton.cdiv(N, BLOCK_M), triton.cdiv(N, BLOCK_N)
         common = dict(sq=sq, EPS=1e-6, HEAD_DIM=D, BLOCK_M=BLOCK_M, BLOCK_N=BLOCK_N,
-                      CAUSAL=causal, USE_ALIBI=use_alibi)
+                      CAUSAL=causal, USE_ALIBI=use_alibi, SKIP=bskip)
         grid_m = (triton.cdiv(N, BLOCK_M), B * H)
         grid_n = (triton.cdiv(N, BLOCK_N), B * H)
 
@@ -443,17 +486,17 @@ class StieltjesAttention(torch.autograd.Function):
         _bwd_delta_kernel[grid_m](
             q, k, v, do, lam, delta, alibi_slopes,
             *_strides(q), *_strides(k), *_strides(v), *_strides(do),
-            sm_scale, c, N, H, **common)
+            sm_scale, c, N, H, live, NB, NT, **common)
         coef = (sq / S.clamp(min=1e-6)).contiguous()
         dk, dv, dq = torch.empty_like(k), torch.empty_like(v), torch.empty_like(q)
         _bwd_dkdv_kernel[grid_n](
             q, k, v, do, lam, coef, delta, alibi_slopes, dk, dv,
             *_strides(q), *_strides(k), *_strides(v), *_strides(do), *_strides(dk), *_strides(dv),
-            sm_scale, c, N, H, **common)
+            sm_scale, c, N, H, live, NB, NT, **common)
         _bwd_dq_kernel[grid_m](
             q, k, v, do, lam, coef, delta, alibi_slopes, dq,
             *_strides(q), *_strides(k), *_strides(v), *_strides(do), *_strides(dq),
-            sm_scale, c, N, H, **common)
+            sm_scale, c, N, H, live, NB, NT, **common)
         return dq, dk, dv, None, None, None, None, None, None
 
 

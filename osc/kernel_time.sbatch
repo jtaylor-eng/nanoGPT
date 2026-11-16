@@ -19,11 +19,13 @@
 #                          aswstieltjes_q3_d2_zi_xs RESUMED from the trained checkpoints (tile skipping depends on how
 #                          sparse the heads are; at initialisation nothing is dead), then wstieltjes_q3_d2_xs from scratch.
 #                          QUICK=1 STEPS=3: the pre-submit smoke of this plan (small micro, 2 layers, one resumed row).
+#                          CMP=cand_nobskip (e005): the comparator is the candidate with backward tile skipping off (the
+#                          e004 kernel) instead of cand_noskip (forward and backward skipping off, the e002 kernel).
 set -uo pipefail
 export SCRATCH=/fs/scratch/PAS2836/$USER
 export REPO=$SCRATCH/wt/nanogpt/stieltjes-kernel-speed VENV=$SCRATCH/venvs/nanogpt DATA_SRC=$SCRATCH/nanogpt_data/fineweb25B
 source $REPO/osc/env.sh; source $REPO/osc/rows.sh; source $VENV/bin/activate
-TAG=${TAG:?set TAG=e00N}; PLAN=${PLAN:-profile}; STEPS=${STEPS:-20}; QUICK=${QUICK:-0}; OUT=$LM_RESULTS/kernel_speed/$TAG; mkdir -p $OUT
+TAG=${TAG:?set TAG=e00N}; PLAN=${PLAN:-profile}; STEPS=${STEPS:-20}; QUICK=${QUICK:-0}; CMP=${CMP:-cand_noskip}; CS=${CMP#cand_}; OUT=$LM_RESULTS/kernel_speed/$TAG; mkdir -p $OUT
 [ -z "$(git -C $REPO status --porcelain)" ] || { echo "dirty tree in $REPO"; exit 2; }
 # Triton/inductor caches: env.sh defaults on scratch (persistent, keyed by source hash: the frozen kernel compiles once)
 cd $TMPDIR
@@ -65,12 +67,12 @@ if [ "$PLAN" = ab_trained ]; then
   else RA="--ckpts=$CK/wstieltjes_q3_d2_xs/lr1.2e-3/ckpt.pt,$CK/aswstieltjes_q3_d2_zi_xs/lr1.2e-3/ckpt.pt"; fi
   python $REPO/bench_kernel.py real $RA --fineweb_val=$DATA_SRC/val.bin --arxiv=$REPO/data/arxiv_long/arxiv_long.bin --out=$OUT/real.json 2>&1 | tee $OUT/real.log
   echo "== real rc=${PIPESTATUS[0]} $(date '+%T')"
-  rstep wst_q3d2_trained_noskip wstieltjes_q3_d2_xs cand_noskip
+  rstep wst_q3d2_trained_$CS wstieltjes_q3_d2_xs $CMP
   rstep wst_q3d2_trained_cand   wstieltjes_q3_d2_xs cand
   if [ "$QUICK" != 1 ]; then
-    rstep aswst_q3d2_trained_noskip aswstieltjes_q3_d2_zi_xs cand_noskip
+    rstep aswst_q3d2_trained_$CS aswstieltjes_q3_d2_zi_xs $CMP
     rstep aswst_q3d2_trained_cand   aswstieltjes_q3_d2_zi_xs cand
-    step wst_q3d2_scratch_noskip wstieltjes_q3_d2_xs $STEPS 0 cand_noskip $SPARSE
+    step wst_q3d2_scratch_$CS wstieltjes_q3_d2_xs $STEPS 0 $CMP $SPARSE
     step wst_q3d2_scratch_cand   wstieltjes_q3_d2_xs $STEPS 0 cand        $SPARSE
   fi
 elif [ "$PLAN" = profile ]; then

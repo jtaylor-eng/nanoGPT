@@ -5,10 +5,10 @@
       process: fwd kernel at NUM_ITER in {0, 5, 15, 30}, each backward kernel, bwd, fwd+bwd at the 125M training shape
       (8, 12, 2048, 64) bf16 causal + exp NAPE slopes, q3/d2; the model call site (non-contiguous q/k/v views);
       AdaSplash entmax and SDPA softmax at the same shape; forward at (1, 12, 16384, 64).
-  python bench_kernel.py wrap [--kernel=cand|cand_noskip|ref] [--timers=0|1] [--out=x.json] -- <script.py> [script args...]
+  python bench_kernel.py wrap [--kernel=cand|cand_nobskip|cand_noskip|ref] [--timers=0|1] [--out=x.json] -- <script.py> [script args...]
       Run an UNMODIFIED repo script (train.py, eval_lengths.py) with the chosen kernel and, with --timers=1,
       CUDA-synchronised timers around the attention call site and the autograd Function forward/backward.
-      cand_noskip = the candidate with SKIP_TILES off (the e002 kernel).
+      cand_noskip = the candidate with SKIP_TILES off (the e002 kernel); cand_nobskip = SKIP_BWD off (the e004 kernel).
   python bench_kernel.py summary <dir>
       Table from <dir>/micro.json, step_*.log, step_*.json.
   python bench_kernel.py sweep [--out=sweep.json] [--small]
@@ -25,9 +25,12 @@
       [--layers=0,11] [--batch=8] [--n_long=16384]
       Forward kernel on q/k captured from trained checkpoints (random logits have no dead tiles to speak of): frozen
       baseline, candidate without tile skipping, candidate; per layer ms, bit identity, live-flag fraction at exit.
+      e005: also forward + backward (autograd, random v and dO) with the backward skipping off (the e004 kernel) and
+      on, and dq, dk, dv bit for bit against the e004 kernel and the baseline.
   python bench_kernel.py skipcheck [--quick]
       Tile skipping is invisible: candidate with flags trusted, never trusted (fallback path) and at logits large
-      enough that the trust test fails by rounding, each bit for bit against the unskipped candidate and the baseline.
+      enough that the trust test fails by rounding, each bit for bit against the unskipped candidate and the baseline
+      (o, lambda, S; e005: and dq, dk, dv with the backward skipping on against off and against the baseline).
 """
 import os, sys, json, time, glob, re, statistics, runpy
 from collections import defaultdict
@@ -125,18 +128,24 @@ def micro(argv):
             kinfo(f"{name} fwd kernel it={ni} compiled", mod._fwd_kernel)
         try:   # per-kernel backward: valid while the module keeps the three-kernel backward of the baseline
             with torch.no_grad():
-                o, lam, S, sl, BM, BN = mod._forward(q, k, v, True, sm, sq, NI, c, slopes)
+                bsk = hasattr(mod, 'SKIP_BWD')      # e005 signature: tile flags + SKIP in the backward kernels
+                fo = mod._forward(q, k, v, True, sm, sq, NI, c, slopes, **(dict(return_live=True) if bsk else {}))
+                o, lam, S, sl, BM, BN = fo[:6]
                 common = dict(sq=sq, EPS=1e-6, HEAD_DIM=D, BLOCK_M=BM, BLOCK_N=BN, CAUSAL=True, USE_ALIBI=True)
                 gm, gn = (triton.cdiv(N, BM), B * H), (triton.cdiv(N, BN), B * H)
+                ex = ()
+                if bsk:
+                    common['SKIP'] = fo[6] is not None and mod.SKIP_BWD
+                    ex = (fo[6] if common['SKIP'] else lam, triton.cdiv(N, BM), triton.cdiv(N, BN))
                 st = mod._strides
                 delta = torch.empty_like(lam); coef = (sq / S.clamp(min=1e-6)).contiguous()
                 dk, dv, dq = torch.empty_like(k), torch.empty_like(v), torch.empty_like(q)
                 put(f"{name} bwd delta kernel {shape}", bench(lambda: mod._bwd_delta_kernel[gm](
-                    q, k, v, do, lam, delta, sl, *st(q), *st(k), *st(v), *st(do), sm, c, N, H, **common)))
+                    q, k, v, do, lam, delta, sl, *st(q), *st(k), *st(v), *st(do), sm, c, N, H, *ex, **common)))
                 put(f"{name} bwd dkdv kernel {shape}", bench(lambda: mod._bwd_dkdv_kernel[gn](
-                    q, k, v, do, lam, coef, delta, sl, dk, dv, *st(q), *st(k), *st(v), *st(do), *st(dk), *st(dv), sm, c, N, H, **common)))
+                    q, k, v, do, lam, coef, delta, sl, dk, dv, *st(q), *st(k), *st(v), *st(do), *st(dk), *st(dv), sm, c, N, H, *ex, **common)))
                 put(f"{name} bwd dq kernel {shape}", bench(lambda: mod._bwd_dq_kernel[gm](
-                    q, k, v, do, lam, coef, delta, sl, dq, *st(q), *st(k), *st(v), *st(do), *st(dq), sm, c, N, H, **common)))
+                    q, k, v, do, lam, coef, delta, sl, dq, *st(q), *st(k), *st(v), *st(do), *st(dq), sm, c, N, H, *ex, **common)))
         except AttributeError as e:
             print(f"{name}: per-kernel backward skipped ({e})", flush=True)
         kw = dict(causal=True, sm_scale=sm, stieltjes_q=sq, num_iter=NI, window=window, alibi_slopes=slopes)
@@ -153,6 +162,14 @@ def micro(argv):
         with torch.no_grad():
             put(f"cand noskip fwd kernel it={NI} {shape}", bench(lambda: cand._forward(q, k, v, True, sm, sq, NI, cand.window_c(sq, window), slopes)))
         cand.SKIP_TILES = True
+    if hasattr(cand, 'SKIP_BWD'):        # the e004 backward on the same (random) inputs
+        cand.SKIP_BWD = False
+        kw = dict(causal=True, sm_scale=sm, stieltjes_q=sq, num_iter=NI, window=window, alibi_slopes=slopes)
+        o = cand.stieltjes_attention(q, k, v, **kw) * 1.0
+        put(f"cand nobskip bwd (autograd, 3 kernels) {shape}", bench(lambda: torch.autograd.grad(o, (q, k, v), do, retain_graph=True)))
+        del o
+        put(f"cand nobskip fwd+bwd it={NI} {shape}", bench(lambda: torch.autograd.grad(cand.stieltjes_attention(q, k, v, **kw) * 1.0, (q, k, v), do)))
+        cand.SKIP_BWD = True
     # call site as in CausalSelfAttention.forward: q/k/v are transposed views of one c_attn output
     x = torch.randn(B, N, 3 * H * D, device=dev).to(torch.bfloat16).requires_grad_(True)
     def views():
@@ -218,6 +235,8 @@ def wrap(argv):
         model._triton_stieltjes = kmod.stieltjes_attention     # _stieltjes_fused looks this global up at call time
     elif fl['kernel'] == 'cand_noskip':
         kmod.SKIP_TILES = False                                # read by _forward at call time
+    elif fl['kernel'] == 'cand_nobskip':
+        kmod.SKIP_BWD = False                                  # read by _forward / the Function at call time
     else:
         assert fl['kernel'] == 'cand', fl['kernel']
     T = defaultdict(list)       # name -> [(t_end, seconds)]
@@ -645,6 +664,22 @@ def real(argv):
                     cse['ms_ref'] = bench(lambda: fwd(ref, True, *a), repeats=3, target_s=0.3)
                     cse['ms_noskip'] = bench(lambda: fwd(cand, False, *a), repeats=3, target_s=0.3)
                     cse['ms_skip'] = bench(lambda: fwd(cand, True, *a), repeats=3, target_s=0.3)
+                # forward + backward through autograd (random dO): baseline, backward skipping off (e004), on
+                qg, kg, vg = (t.detach().clone().requires_grad_(True) for t in (q, k, v))
+                do = torch.randn_like(q)
+                kw = dict(causal=True, sm_scale=q.shape[-1] ** -0.5, stieltjes_q=sq, num_iter=NI, window=window, alibi_slopes=slopes)
+
+                def fb(mod, bskip):
+                    cand.SKIP_TILES = True; cand.SKIP_BWD = bskip
+                    return torch.autograd.grad(mod.stieltjes_attention(qg, kg, vg, **kw) * 1.0, (qg, kg, vg), do)
+                gr = fb(ref, True); gn = fb(cand, False); gx = fb(cand, True)
+                cse['grad_identical_nobskip'] = [bool(torch.equal(gx[i], gn[i])) for i in range(3)]
+                cse['grad_identical_ref'] = [bool(torch.equal(gx[i], gr[i])) for i in range(3)]
+                del gr, gn, gx
+                cse['ms_fb_ref'] = bench(lambda: fb(ref, True), repeats=3, target_s=0.3)
+                cse['ms_fb_nobskip'] = bench(lambda: fb(cand, False), repeats=3, target_s=0.3)
+                cse['ms_fb_skip'] = bench(lambda: fb(cand, True), repeats=3, target_s=0.3)
+                del qg, kg, vg, do
                 rows.append(cse); res['cases'].append(cse)
                 print(json.dumps(cse), flush=True)
                 if fl['out']:
@@ -652,16 +687,21 @@ def real(argv):
                         json.dump(res, f, indent=1)
             m = dict(layers=len(rows), ms_ref=statistics.fmean(x['ms_ref'] for x in rows), ms_noskip=statistics.fmean(x['ms_noskip'] for x in rows),
                      ms_skip=statistics.fmean(x['ms_skip'] for x in rows), live_at_exit=statistics.fmean(x['live_at_exit'] for x in rows),
-                     identical_noskip=all(all(x['identical_noskip']) for x in rows), identical_ref=all(all(x['identical_ref']) for x in rows))
+                     identical_noskip=all(all(x['identical_noskip']) for x in rows), identical_ref=all(all(x['identical_ref']) for x in rows),
+                     ms_fb_ref=statistics.fmean(x['ms_fb_ref'] for x in rows), ms_fb_nobskip=statistics.fmean(x['ms_fb_nobskip'] for x in rows),
+                     ms_fb_skip=statistics.fmean(x['ms_fb_skip'] for x in rows),
+                     grad_identical_nobskip=all(all(x['grad_identical_nobskip']) for x in rows),
+                     grad_identical_ref=all(all(x['grad_identical_ref']) for x in rows))
             res['mean'][f"{row} {name}"] = m
             print('MEAN', f"{row} {name}", json.dumps(m), flush=True)
             del qk
             torch.cuda.empty_cache()
-    cand.SKIP_TILES = True
+    cand.SKIP_TILES = True; cand.SKIP_BWD = True
     if fl['out']:
         with open(fl['out'], 'w') as f:
             json.dump(res, f, indent=1)
-    sys.exit(0 if all(m['identical_noskip'] and m['identical_ref'] for m in res['mean'].values()) else 1)
+    sys.exit(0 if all(m['identical_noskip'] and m['identical_ref'] and m['grad_identical_nobskip'] and m['grad_identical_ref']
+                      for m in res['mean'].values()) else 1)
 
 
 def skipcheck(argv):
@@ -680,18 +720,26 @@ def skipcheck(argv):
                         q = (torch.randn(2, H, N, D, device=dev) * qs).to(dt); k = torch.randn(2, H, N, D, device=dev).to(dt)
                         v = torch.randn(2, H, N, D, device=dev).to(dt)
                         a = (q, k, v, True, D ** -0.5, sq, 15, cand.window_c(sq, win), sl)
+                        qg, kg, vg = (t.clone().requires_grad_(True) for t in (q, k, v)); do = torch.randn_like(q)
+                        kw = dict(causal=True, sm_scale=D ** -0.5, stieltjes_q=sq, num_iter=15, window=win, alibi_slopes=sl)
+                        grad = lambda mod: torch.autograd.grad(mod.stieltjes_attention(qg, kg, vg, **kw) * 1.0, (qg, kg, vg), do)
                         with torch.no_grad():
                             r = ref._forward(*a)
                             cand.SKIP_TILES = False; base = cand._forward(*a); cand.SKIP_TILES = True
-                            for name, mu in (('trust', 1e-3), ('notrust', -1.0)):
-                                cand.SKIP_MU_REL = mu
+                        gr = grad(ref)
+                        cand.SKIP_BWD = False; gb = grad(cand); cand.SKIP_BWD = True      # the e004 backward (no tile skipped)
+                        for name, mu in (('trust', 1e-3), ('notrust', -1.0)):
+                            cand.SKIP_MU_REL = mu
+                            with torch.no_grad():
                                 x = cand._forward(*a, return_live=True)
-                                cand.SKIP_MU_REL = 1e-3
-                                same = [bool(torch.equal(x[i], base[i])) and bool(torch.equal(x[i], r[i])) for i in range(3)]
-                                fr = _live_frac(x[6], x[4], x[5], N) if x[6] is not None else None
-                                n += 1; bad += not all(same)
-                                print(f"{'OK ' if all(same) else 'BAD'} {str(dt)[6:]:9s} N{N:5d} q{sq} d{win} slopes{int(sl is not None)} qs{qs:7.0f} {name:8s} "
-                                      f"identical(o,lam,S)={same} live_at_exit={fr if fr is None else round(fr, 3)}", flush=True)
+                            gx = grad(cand)
+                            cand.SKIP_MU_REL = 1e-3
+                            same = [bool(torch.equal(x[i], base[i])) and bool(torch.equal(x[i], r[i])) for i in range(3)]
+                            gsame = [bool(torch.equal(gx[i], gb[i])) and bool(torch.equal(gx[i], gr[i])) for i in range(3)]
+                            fr = _live_frac(x[6], x[4], x[5], N) if x[6] is not None else None
+                            n += 1; bad += not (all(same) and all(gsame))
+                            print(f"{'OK ' if all(same) and all(gsame) else 'BAD'} {str(dt)[6:]:9s} N{N:5d} q{sq} d{win} slopes{int(sl is not None)} qs{qs:7.0f} {name:8s} "
+                                  f"identical(o,lam,S)={same} (dq,dk,dv)={gsame} live_at_exit={fr if fr is None else round(fr, 3)}", flush=True)
     print(f"skipcheck: {n - bad} of {n} OK")
     sys.exit(1 if bad else 0)
 
