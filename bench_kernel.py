@@ -5,11 +5,11 @@
       process: fwd kernel at NUM_ITER in {0, 5, 15, 30}, each backward kernel, bwd, fwd+bwd at the 125M training shape
       (8, 12, 2048, 64) bf16 causal + exp NAPE slopes, q3/d2; the model call site (non-contiguous q/k/v views);
       AdaSplash entmax and SDPA softmax at the same shape; forward at (1, 12, 16384, 64).
-  python bench_kernel.py wrap [--kernel=cand|cand_noexit|cand_nobskip|cand_noskip|ref] [--timers=0|1] [--out=x.json] -- <script.py> [script args...]
+  python bench_kernel.py wrap [--kernel=cand|cand_copy|cand_noexit|cand_nobskip|cand_noskip|ref] [--timers=0|1] [--out=x.json] -- <script.py> [script args...]
       Run an UNMODIFIED repo script (train.py, eval_lengths.py) with the chosen kernel and, with --timers=1,
       CUDA-synchronised timers around the attention call site and the autograd Function forward/backward.
       cand_noskip = the candidate with SKIP_TILES off (the e002 kernel); cand_nobskip = SKIP_BWD off (the e004 kernel);
-      cand_noexit = EXIT_CYCLE off (the e005 kernel).
+      cand_noexit = EXIT_CYCLE off (the e005 kernel); cand_copy = ZERO_COPY off and q/k/v copied at the call site (e006).
   python bench_kernel.py summary <dir>
       Table from <dir>/micro.json, step_*.log, step_*.json.
   python bench_kernel.py sweep [--out=sweep.json] [--small]
@@ -35,6 +35,9 @@
       enough that the trust test fails by rounding, each bit for bit against the unskipped candidate and the baseline
       (o, lambda, S; e005: and dq, dk, dv with the backward skipping on against off and against the baseline).
       e006: plus the cycle exit at other sweep counts (both parities of the sweeps left) against the baseline.
+  python bench_kernel.py viewcheck [--quick]
+      e007: the candidate on strided q/k/v views with outputs in the views' memory order against the e006 wrapper and
+      the frozen baseline on contiguous copies, y and the gradient at the c_attn output bit for bit.
   python bench_kernel.py aliascheck
       The Triton behaviour the kernel's loop-carried lambda history relies on (a name aliasing another before a loop).
 """
@@ -188,12 +191,38 @@ def micro(argv):
     def views():
         a, b, c_ = x.split(H * D, dim=2)
         return [t.view(B, N, H, D).transpose(1, 2) for t in (a, b, c_)]
-    def site():
+    # e007: the whole call site of CausalSelfAttention.forward, from the c_attn output x to y (B, N, H*D) and back to
+    # dx. "copy" = the e006 site (q/k/v .contiguous(), O and gradients in (B, H, N, D) memory, dO copied), "zero-copy" =
+    # the candidate (views in, outputs in the views' memory order). "kernel on views" = the forward alone on strided q/k/v.
+    def site(copy):
         qq, kk, vv = views()
-        return model._stieltjes_fused(qq, kk, vv, sm, sq, NI, window, slopes)
+        cand.ZERO_COPY = not copy
+        try:
+            if copy:
+                qq, kk, vv = qq.contiguous(), kk.contiguous(), vv.contiguous()
+            y = cand.stieltjes_attention(qq, kk, vv, causal=True, sm_scale=sm, stieltjes_q=sq, num_iter=NI, window=window, alibi_slopes=slopes)
+        finally:
+            cand.ZERO_COPY = True
+        return y.transpose(1, 2).contiguous().view(B, N, H * D)
+    dy = torch.randn(B, N, H * D, device=dev).to(torch.bfloat16)
+    def site_fb(copy):
+        cand.ZERO_COPY = not copy       # the backward reads the switch too
+        try:
+            return torch.autograd.grad(site(copy), x, dy)
+        finally:
+            cand.ZERO_COPY = True
     with torch.no_grad():
-        put(f"cand call site fwd (views + contiguous) {shape}", bench(site))
-    put(f"cand call site fwd+bwd (views) {shape}", bench(lambda: torch.autograd.grad(site() * 1.0, x, do)))
+        qv, kv, vv_ = views()
+        put(f"cand fwd kernel on views it={NI} {shape}", bench(lambda: cand._forward(qv, kv, vv_, True, sm, sq, NI, cand.window_c(sq, window), slopes)))
+        put(f"cand call site fwd copy {shape}", bench(lambda: site(True)))
+        put(f"cand call site fwd zero-copy {shape}", bench(lambda: site(False)))
+        same = bool(torch.equal(site(True), site(False)))
+    put(f"cand call site fwd+bwd copy {shape}", bench(lambda: site_fb(True)))
+    put(f"cand call site fwd+bwd zero-copy {shape}", bench(lambda: site_fb(False)))
+    gsame = bool(torch.equal(site_fb(True)[0], site_fb(False)[0]))
+    res['site_identical'] = [same, gsame]
+    print(f"call site copy vs zero-copy identical (y, dx): {same} {gsame}", flush=True)
+    del qv, kv, vv_, dy
 
     # references: AdaSplash entmax (niter 10) and SDPA softmax + NAPE bias, same shape; softmax also at micro-batch 16
     varlen = torch.full((B,), N, dtype=torch.long, device=dev)
@@ -245,13 +274,19 @@ def wrap(argv):
     import stieltjes.triton_stieltjes as kmod
     if fl['kernel'] == 'ref':
         import stieltjes.triton_stieltjes_ref as kmod
-        model._triton_stieltjes = kmod.stieltjes_attention     # _stieltjes_fused looks this global up at call time
+        # _stieltjes_fused looks this global up at call time; contiguous copies as at the call site the baseline was
+        # frozen with (e007 took them out of model.py)
+        model._triton_stieltjes = lambda q, k, v, **kw: kmod.stieltjes_attention(q.contiguous(), k.contiguous(), v.contiguous(), **kw)
     elif fl['kernel'] == 'cand_noskip':
         kmod.SKIP_TILES = False                                # read by _forward at call time
     elif fl['kernel'] == 'cand_nobskip':
         kmod.SKIP_BWD = False                                  # read by _forward / the Function at call time
     elif fl['kernel'] == 'cand_noexit':
         kmod.EXIT_CYCLE = False                                # read by _forward at call time (the e005 kernel)
+    elif fl['kernel'] == 'cand_copy':
+        kmod.ZERO_COPY = False                                 # the e006 kernel wrapper and call site: q/k/v copied, O and
+        _sa = kmod.stieltjes_attention                         # the gradients contiguous (B, H, N, D), dO copied
+        model._triton_stieltjes = lambda q, k, v, **kw: _sa(q.contiguous(), k.contiguous(), v.contiguous(), **kw)
     else:
         assert fl['kernel'] == 'cand', fl['kernel']
     T = defaultdict(list)       # name -> [(t_end, seconds)]
@@ -813,6 +848,50 @@ def skipcheck(argv):
     sys.exit(1 if bad else 0)
 
 
+def viewcheck(argv):
+    """e007: the candidate on the model's strided q/k/v views with its outputs in the views' memory order (ZERO_COPY)
+    against the e006 wrapper on contiguous copies and against the frozen baseline on contiguous copies: y and the
+    gradient at the c_attn output bit for bit. `as` = q a contiguous tensor of its own, k/v views (the AS rows)."""
+    import model
+    import stieltjes.triton_stieltjes as cand
+    import stieltjes.triton_stieltjes_ref as ref
+    fl, _ = _flags(argv, quick=False)
+    dev = 'cuda'; H, D = 4, 64
+    torch.manual_seed(0)
+    bad = n = 0
+    for dt in (torch.bfloat16, torch.float32):
+        for (B, N) in (((1, 64), (3, 300)) if fl['quick'] else ((1, 64), (3, 300), (2, 1000), (2, 2048))):
+            for (sq, win) in ((3.0, 2.0), (4.0, 2.0), (4.0, None)):
+                for sl in (None, model.nape_slopes(H, 'exp').to(dev)):
+                    for qs in (3.0, 12.0):
+                        for as_q in (False, True):
+                            x = torch.randn(B, N, 3 * H * D, device=dev)
+                            x[..., :H * D] *= qs                                   # the q chunk: qs 12 = sparse supports
+                            x = x.to(dt).requires_grad_(True)
+                            dy = torch.randn(B, N, H * D, device=dev).to(dt)
+                            kw = dict(causal=True, sm_scale=D ** -0.5, stieltjes_q=sq, num_iter=15, window=win, alibi_slopes=sl)
+                            def run(mod, copy):
+                                q, k, v = (t.view(B, N, H, D).transpose(1, 2) for t in x.split(H * D, dim=2))
+                                if as_q:
+                                    q = q * 1.0                                    # a tensor of its own, as _apply_scale returns
+                                cand.ZERO_COPY = not copy
+                                try:
+                                    if copy:
+                                        q, k, v = q.contiguous(), k.contiguous(), v.contiguous()
+                                    y = mod.stieltjes_attention(q, k, v, **kw).transpose(1, 2).contiguous().view(B, N, H * D)
+                                    return y.detach(), torch.autograd.grad(y, x, dy)[0]
+                                finally:
+                                    cand.ZERO_COPY = True
+                            z, c0, r = run(cand, False), run(cand, True), run(ref, True)
+                            same = [bool(torch.equal(z[i], c0[i])) and bool(torch.equal(z[i], r[i])) for i in range(2)]
+                            fin = bool(torch.isfinite(z[0]).all()) and bool(torch.isfinite(z[1]).all())
+                            n += 1; bad += not (all(same) and fin)
+                            print(f"{'OK ' if all(same) and fin else 'BAD'} {str(dt)[6:]:9s} B{B} N{N:5d} q{sq} d{win} slopes{int(sl is not None)} qs{qs:5.0f} "
+                                  f"{'as  ' if as_q else 'view'} identical(y, dx)={same} finite={fin}", flush=True)
+    print(f"viewcheck: {n - bad} of {n} OK")
+    sys.exit(1 if bad else 0)
+
+
 def aliascheck(argv):
     """Toolchain assumption of the kernel: a name that aliases another before a runtime loop (`lam_hw = lam`, e004) must
     stay a loop-carried variable of its own. On triton 3.6 it does when the loop updates it through a new op (the
@@ -865,7 +944,7 @@ def aliascheck(argv):
 
 if __name__ == '__main__':
     mode = sys.argv[1] if len(sys.argv) > 1 else ''
-    modes = {'micro': micro, 'wrap': wrap, 'summary': summary, 'sweep': sweep, 'tiles': tiles, 'real': real, 'skipcheck': skipcheck, 'aliascheck': aliascheck}
+    modes = {'micro': micro, 'wrap': wrap, 'summary': summary, 'sweep': sweep, 'tiles': tiles, 'real': real, 'skipcheck': skipcheck, 'viewcheck': viewcheck, 'aliascheck': aliascheck}
     if mode not in modes:
         print(__doc__); sys.exit(2)
     modes[mode](sys.argv[2:])

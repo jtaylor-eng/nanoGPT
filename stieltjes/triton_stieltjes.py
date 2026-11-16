@@ -1,4 +1,4 @@
-# Direction stieltjes-kernel-speed CANDIDATE. Base: jtaylor-eng/asentmax@c7093f0 synthetic/src/kernels/adasplash/triton_stieltjes.py (frozen copy: triton_stieltjes_ref.py). Diverges: e002 Newton loop is a runtime loop (tl.range), not unrolled (tl.static_range); e004 windowed forward skips key tiles outside every row's support (SKIP); e005 the three backward kernels skip the tiles the forward flagged dead at the final λ (SKIP in the backward kernels, FLAGS_OUT in the forward); e006 a block leaves the Newton loop once every row's λ repeats with period 1 or 2 (CYC), the remaining sweeps being determined.
+# Direction stieltjes-kernel-speed CANDIDATE. Base: jtaylor-eng/asentmax@c7093f0 synthetic/src/kernels/adasplash/triton_stieltjes.py (frozen copy: triton_stieltjes_ref.py). Diverges: e002 Newton loop is a runtime loop (tl.range), not unrolled (tl.static_range); e004 windowed forward skips key tiles outside every row's support (SKIP); e005 the three backward kernels skip the tiles the forward flagged dead at the final λ (SKIP in the backward kernels, FLAGS_OUT in the forward); e006 a block leaves the Newton loop once every row's λ repeats with period 1 or 2 (CYC), the remaining sweeps being determined; e007 no copies around the kernels: q/k/v/dO are read through their strides as the caller's views and O, dQ, dK, dV are written in the caller's memory order (ZERO_COPY).
 """
 Fused (flash-style) Stieltjes attention, dense or windowed. Triton.
 
@@ -437,6 +437,18 @@ SKIP_TILES = True       # windowed forward: skip key tiles outside every row's s
 SKIP_MU_REL = 1e-3      # μ / d. A negative value never trusts a flag (every tile swept): the test of the fallback path
 SKIP_BWD = True         # backward kernels skip the tiles flagged dead at the final λ (False = the e004 kernel)
 EXIT_CYCLE = True       # a block leaves the Newton loop once every row's λ has period 1 or 2 (False = the e005 kernel)
+ZERO_COPY = True        # outputs in the caller's memory order, dO read through its strides (False = the e006 wrapper)
+
+
+def _like(t):
+    """Uninitialised kernel output shaped like t (B, H, N, D). ZERO_COPY: if t is a heads-inner view (the model's q/k/v:
+    (B, N, H, D) memory seen through transpose(1, 2)) the output gets the same memory order, so the caller's
+    transpose(1, 2).contiguous() on O and autograd's reshape of dQ, dK, dV are no copies. The kernels address every
+    tensor through its strides, so the values do not depend on the layout."""
+    if ZERO_COPY and t.stride(1) < t.stride(2):
+        B, H, N, D = t.shape
+        return torch.empty((B, N, H, D), device=t.device, dtype=t.dtype).transpose(1, 2)
+    return torch.empty_like(t)
 
 
 def _forward(q, k, v, causal, sm_scale, sq, num_iter, c, alibi_slopes, return_live=False):
@@ -446,7 +458,7 @@ def _forward(q, k, v, causal, sm_scale, sq, num_iter, c, alibi_slopes, return_li
     assert D in {16, 32, 64, 128, 256}
     if B * H > 65535:
         raise ValueError(f"B*H = {B * H} exceeds the CUDA grid limit; split the batch")
-    o = torch.empty_like(q)
+    o = _like(v)
     lam = torch.empty((B * H, N), device=q.device, dtype=torch.float32)
     S = torch.empty((B * H, N), device=q.device, dtype=torch.float32)
     use_alibi = alibi_slopes is not None
@@ -494,7 +506,8 @@ class StieltjesAttention(torch.autograd.Function):
         q, k, v, lam, S, alibi_slopes = ctx.saved_tensors
         causal, sm_scale, sq, c, use_alibi, BLOCK_M, BLOCK_N = ctx.meta
         B, H, N, D = q.shape
-        do = do.contiguous()
+        if not ZERO_COPY:
+            do = do.contiguous()                    # e006 wrapper; the kernels read dO through its strides
         live = ctx.live
         bskip = live is not None
         if not bskip:
@@ -511,7 +524,7 @@ class StieltjesAttention(torch.autograd.Function):
             *_strides(q), *_strides(k), *_strides(v), *_strides(do),
             sm_scale, c, N, H, live, NB, NT, **common)
         coef = (sq / S.clamp(min=1e-6)).contiguous()
-        dk, dv, dq = torch.empty_like(k), torch.empty_like(v), torch.empty_like(q)
+        dk, dv, dq = _like(k), _like(v), _like(q)
         _bwd_dkdv_kernel[grid_n](
             q, k, v, do, lam, coef, delta, alibi_slopes, dk, dv,
             *_strides(q), *_strides(k), *_strides(v), *_strides(do), *_strides(dk), *_strides(dv),

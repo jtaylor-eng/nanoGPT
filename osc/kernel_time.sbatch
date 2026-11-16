@@ -22,6 +22,9 @@
 #                          CMP=cand_nobskip (e005): the comparator is the candidate with backward tile skipping off (the
 #                          e004 kernel) instead of cand_noskip (forward and backward skipping off, the e002 kernel).
 #                          CMP=cand_noexit (e006): the comparator is the candidate with the Newton cycle exit off (the e005 kernel).
+#                          CMP=cand_copy (e007): the comparator is the candidate with ZERO_COPY off and q/k/v copied at the
+#                          call site (the e006 kernel and call site). REAL=0 skips bench_kernel.py real (kernel-level
+#                          timings on captured, contiguous q/k: not what e007 changes).
 set -uo pipefail
 export SCRATCH=/fs/scratch/PAS2836/$USER
 export REPO=$SCRATCH/wt/nanogpt/stieltjes-kernel-speed VENV=$SCRATCH/venvs/nanogpt DATA_SRC=$SCRATCH/nanogpt_data/fineweb25B
@@ -35,6 +38,9 @@ echo "commit $(git -C $REPO rev-parse HEAD) job $SLURM_JOB_ID host $(hostname) $
 echo "== aliascheck $(date '+%T')"
 python $REPO/bench_kernel.py aliascheck
 echo "== aliascheck rc=$? $(date '+%T')"
+echo "== viewcheck $(date '+%T')"
+python $REPO/bench_kernel.py viewcheck --quick | tail -3
+echo "== viewcheck rc=${PIPESTATUS[0]} $(date '+%T')"
 
 echo "== micro $(date '+%T')"
 python $REPO/bench_kernel.py micro $([ "$QUICK" = 1 ] && echo --small) --out=$OUT/micro.json 2>&1 | tee $OUT/micro.log
@@ -67,11 +73,13 @@ rstep() {  # name row kernel: STEPS steps resumed from the trained checkpoint (a
   rm -rf $O
 }
 if [ "$PLAN" = ab_trained ]; then
+  if [ "${REAL:-1}" = 1 ]; then
   echo "== real $(date '+%T')"
   if [ "$QUICK" = 1 ]; then RA="--ckpts=$CK/wstieltjes_q3_d2_xs/lr1.2e-3/ckpt.pt --layers=0,11"
   else RA="--ckpts=$CK/wstieltjes_q3_d2_xs/lr1.2e-3/ckpt.pt,$CK/aswstieltjes_q3_d2_zi_xs/lr1.2e-3/ckpt.pt"; fi
   python $REPO/bench_kernel.py real $RA --fineweb_val=$DATA_SRC/val.bin --arxiv=$REPO/data/arxiv_long/arxiv_long.bin --out=$OUT/real.json 2>&1 | tee $OUT/real.log
   echo "== real rc=${PIPESTATUS[0]} $(date '+%T')"
+  fi
   rstep wst_q3d2_trained_$CS wstieltjes_q3_d2_xs $CMP
   rstep wst_q3d2_trained_cand   wstieltjes_q3_d2_xs cand
   if [ "$QUICK" != 1 ]; then
