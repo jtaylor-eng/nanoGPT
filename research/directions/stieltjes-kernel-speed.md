@@ -9,18 +9,20 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 15
-spent_gpu_hours: 1.78
+spent_gpu_hours: 1.79
 max_jobs_in_flight: 4
 jobs:
-- 8612640
-- 8612641
+- 8613091
 jobs_archived:
 - 8603546
 - 8603935
 - 8603936
 - 8612613
-last_wake: '2026-11-16T01:00:01-05:00'
-next_id: 3
+- 8612640
+- 8612641
+- 8613034
+last_wake: '2026-11-16T02:15:00-05:00'
+next_id: 4
 model: claude-fable-5-2
 effort: high
 max_turns: 120
@@ -143,3 +145,4 @@ precision that fails the tolerance), or changing num_iter / q / d defaults of th
 One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobids> | eNNN done <metric> | paused: <reason>`
 2026-11-15 13:30  e001 submitted 8603935 (ks_time: micro + 125M step profile) 8603936 (ks_gate: attn_paths, real-input and random equivalence, e2e eval), debug-nextgen, sha 4773794 | smoke 8603546 cancelled after 17 min (0.29 GPU-h): all stages passed except bench micro (Triton backward needs a CUDA context in the autograd thread; fixed in the harness) | no kernel change yet | desktop venv is torch 2.10 / triton 3.6, not the OSC 2.5.1 / 3.1.0: gate verdicts are taken on the A100 only
 2026-11-16 01:10  e001 done: wstieltjes_q3_d2_xs 13.58 s/step (softmax_xs 6.26, asentmax_zi_xs 9.88), forward kernel 66.8 % of the step (24.1 ms x 384 calls), backward 9.8 %, non-attention 22.7 %; forward cost per Newton sweep grows with NUM_ITER (0.63 / 1.42 / 2.07 ms at 5 / 15 / 30: the unrolled tl.static_range loop); gate built and passing on the baseline (72 real + 38 random cases, e2e FineWeb 2048 3.402708, ArXiv 16k 3.651948, 7,660 tok/s) | e002 submitted 8612640 (ks_time PLAN=ab) 8612641 (ks_gate), debug-nextgen, sha 55569fb: Newton loop as a runtime tl.range loop, nothing else | smoke 8612613 (0.05 GPU-h, tier 2, desktop GPU busy): forward 22.68 -> 10.05 ms at the training shape, 173.9 -> 80.4 ms at 16k, bit-identical on 20 quick cases | spent 1.13 of 15 GPU-h
+2026-11-16 02:15  e002 done: Newton loop as a runtime tl.range loop, wstieltjes_q3_d2_xs 13.69 -> 8.91 s/step (-34.9 %; aswstieltjes_q3_d2_zi_xs 13.93 -> 9.16, wstieltjes_q4_d2_xs 13.67 -> 8.86; ASEntmax 9.88, softmax 6.26 from e001), forward kernel 22.69 -> 10.00 ms and affine in NUM_ITER (0.59 ms per sweep), 16k forward 174.3 -> 79.5 ms, ArXiv 16k eval 7,654 -> 16,376 tok/s, gate PASS and bit-identical to the frozen baseline on 72 real + 38 random cases and both e2e evals (jobs 8612640, 8612641, 0.66 GPU-h); 9 of 9 predictions hit | e003 submitted 8613091 (ks_meas, debug-nextgen, sha 0b3c77a): measurement only, launch-parameter sweep of the four kernels (tiles, num_warps, num_stages) and live-tile fraction per Newton sweep on trained q/k, to choose between launch parameters and tile skipping as e004 | smoke 8613034 (0.01 GPU-h, tier 2 after tier-1 desktop checks) passed: layers 0 / 11 of wstieltjes_q3_d2_xs show 56 % / 31 % of 64x32 tiles live at the final lambda at N=2048, no tile coming back | kernel of record so far: stieltjes/triton_stieltjes.py at 55569fb | spent 1.79 of 15 GPU-h
