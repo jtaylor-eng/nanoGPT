@@ -5,10 +5,11 @@
       process: fwd kernel at NUM_ITER in {0, 5, 15, 30}, each backward kernel, bwd, fwd+bwd at the 125M training shape
       (8, 12, 2048, 64) bf16 causal + exp NAPE slopes, q3/d2; the model call site (non-contiguous q/k/v views);
       AdaSplash entmax and SDPA softmax at the same shape; forward at (1, 12, 16384, 64).
-  python bench_kernel.py wrap [--kernel=cand|cand_nobskip|cand_noskip|ref] [--timers=0|1] [--out=x.json] -- <script.py> [script args...]
+  python bench_kernel.py wrap [--kernel=cand|cand_noexit|cand_nobskip|cand_noskip|ref] [--timers=0|1] [--out=x.json] -- <script.py> [script args...]
       Run an UNMODIFIED repo script (train.py, eval_lengths.py) with the chosen kernel and, with --timers=1,
       CUDA-synchronised timers around the attention call site and the autograd Function forward/backward.
-      cand_noskip = the candidate with SKIP_TILES off (the e002 kernel); cand_nobskip = SKIP_BWD off (the e004 kernel).
+      cand_noskip = the candidate with SKIP_TILES off (the e002 kernel); cand_nobskip = SKIP_BWD off (the e004 kernel);
+      cand_noexit = EXIT_CYCLE off (the e005 kernel).
   python bench_kernel.py summary <dir>
       Table from <dir>/micro.json, step_*.log, step_*.json.
   python bench_kernel.py sweep [--out=sweep.json] [--small]
@@ -27,10 +28,15 @@
       baseline, candidate without tile skipping, candidate; per layer ms, bit identity, live-flag fraction at exit.
       e005: also forward + backward (autograd, random v and dO) with the backward skipping off (the e004 kernel) and
       on, and dq, dk, dv bit for bit against the e004 kernel and the baseline.
+      e006: also the candidate with EXIT_CYCLE off (the e005 kernel), forward and forward + backward, and the sweep at
+      which each 64-row block's lambda starts to repeat (lambda_t from kernels launched at NUM_ITER = 1..num_iter).
   python bench_kernel.py skipcheck [--quick]
       Tile skipping is invisible: candidate with flags trusted, never trusted (fallback path) and at logits large
       enough that the trust test fails by rounding, each bit for bit against the unskipped candidate and the baseline
       (o, lambda, S; e005: and dq, dk, dv with the backward skipping on against off and against the baseline).
+      e006: plus the cycle exit at other sweep counts (both parities of the sweeps left) against the baseline.
+  python bench_kernel.py aliascheck
+      The Triton behaviour the kernel's loop-carried lambda history relies on (a name aliasing another before a loop).
 """
 import os, sys, json, time, glob, re, statistics, runpy
 from collections import defaultdict
@@ -170,6 +176,13 @@ def micro(argv):
         del o
         put(f"cand nobskip fwd+bwd it={NI} {shape}", bench(lambda: torch.autograd.grad(cand.stieltjes_attention(q, k, v, **kw) * 1.0, (q, k, v), do)))
         cand.SKIP_BWD = True
+    if hasattr(cand, 'EXIT_CYCLE'):      # the e005 kernel on the same (random) inputs
+        cand.EXIT_CYCLE = False
+        kw = dict(causal=True, sm_scale=sm, stieltjes_q=sq, num_iter=NI, window=window, alibi_slopes=slopes)
+        with torch.no_grad():
+            put(f"cand noexit fwd kernel it={NI} {shape}", bench(lambda: cand._forward(q, k, v, True, sm, sq, NI, cand.window_c(sq, window), slopes)))
+        put(f"cand noexit fwd+bwd it={NI} {shape}", bench(lambda: torch.autograd.grad(cand.stieltjes_attention(q, k, v, **kw) * 1.0, (q, k, v), do)))
+        cand.EXIT_CYCLE = True
     # call site as in CausalSelfAttention.forward: q/k/v are transposed views of one c_attn output
     x = torch.randn(B, N, 3 * H * D, device=dev).to(torch.bfloat16).requires_grad_(True)
     def views():
@@ -237,6 +250,8 @@ def wrap(argv):
         kmod.SKIP_TILES = False                                # read by _forward at call time
     elif fl['kernel'] == 'cand_nobskip':
         kmod.SKIP_BWD = False                                  # read by _forward / the Function at call time
+    elif fl['kernel'] == 'cand_noexit':
+        kmod.EXIT_CYCLE = False                                # read by _forward at call time (the e005 kernel)
     else:
         assert fl['kernel'] == 'cand', fl['kernel']
     T = defaultdict(list)       # name -> [(t_end, seconds)]
@@ -638,9 +653,33 @@ def real(argv):
     tok_fw = torch.from_numpy(np.stack([fw[i * 2049: i * 2049 + 2048].astype(np.int64) for i in range(fl['batch'])])).to(dev)
     tok_ax = torch.from_numpy(ax[:NLg].astype(np.int64))[None].to(dev)
 
-    def fwd(mod, skip, q, k, v, sq, c, slopes, **kw):
-        cand.SKIP_TILES = skip
-        return mod._forward(q, k, v, True, q.shape[-1] ** -0.5, sq, NI, c, slopes, **kw)
+    def fwd(mod, skip, q, k, v, sq, c, slopes, ex=True, ni=None, **kw):
+        cand.SKIP_TILES = skip; cand.EXIT_CYCLE = ex
+        try:
+            return mod._forward(q, k, v, True, q.shape[-1] ** -0.5, sq, NI if ni is None else ni, c, slopes, **kw)
+        finally:
+            cand.EXIT_CYCLE = True
+
+    def cycle_stats(a, BM):
+        # lambda_t for t = 1..NI from kernels launched at NUM_ITER = t (exit off: the plain iterates). A row repeats at
+        # sweep t if lambda_t == lambda_{t-1} or lambda_{t-2} (the kernel's test; P4: or t-3, t-4, what a longer history
+        # would add); a block leaves the loop at the first sweep where all its rows do.
+        L = torch.stack([fwd(cand, True, *a, ex=False, ni=t)[1] for t in range(1, NI + 1)])
+        L = torch.cat([fwd(cand, True, *a, ex=False, ni=0)[1][None], L])            # L[t] = lambda_t, t = 0..NI
+        N = L.shape[-1]; out = {}
+        for name, P in (('p2', 2), ('p4', 4)):
+            blk_exit = torch.full((L.shape[1], -(-N // BM)), NI, device=L.device)
+            for t in range(NI, 0, -1):
+                ok = torch.zeros_like(L[0], dtype=torch.bool)
+                for p in range(1, P + 1):
+                    if t - p >= 0:
+                        ok |= L[t] == L[t - p]
+                ok = torch.nn.functional.pad(ok, (0, blk_exit.shape[1] * BM - N), value=True).view(L.shape[1], -1, BM).all(-1)
+                blk_exit = torch.where(ok, torch.full_like(blk_exit, t), blk_exit)
+            # earliest t with the test true (the test stays true once true: the row is then on its cycle)
+            out[f'sweeps_run_{name}'] = float(blk_exit.float().mean())
+            out[f'blocks_exit_early_{name}'] = float((blk_exit < NI).float().mean())
+        return out
 
     for path in [x for x in fl['ckpts'].split(',') if x]:
         row = os.path.basename(os.path.dirname(os.path.dirname(path)))
@@ -655,29 +694,38 @@ def real(argv):
                 a = (q, k, v, sq, c, slopes)
                 with torch.no_grad():
                     r = fwd(ref, True, *a); n = fwd(cand, False, *a); x = fwd(cand, True, *a, return_live=True)
+                    e = fwd(cand, True, *a, ex=False)
                     cse = dict(tag=f"{row} {name}", layer=li, shape=list(q.shape), dtype=str(q.dtype),
                                identical_noskip=[bool(torch.equal(x[i], n[i])) for i in range(3)],
                                identical_ref=[bool(torch.equal(x[i], r[i])) for i in range(3)],
+                               identical_noexit=[bool(torch.equal(x[i], e[i])) for i in range(3)],
                                resid_max=float((x[2] - 1).abs().max()), resid_max_ref=float((r[2] - 1).abs().max()),
                                live_at_exit=_live_frac(x[6], x[4], x[5], q.shape[2]) if x[6] is not None else None)
-                    del r, n, x
+                    cse.update(cycle_stats(a, x[4]))
+                    del r, n, x, e
                     cse['ms_ref'] = bench(lambda: fwd(ref, True, *a), repeats=3, target_s=0.3)
                     cse['ms_noskip'] = bench(lambda: fwd(cand, False, *a), repeats=3, target_s=0.3)
+                    cse['ms_noexit'] = bench(lambda: fwd(cand, True, *a, ex=False), repeats=3, target_s=0.3)
                     cse['ms_skip'] = bench(lambda: fwd(cand, True, *a), repeats=3, target_s=0.3)
                 # forward + backward through autograd (random dO): baseline, backward skipping off (e004), on
                 qg, kg, vg = (t.detach().clone().requires_grad_(True) for t in (q, k, v))
                 do = torch.randn_like(q)
                 kw = dict(causal=True, sm_scale=q.shape[-1] ** -0.5, stieltjes_q=sq, num_iter=NI, window=window, alibi_slopes=slopes)
 
-                def fb(mod, bskip):
-                    cand.SKIP_TILES = True; cand.SKIP_BWD = bskip
-                    return torch.autograd.grad(mod.stieltjes_attention(qg, kg, vg, **kw) * 1.0, (qg, kg, vg), do)
-                gr = fb(ref, True); gn = fb(cand, False); gx = fb(cand, True)
+                def fb(mod, bskip, ex=True):
+                    cand.SKIP_TILES = True; cand.SKIP_BWD = bskip; cand.EXIT_CYCLE = ex
+                    try:
+                        return torch.autograd.grad(mod.stieltjes_attention(qg, kg, vg, **kw) * 1.0, (qg, kg, vg), do)
+                    finally:
+                        cand.SKIP_BWD = True; cand.EXIT_CYCLE = True
+                gr = fb(ref, True); gn = fb(cand, False); gx = fb(cand, True); ge = fb(cand, True, ex=False)
                 cse['grad_identical_nobskip'] = [bool(torch.equal(gx[i], gn[i])) for i in range(3)]
                 cse['grad_identical_ref'] = [bool(torch.equal(gx[i], gr[i])) for i in range(3)]
-                del gr, gn, gx
+                cse['grad_identical_noexit'] = [bool(torch.equal(gx[i], ge[i])) for i in range(3)]
+                del gr, gn, gx, ge
                 cse['ms_fb_ref'] = bench(lambda: fb(ref, True), repeats=3, target_s=0.3)
                 cse['ms_fb_nobskip'] = bench(lambda: fb(cand, False), repeats=3, target_s=0.3)
+                cse['ms_fb_noexit'] = bench(lambda: fb(cand, True, ex=False), repeats=3, target_s=0.3)
                 cse['ms_fb_skip'] = bench(lambda: fb(cand, True), repeats=3, target_s=0.3)
                 del qg, kg, vg, do
                 rows.append(cse); res['cases'].append(cse)
@@ -691,7 +739,11 @@ def real(argv):
                      ms_fb_ref=statistics.fmean(x['ms_fb_ref'] for x in rows), ms_fb_nobskip=statistics.fmean(x['ms_fb_nobskip'] for x in rows),
                      ms_fb_skip=statistics.fmean(x['ms_fb_skip'] for x in rows),
                      grad_identical_nobskip=all(all(x['grad_identical_nobskip']) for x in rows),
-                     grad_identical_ref=all(all(x['grad_identical_ref']) for x in rows))
+                     grad_identical_ref=all(all(x['grad_identical_ref']) for x in rows),
+                     ms_noexit=statistics.fmean(x['ms_noexit'] for x in rows), ms_fb_noexit=statistics.fmean(x['ms_fb_noexit'] for x in rows),
+                     identical_noexit=all(all(x['identical_noexit']) for x in rows),
+                     grad_identical_noexit=all(all(x['grad_identical_noexit']) for x in rows),
+                     **{key: statistics.fmean(x[key] for x in rows) for key in ('sweeps_run_p2', 'blocks_exit_early_p2', 'sweeps_run_p4', 'blocks_exit_early_p4')})
             res['mean'][f"{row} {name}"] = m
             print('MEAN', f"{row} {name}", json.dumps(m), flush=True)
             del qk
@@ -701,6 +753,7 @@ def real(argv):
         with open(fl['out'], 'w') as f:
             json.dump(res, f, indent=1)
     sys.exit(0 if all(m['identical_noskip'] and m['identical_ref'] and m['grad_identical_nobskip'] and m['grad_identical_ref']
+                      and m['identical_noexit'] and m['grad_identical_noexit']
                       for m in res['mean'].values()) else 1)
 
 
@@ -740,13 +793,78 @@ def skipcheck(argv):
                             n += 1; bad += not (all(same) and all(gsame))
                             print(f"{'OK ' if all(same) and all(gsame) else 'BAD'} {str(dt)[6:]:9s} N{N:5d} q{sq} d{win} slopes{int(sl is not None)} qs{qs:7.0f} {name:8s} "
                                   f"identical(o,lam,S)={same} (dq,dk,dv)={gsame} live_at_exit={fr if fr is None else round(fr, 3)}", flush=True)
+    # e006: the cycle exit at other sweep counts (odd and even numbers of sweeps left at the exit; 1 and 2 = no history yet)
+    for dt in (torch.bfloat16, torch.float32):
+        for N in (64, 300):
+            for (sq, win) in ((3.0, 2.0), (4.0, None)):
+                for qs in (3.0, 12.0):
+                    sl = model.nape_slopes(H, 'exp').to(dev)
+                    q = (torch.randn(2, H, N, D, device=dev) * qs).to(dt); k = torch.randn(2, H, N, D, device=dev).to(dt)
+                    v = torch.randn(2, H, N, D, device=dev).to(dt)
+                    for ni in (1, 2, 3, 4, 7, 8, 14):
+                        a = (q, k, v, True, D ** -0.5, sq, ni, cand.window_c(sq, win), sl)
+                        with torch.no_grad():
+                            r = ref._forward(*a); x = cand._forward(*a)
+                            cand.EXIT_CYCLE = False; e = cand._forward(*a); cand.EXIT_CYCLE = True
+                        same = [bool(torch.equal(x[i], r[i])) and bool(torch.equal(x[i], e[i])) for i in range(3)]
+                        n += 1; bad += not all(same)
+                        print(f"{'OK ' if all(same) else 'BAD'} {str(dt)[6:]:9s} N{N:5d} q{sq} d{win} qs{qs:7.0f} num_iter{ni:3d} exit     identical(o,lam,S)={same}", flush=True)
     print(f"skipcheck: {n - bad} of {n} OK")
+    sys.exit(1 if bad else 0)
+
+
+def aliascheck(argv):
+    """Toolchain assumption of the kernel: a name that aliases another before a runtime loop (`lam_hw = lam`, e004) must
+    stay a loop-carried variable of its own. On triton 3.6 it does when the loop updates it through a new op (the
+    `lam_hw` pattern) and does not when the loop re-binds it by plain assignment (it keeps its initial value), which is
+    why e006's `lam_p1` starts as `lam + 0.0`. Exit 1 unless the two patterns the kernel uses behave."""
+    import triton
+    import triton.language as tl
+
+    @triton.jit
+    def k_alias(X, Y, n, BM: tl.constexpr, COPY: tl.constexpr, INIF: tl.constexpr):
+        offs = tl.arange(0, BM)
+        a = tl.load(X + offs)
+        if COPY:
+            b = a + 0.0
+        else:
+            b = a
+        hw = a                       # as lam_hw = lam
+        go = n > 0
+        for i in tl.range(0, n):
+            if INIF:
+                if go:
+                    hw = tl.maximum(hw, a)
+                    t = tl.where(i < 3, a + 1.0, a - 1.0)
+                    b = a
+                    a = t
+            else:
+                hw = tl.maximum(hw, a)
+                t = tl.where(i < 3, a + 1.0, a - 1.0)
+                b = a
+                a = t
+        tl.store(Y + offs, a)
+        tl.store(Y + BM + offs, b)
+        tl.store(Y + 2 * BM + offs, hw)
+
+    print('triton', triton.__version__, 'torch', torch.__version__, torch.cuda.get_device_name(), flush=True)
+    bad = 0
+    for inif in (False, True):
+        for copy in (False, True):
+            x = torch.zeros(4, device='cuda'); y = torch.zeros(12, device='cuda')
+            k_alias[(1,)](x, y, 5, BM=4, COPY=copy, INIF=inif)
+            a_, b_, hw_ = y[0].item(), y[4].item(), y[8].item()      # a: 0 1 2 3 2 -> 1; b = the a before it = 2; hw = 3
+            used = (a_ == 1.0 and hw_ == 3.0) and (b_ == 2.0 or not copy)   # the kernel uses: hw aliased, b not aliased
+            bad += not used
+            print(f"{'OK ' if used else 'BAD'} if-wrapped={inif} b {'= a + 0.0' if copy else 'aliases a'}: a={a_} (1) b={b_} (2) hw={hw_} (3)"
+                  f"{'' if b_ == 2.0 else '   <- aliased plain-assigned name NOT carried (not used by the kernel)'}", flush=True)
+    print('aliascheck:', 'OK' if not bad else f'{bad} BAD')
     sys.exit(1 if bad else 0)
 
 
 if __name__ == '__main__':
     mode = sys.argv[1] if len(sys.argv) > 1 else ''
-    modes = {'micro': micro, 'wrap': wrap, 'summary': summary, 'sweep': sweep, 'tiles': tiles, 'real': real, 'skipcheck': skipcheck}
+    modes = {'micro': micro, 'wrap': wrap, 'summary': summary, 'sweep': sweep, 'tiles': tiles, 'real': real, 'skipcheck': skipcheck, 'aliascheck': aliascheck}
     if mode not in modes:
         print(__doc__); sys.exit(2)
     modes[mode](sys.argv[2:])

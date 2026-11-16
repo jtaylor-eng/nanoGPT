@@ -21,6 +21,7 @@
 #                          QUICK=1 STEPS=3: the pre-submit smoke of this plan (small micro, 2 layers, one resumed row).
 #                          CMP=cand_nobskip (e005): the comparator is the candidate with backward tile skipping off (the
 #                          e004 kernel) instead of cand_noskip (forward and backward skipping off, the e002 kernel).
+#                          CMP=cand_noexit (e006): the comparator is the candidate with the Newton cycle exit off (the e005 kernel).
 set -uo pipefail
 export SCRATCH=/fs/scratch/PAS2836/$USER
 export REPO=$SCRATCH/wt/nanogpt/stieltjes-kernel-speed VENV=$SCRATCH/venvs/nanogpt DATA_SRC=$SCRATCH/nanogpt_data/fineweb25B
@@ -30,6 +31,10 @@ TAG=${TAG:?set TAG=e00N}; PLAN=${PLAN:-profile}; STEPS=${STEPS:-20}; QUICK=${QUI
 # Triton/inductor caches: env.sh defaults on scratch (persistent, keyed by source hash: the frozen kernel compiles once)
 cd $TMPDIR
 echo "commit $(git -C $REPO rev-parse HEAD) job $SLURM_JOB_ID host $(hostname) $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader) plan=$PLAN $(date '+%F %T')"
+
+echo "== aliascheck $(date '+%T')"
+python $REPO/bench_kernel.py aliascheck
+echo "== aliascheck rc=$? $(date '+%T')"
 
 echo "== micro $(date '+%T')"
 python $REPO/bench_kernel.py micro $([ "$QUICK" = 1 ] && echo --small) --out=$OUT/micro.json 2>&1 | tee $OUT/micro.log

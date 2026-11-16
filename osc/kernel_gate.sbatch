@@ -12,7 +12,8 @@
 #   1. tests/test_attn_paths.py, SLOPES=linear and exp
 #   2. tests/test_kernel_equiv.py --part=real  (trained wstieltjes_q3_d2_xs and aswstieltjes_q3_d2_zi_xs, 12 layers)
 #   3. eval_lengths.py with the baseline and the candidate: FineWeb 2048 and ArXiv 16384, |d loss| < 1e-3
-#   4. bench_kernel.py skipcheck  (e004: tile flags trusted / never trusted / trust failing, bit for bit; e005: gradients too)
+#   4. bench_kernel.py skipcheck  (e004: tile flags trusted / never trusted / trust failing, bit for bit; e005: gradients too;
+#      e006: the cycle exit at other sweep counts) and, first of all, bench_kernel.py aliascheck (Triton loop-carried aliases)
 #   5. tests/test_kernel_equiv.py --part=random
 # Checkpoints are read through symlinks in $TMPDIR (the run dirs are read-only for this direction).
 set -uo pipefail
@@ -28,6 +29,7 @@ CK=$LM_RESULTS/125m_fw25_rng
 fail=0
 step() { local name=$1; shift; echo "== $name $(date '+%T')"; "$@"; local rc=$?; echo "== $name rc=$rc $(date '+%T')"; [ $rc -eq 0 ] || fail=1; }
 
+step aliascheck python $REPO/bench_kernel.py aliascheck
 step attn_paths_linear env SLOPES=linear python $REPO/tests/test_attn_paths.py
 step attn_paths_exp env SLOPES=exp python $REPO/tests/test_attn_paths.py
 step equiv_real python $REPO/tests/test_kernel_equiv.py --part=real \

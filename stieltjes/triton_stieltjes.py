@@ -1,4 +1,4 @@
-# Direction stieltjes-kernel-speed CANDIDATE. Base: jtaylor-eng/asentmax@c7093f0 synthetic/src/kernels/adasplash/triton_stieltjes.py (frozen copy: triton_stieltjes_ref.py). Diverges: e002 Newton loop is a runtime loop (tl.range), not unrolled (tl.static_range); e004 windowed forward skips key tiles outside every row's support (SKIP); e005 the three backward kernels skip the tiles the forward flagged dead at the final λ (SKIP in the backward kernels, FLAGS_OUT in the forward).
+# Direction stieltjes-kernel-speed CANDIDATE. Base: jtaylor-eng/asentmax@c7093f0 synthetic/src/kernels/adasplash/triton_stieltjes.py (frozen copy: triton_stieltjes_ref.py). Diverges: e002 Newton loop is a runtime loop (tl.range), not unrolled (tl.static_range); e004 windowed forward skips key tiles outside every row's support (SKIP); e005 the three backward kernels skip the tiles the forward flagged dead at the final λ (SKIP in the backward kernels, FLAGS_OUT in the forward); e006 a block leaves the Newton loop once every row's λ repeats with period 1 or 2 (CYC), the remaining sweeps being determined.
 """
 Fused (flash-style) Stieltjes attention, dense or windowed. Triton.
 
@@ -11,7 +11,7 @@ c = 0 is the dense map (window d = inf). Same semantics as
 
 Forward = 3 kinds of sweeps over K (never materialises N x N):
     1. row max            (1 sweep)
-    2. Newton for λ       (NUM_ITER sweeps, one runtime loop)  f(λ) = Σ w - 1 is convex, decreasing;
+    2. Newton for λ       (<= NUM_ITER sweeps, one runtime loop)  f(λ) = Σ w - 1 is convex, decreasing;
                                              started left of the root (λ = (1+c)^{-1/q}
                                              after centring) Newton is monotone.
     3. P V, S             (1 sweep)
@@ -19,6 +19,10 @@ Windowed map only (SKIP): a (query block, key tile) whose every row is outside t
 in Live and skipped by later sweeps; a skipped tile would have added exact zeros to f, f', S and O. The flag is
 trusted in a sweep only while no row's λ is more than μ below its running maximum (λ rises monotonically except for
 rounding), otherwise the block sweeps every tile, so the result does not depend on the flags.
+CYC: the Newton update is a deterministic function of a row's λ (a skipped tile adds exact zeros), so once every row
+of a block has λ_t == λ_{t-1} or λ_t == λ_{t-2} the remaining sweeps only alternate between λ_t and λ_{t-1}: the block
+stops sweeping and takes the one the full NUM_ITER sweeps would have ended on. Bit-identical by construction; a NaN λ
+never compares equal, so it runs every sweep as before.
 With FLAGS_OUT the output sweep leaves in Live the flags at the final λ (a tile it processed is re-flagged from the
 final λ with the 2μ margin; a tile it skipped was trusted, so it is outside the window at the final λ by >= μ). The
 backward kernels use the saved λ, so a tile flagged dead has r = w = 0 on every row and adds exact zeros to δ, dQ, dK,
@@ -107,7 +111,7 @@ def _fwd_kernel(
     Live, NB, NT, dthr2, mu,
     sq: tl.constexpr, NUM_ITER: tl.constexpr, EPS: tl.constexpr,
     HEAD_DIM: tl.constexpr, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr,
-    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr, SKIP: tl.constexpr, FLAGS_OUT: tl.constexpr,
+    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr, SKIP: tl.constexpr, FLAGS_OUT: tl.constexpr, CYC: tl.constexpr,
 ):
     start_m = tl.program_id(0)
     off_hz = tl.program_id(1)
@@ -145,29 +149,47 @@ def _fwd_kernel(
     lam_hw = lam
     # runtime loop: ONE copy of the sweep body. tl.static_range unrolled NUM_ITER copies into the kernel and the
     # cost per sweep grew with NUM_ITER (A100, job 8603935: 0.5 / 1.3 / 2.0 ms per sweep at NUM_ITER 5 / 15 / 30).
+    # CYC: λ_{t+1} = G(λ_t) row by row, bit for bit (skipped tiles add exact zeros), so if after sweep t every valid row
+    # has λ_t == λ_{t-1} (fixed point) or λ_t == λ_{t-2} (2-cycle), the sweeps still to run would only alternate between
+    # λ_t and λ_{t-1}: stop, and keep λ_t if an even number of sweeps remains, λ_{t-1} if odd (the same value on a
+    # fixed-point row). The flags stay valid for the output sweep: `trust` there is tested against lam_hw as before.
+    # `+ 0.0`: a value of its own. A name that only aliases `lam` here and is re-bound by plain assignment in the loop is
+    # not carried by triton 3.6 (it keeps its initial value: bench_kernel.py aliascheck); `lam_hw = lam` above is updated
+    # through a new op and is carried on both versions (same check).
+    lam_p1 = lam + 0.0           # λ two sweeps back at the test (λ_0 before the first sweep: the test is then λ_1 == λ_0)
+    active = N_CTX > 0           # runtime scalar, true
     for _it in tl.range(0, NUM_ITER):
-        f = tl.zeros([BLOCK_M], dtype=tl.float32)
-        fp = tl.zeros([BLOCK_M], dtype=tl.float32)
-        if SKIP:
-            # NaN / inf λ compare false: no trust, every tile is swept and propagates as in the unskipped kernel
-            trust = tl.min((((lam_hw - lam) <= mu) | (offs_m >= N_CTX)).to(tl.int32), axis=0)
-            lam_hw = tl.maximum(lam_hw, lam)
-        for start_n in tl.range(0, hi, BLOCK_N):
+        if active:
+            f = tl.zeros([BLOCK_M], dtype=tl.float32)
+            fp = tl.zeros([BLOCK_M], dtype=tl.float32)
             if SKIP:
-                go = (tl.load(live_base + start_n // BLOCK_N) != 0) | (trust == 0)
-            else:
-                go = True
-            if go:
-                offs_n = start_n + tl.arange(0, BLOCK_N)
-                k_block = tl.load(k_base + offs_n[:, None] * stride_kn + offs_d[None, :] * stride_kk, mask=offs_n[:, None] < N_CTX, other=0.0)
-                qk = _scores(q_block, k_block, offs_m, offs_n, sm_scale, alibi_slope, N_CTX, CAUSAL, USE_ALIBI)
-                w, r = _weights(qk, lam, c, sq, EPS)
-                f += tl.sum(w, axis=1)
-                fp += tl.sum(r, axis=1)
+                # NaN / inf λ compare false: no trust, every tile is swept and propagates as in the unskipped kernel
+                trust = tl.min((((lam_hw - lam) <= mu) | (offs_m >= N_CTX)).to(tl.int32), axis=0)
+                lam_hw = tl.maximum(lam_hw, lam)
+            for start_n in tl.range(0, hi, BLOCK_N):
                 if SKIP:
-                    alive = tl.max((((lam - tl.max(qk, axis=1)) < dthr2) & row_ok).to(tl.int32), axis=0)
-                    tl.store(live_base + start_n // BLOCK_N, alive.to(tl.uint8))
-        lam = lam + (f - 1.0) / (sq * tl.maximum(fp, 1e-30))   # f' = -q Σ r
+                    go = (tl.load(live_base + start_n // BLOCK_N) != 0) | (trust == 0)
+                else:
+                    go = True
+                if go:
+                    offs_n = start_n + tl.arange(0, BLOCK_N)
+                    k_block = tl.load(k_base + offs_n[:, None] * stride_kn + offs_d[None, :] * stride_kk, mask=offs_n[:, None] < N_CTX, other=0.0)
+                    qk = _scores(q_block, k_block, offs_m, offs_n, sm_scale, alibi_slope, N_CTX, CAUSAL, USE_ALIBI)
+                    w, r = _weights(qk, lam, c, sq, EPS)
+                    f += tl.sum(w, axis=1)
+                    fp += tl.sum(r, axis=1)
+                    if SKIP:
+                        alive = tl.max((((lam - tl.max(qk, axis=1)) < dthr2) & row_ok).to(tl.int32), axis=0)
+                        tl.store(live_base + start_n // BLOCK_N, alive.to(tl.uint8))
+            lam_new = lam + (f - 1.0) / (sq * tl.maximum(fp, 1e-30))   # f' = -q Σ r
+            if CYC:
+                cyc = tl.min((((lam_new == lam) | (lam_new == lam_p1)) | (offs_m >= N_CTX)).to(tl.int32), axis=0)
+                odd_left = ((NUM_ITER - 1 - _it) % 2) == 1
+                lam_p1 = lam
+                lam = tl.where((cyc != 0) & odd_left, lam, lam_new)
+                active = cyc == 0
+            else:
+                lam = lam_new
 
     # 3) O = Σ w v / S
     acc = tl.zeros([BLOCK_M, HEAD_DIM], dtype=tl.float32)
@@ -414,6 +436,7 @@ def window_c(q: float, window) -> float:
 SKIP_TILES = True       # windowed forward: skip key tiles outside every row's support (False = the e002 kernel)
 SKIP_MU_REL = 1e-3      # μ / d. A negative value never trusts a flag (every tile swept): the test of the fallback path
 SKIP_BWD = True         # backward kernels skip the tiles flagged dead at the final λ (False = the e004 kernel)
+EXIT_CYCLE = True       # a block leaves the Newton loop once every row's λ has period 1 or 2 (False = the e005 kernel)
 
 
 def _forward(q, k, v, causal, sm_scale, sq, num_iter, c, alibi_slopes, return_live=False):
@@ -449,7 +472,7 @@ def _forward(q, k, v, causal, sm_scale, sq, num_iter, c, alibi_slopes, return_li
         live, NB, NT, dthr2, mu,
         sq=sq, NUM_ITER=num_iter, EPS=1e-6, HEAD_DIM=D,
         BLOCK_M=BLOCK_M, BLOCK_N=BLOCK_N, CAUSAL=causal, USE_ALIBI=use_alibi, SKIP=skip,
-        FLAGS_OUT=bool(skip and SKIP_BWD),
+        FLAGS_OUT=bool(skip and SKIP_BWD), CYC=bool(EXIT_CYCLE and num_iter > 1),
     )
     if return_live:
         return o, lam, S, alibi_slopes, BLOCK_M, BLOCK_N, (live if skip else None)
