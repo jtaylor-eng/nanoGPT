@@ -1,0 +1,45 @@
+{'device': 'NVIDIA A100-PCIE-40GB', 'max_shared_mem': 166912, 'torch': '2.5.1+cu121', 'triton': '3.1.0', 'tiles_bf16': [64, 32], 'rows': {}}
+ref fwd kernel it=0 B2 H12 N512                           1.50 ms
+ref fwd kernel it=0 compiled                         {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 71474, 'cubin_bytes': 91616}
+ref fwd kernel it=5 B2 H12 N512                           1.11 ms
+ref fwd kernel it=5 compiled                         {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 221567, 'cubin_bytes': 302048}
+ref fwd kernel it=15 B2 H12 N512                          1.09 ms
+ref fwd kernel it=15 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 521092, 'cubin_bytes': 719968}
+ref fwd kernel it=30 B2 H12 N512                          0.98 ms
+ref fwd kernel it=30 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 993621, 'cubin_bytes': 1372384}
+ref bwd delta kernel B2 H12 N512                          0.03 ms
+ref bwd dkdv kernel B2 H12 N512                           0.04 ms
+ref bwd dq kernel B2 H12 N512                             0.04 ms
+ref bwd (autograd, 3 kernels) B2 H12 N512                 0.33 ms
+ref fwd+bwd it=15 B2 H12 N512                             1.53 ms
+cand fwd kernel it=0 B2 H12 N512                          1.06 ms
+cand fwd kernel it=0 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 71616, 'cubin_bytes': 92000}
+cand fwd kernel it=5 B2 H12 N512                          1.18 ms
+cand fwd kernel it=5 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 109309, 'cubin_bytes': 143840}
+cand fwd kernel it=15 B2 H12 N512                         1.00 ms
+cand fwd kernel it=15 compiled                       {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 109310, 'cubin_bytes': 143840}
+cand fwd kernel it=30 B2 H12 N512                         1.11 ms
+cand fwd kernel it=30 compiled                       {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 109310, 'cubin_bytes': 143840}
+icc: remark #10441: The Intel(R) C++ Compiler Classic (ICC) is deprecated and will be removed from product release in the second half of 2023. The Intel(R) oneAPI DPC++/C++ Compiler (ICX) is the recommended compiler moving forward. Please transition to use this compiler. Use '-diag-disable=10441' to disable this message.
+cand bwd delta kernel B2 H12 N512                         0.06 ms
+icc: remark #10441: The Intel(R) C++ Compiler Classic (ICC) is deprecated and will be removed from product release in the second half of 2023. The Intel(R) oneAPI DPC++/C++ Compiler (ICX) is the recommended compiler moving forward. Please transition to use this compiler. Use '-diag-disable=10441' to disable this message.
+cand bwd dkdv kernel B2 H12 N512                          0.08 ms
+icc: remark #10441: The Intel(R) C++ Compiler Classic (ICC) is deprecated and will be removed from product release in the second half of 2023. The Intel(R) oneAPI DPC++/C++ Compiler (ICX) is the recommended compiler moving forward. Please transition to use this compiler. Use '-diag-disable=10441' to disable this message.
+cand bwd dq kernel B2 H12 N512                            0.07 ms
+cand bwd (autograd, 3 kernels) B2 H12 N512                0.34 ms
+cand fwd+bwd it=15 B2 H12 N512                            1.93 ms
+cand noskip fwd kernel it=15 B2 H12 N512                  1.09 ms
+cand nobskip bwd (autograd, 3 kernels) B2 H12 N512        0.34 ms
+cand nobskip fwd+bwd it=15 B2 H12 N512                    2.14 ms
+cand call site fwd (views + contiguous) B2 H12 N512       1.31 ms
+cand call site fwd+bwd (views) B2 H12 N512                1.85 ms
+entmax fwd niter=10 B2 H12 N512                           0.45 ms
+entmax fwd+bwd niter=10 B2 H12 N512                       0.60 ms
+softmax SDPA+bias fwd B2 H12 N512                         0.05 ms
+softmax SDPA+bias fwd+bwd B2 H12 N512                     0.18 ms
+ref fwd kernel it=15 B1 H12 N2048                         2.29 ms
+cand fwd kernel it=15 B1 H12 N2048                        2.16 ms
+entmax fwd niter=10 B1 H12 N2048                          2.40 ms
+cand fwd wrapper it=0 B1 H12 N64 (launch overhead)        1.11 ms
+ref fwd wrapper it=0 B1 H12 N64 (launch overhead)         1.12 ms
+cand _pick_blocks (device query)                          1.01 ms

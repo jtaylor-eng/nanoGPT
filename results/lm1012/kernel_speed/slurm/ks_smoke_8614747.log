@@ -1,0 +1,66 @@
+commit f3e90362da4189d4ee4adf5a8a60d4fc3483818d job 8614747 host a0127.ten.osc.edu NVIDIA A100-PCIE-40GB, 40960 MiB plan=ab_trained 2026-11-16 07:30:14
+== micro 07:30:14
+{'device': 'NVIDIA A100-PCIE-40GB', 'max_shared_mem': 166912, 'torch': '2.5.1+cu121', 'triton': '3.1.0', 'tiles_bf16': [64, 32], 'rows': {}}
+ref fwd kernel it=0 B2 H12 N512                           1.50 ms
+ref fwd kernel it=0 compiled                         {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 71474, 'cubin_bytes': 91616}
+ref fwd kernel it=5 B2 H12 N512                           1.11 ms
+ref fwd kernel it=5 compiled                         {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 221567, 'cubin_bytes': 302048}
+ref fwd kernel it=15 B2 H12 N512                          1.09 ms
+ref fwd kernel it=15 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 521092, 'cubin_bytes': 719968}
+ref fwd kernel it=30 B2 H12 N512                          0.98 ms
+ref fwd kernel it=30 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 993621, 'cubin_bytes': 1372384}
+ref bwd delta kernel B2 H12 N512                          0.03 ms
+ref bwd dkdv kernel B2 H12 N512                           0.04 ms
+ref bwd dq kernel B2 H12 N512                             0.04 ms
+ref bwd (autograd, 3 kernels) B2 H12 N512                 0.33 ms
+ref fwd+bwd it=15 B2 H12 N512                             1.53 ms
+cand fwd kernel it=0 B2 H12 N512                          1.06 ms
+cand fwd kernel it=0 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 71616, 'cubin_bytes': 92000}
+cand fwd kernel it=5 B2 H12 N512                          1.18 ms
+cand fwd kernel it=5 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 109309, 'cubin_bytes': 143840}
+cand fwd kernel it=15 B2 H12 N512                         1.00 ms
+cand fwd kernel it=15 compiled                       {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 109310, 'cubin_bytes': 143840}
+cand fwd kernel it=30 B2 H12 N512                         1.11 ms
+cand fwd kernel it=30 compiled                       {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 109310, 'cubin_bytes': 143840}
+icc: remark #10441: The Intel(R) C++ Compiler Classic (ICC) is deprecated and will be removed from product release in the second half of 2023. The Intel(R) oneAPI DPC++/C++ Compiler (ICX) is the recommended compiler moving forward. Please transition to use this compiler. Use '-diag-disable=10441' to disable this message.
+cand bwd delta kernel B2 H12 N512                         0.06 ms
+icc: remark #10441: The Intel(R) C++ Compiler Classic (ICC) is deprecated and will be removed from product release in the second half of 2023. The Intel(R) oneAPI DPC++/C++ Compiler (ICX) is the recommended compiler moving forward. Please transition to use this compiler. Use '-diag-disable=10441' to disable this message.
+cand bwd dkdv kernel B2 H12 N512                          0.08 ms
+icc: remark #10441: The Intel(R) C++ Compiler Classic (ICC) is deprecated and will be removed from product release in the second half of 2023. The Intel(R) oneAPI DPC++/C++ Compiler (ICX) is the recommended compiler moving forward. Please transition to use this compiler. Use '-diag-disable=10441' to disable this message.
+cand bwd dq kernel B2 H12 N512                            0.07 ms
+cand bwd (autograd, 3 kernels) B2 H12 N512                0.34 ms
+cand fwd+bwd it=15 B2 H12 N512                            1.93 ms
+cand noskip fwd kernel it=15 B2 H12 N512                  1.09 ms
+cand nobskip bwd (autograd, 3 kernels) B2 H12 N512        0.34 ms
+cand nobskip fwd+bwd it=15 B2 H12 N512                    2.14 ms
+cand call site fwd (views + contiguous) B2 H12 N512       1.31 ms
+cand call site fwd+bwd (views) B2 H12 N512                1.85 ms
+entmax fwd niter=10 B2 H12 N512                           0.45 ms
+entmax fwd+bwd niter=10 B2 H12 N512                       0.60 ms
+softmax SDPA+bias fwd B2 H12 N512                         0.05 ms
+softmax SDPA+bias fwd+bwd B2 H12 N512                     0.18 ms
+ref fwd kernel it=15 B1 H12 N2048                         2.29 ms
+cand fwd kernel it=15 B1 H12 N2048                        2.16 ms
+entmax fwd niter=10 B1 H12 N2048                          2.40 ms
+cand fwd wrapper it=0 B1 H12 N64 (launch overhead)        1.11 ms
+ref fwd wrapper it=0 B1 H12 N64 (launch overhead)         1.12 ms
+cand _pick_blocks (device query)                          1.01 ms
+== micro rc=0 07:30:49
+== real 07:30:53
+{'device': 'NVIDIA A100-PCIE-40GB', 'torch': '2.5.1+cu121', 'triton': '3.1.0', 'num_iter': 15, 'batch': 8}
+number of parameters: 123.59M
+{"tag": "wstieltjes_q3_d2_xs fineweb N=2048", "layer": 0, "shape": [8, 12, 2048, 64], "dtype": "torch.bfloat16", "identical_noskip": [true, true, true], "identical_ref": [true, true, true], "resid_max": 2.8014183044433594e-05, "resid_max_ref": 2.8014183044433594e-05, "live_at_exit": 0.5556344696969697, "ms_ref": 22.72167675255332, "ms_noskip": 10.101444464193523, "ms_skip": 8.484053299374258, "grad_identical_nobskip": [true, true, true], "grad_identical_ref": [true, true, true], "ms_fb_ref": 26.188765427962476, "ms_fb_nobskip": 12.337905712359186, "ms_fb_skip": 10.789057957784584}
+{"tag": "wstieltjes_q3_d2_xs fineweb N=2048", "layer": 11, "shape": [8, 12, 2048, 64], "dtype": "torch.bfloat16", "identical_noskip": [true, true, true], "identical_ref": [true, true, true], "resid_max": 2.384185791015625e-06, "resid_max_ref": 2.384185791015625e-06, "live_at_exit": 0.31431502525252525, "ms_ref": 22.785414335279103, "ms_noskip": 10.038994517849964, "ms_skip": 5.881230159981274, "grad_identical_nobskip": [true, true, true], "grad_identical_ref": [true, true, true], "ms_fb_ref": 25.96049890271388, "ms_fb_nobskip": 9.599109250952356, "ms_fb_skip": 7.416207181064017}
+MEAN wstieltjes_q3_d2_xs fineweb N=2048 {"layers": 2, "ms_ref": 22.75354554391621, "ms_noskip": 10.070219491021744, "ms_skip": 7.182641729677766, "live_at_exit": 0.4349747474747475, "identical_noskip": true, "identical_ref": true, "ms_fb_ref": 26.07463216533818, "ms_fb_nobskip": 10.96850748165577, "ms_fb_skip": 9.102632569424301, "grad_identical_nobskip": true, "grad_identical_ref": true}
+number of parameters: 123.59M
+{"tag": "wstieltjes_q3_d2_xs arxiv N=16384", "layer": 0, "shape": [1, 12, 16384, 64], "dtype": "torch.bfloat16", "identical_noskip": [true, true, true], "identical_ref": [true, true, true], "resid_max": 0.0001232624053955078, "resid_max_ref": 0.0001232624053955078, "live_at_exit": 0.46111735976005186, "ms_ref": 175.10708132370686, "ms_noskip": 78.69033032329753, "ms_skip": 59.688070393167436, "grad_identical_nobskip": [true, true, true], "grad_identical_ref": [true, true, true], "ms_fb_ref": 199.2365019978024, "ms_fb_nobskip": 86.83063000595818, "ms_fb_skip": 74.11424334471424}
+{"tag": "wstieltjes_q3_d2_xs arxiv N=16384", "layer": 11, "shape": [1, 12, 16384, 64], "dtype": "torch.bfloat16", "identical_noskip": [true, true, true], "identical_ref": [true, true, true], "resid_max": 4.291534423828125e-06, "resid_max_ref": 4.291534423828125e-06, "live_at_exit": 0.35484684054798965, "ms_ref": 174.27502033145478, "ms_noskip": 79.48314433451742, "ms_skip": 51.86765139224008, "grad_identical_nobskip": [true, true, true], "grad_identical_ref": [true, true, true], "ms_fb_ref": 200.40269599606594, "ms_fb_nobskip": 80.12940899546568, "ms_fb_skip": 63.31406375102233}
+MEAN wstieltjes_q3_d2_xs arxiv N=16384 {"layers": 2, "ms_ref": 174.69105082758082, "ms_noskip": 79.08673732890747, "ms_skip": 55.77786089270376, "live_at_exit": 0.40798210015402075, "identical_noskip": true, "identical_ref": true, "ms_fb_ref": 199.8195989969342, "ms_fb_nobskip": 83.48001950071193, "ms_fb_skip": 68.71415354786828, "grad_identical_nobskip": true, "grad_identical_ref": true}
+== real rc=0 07:31:43
+== step wst_q3d2_trained_nobskip (resume at iter 4771) 07:31:46
+== step wst_q3d2_trained_nobskip rc=0 3 iters 07:32:25
+== step wst_q3d2_trained_cand (resume at iter 4771) 07:32:29
+== step wst_q3d2_trained_cand rc=0 3 iters 07:33:03
+wst_q3d2_trained_cand {"steps": 0, "s_per_step": null, "peak_alloc_gb": 16.64175844192505, "peak_reserved_gb": 22.521484375}
+wst_q3d2_trained_nobskip {"steps": 0, "s_per_step": null, "peak_alloc_gb": 16.63956117630005, "peak_reserved_gb": 22.51953125}
+DONE 07:33:06
