@@ -9,12 +9,10 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 15
-spent_gpu_hours: 3.88
+spent_gpu_hours: 5.1
 max_jobs_in_flight: 4
 jobs:
-- 8615021
-- 8615023
-- 8615182
+- 8615586
 jobs_archived:
 - 8603546
 - 8603935
@@ -31,13 +29,17 @@ jobs_archived:
 - 8614758
 - 8614759
 - 8615008
-last_wake: '2026-11-16T08:36:55-05:00'
-next_id: 7
+- 8615021
+- 8615023
+- 8615182
+- 8615534
+last_wake: '2026-11-16T09:15:15-05:00'
+next_id: 8
 model: claude-fable-5-2
 effort: high
 max_turns: 120
 timeout_minutes: 60
-wakes: 7
+wakes: 8
 ---
 # How fast can the fused windowed-Stieltjes attention kernel run at 125M / T=2048 on an A100 with unchanged outputs and gradients? (profile, then optimise the Triton kernel)
 
@@ -159,3 +161,4 @@ One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobid
 2026-11-16 06:38  e003 done: launch parameters exhausted (default 64x32 tiles / 4 warps / 3 stages is the fastest forward, 10.10 ms; best backward variants -4.6 % and not bit-identical; 8 warps 24-56 % slower), early exit closed (lambda still moving at sweep 15 in 86 % of blocks); trained q/k of wstieltjes_q3_d2_xs lr 1.2e-3 seed 1337 leave 47 % of the swept forward tiles live at sweep 0 and 35 % at the final lambda (N=2048; 29 % at N=16384), 7.5 of 17 sweep-equivalents, no dead tile coming back in 48 cases (job 8613091, 0.08 GPU-h); 8 of 14 predictions hit | e004 submitted 8614519 (ks_time PLAN=ab_trained) 8614520 (ks_gate), debug-nextgen, sha 4d26cd9: tile skipping in the windowed forward, exact by construction (dead flag with a 2e-3 d margin, trusted only while lambda has not dropped by 1e-3 d), timed on trained q/k and on steps resumed from the trained checkpoints as well as from scratch | smoke 8614500 (0.04 GPU-h, tier 2 after tier-1 desktop checks: 480 of 480 skipcheck cases and the quick gradient set bit-identical) passed: forward on trained q/k 9.9 -> 8.7 ms (layer 0) and 6.0 ms (layer 11), 16k 77 -> 60 / 53 ms, bit-identical to the e002 kernel and the frozen baseline; resumed step 8.3-8.6 -> 7.2-7.5 s on 2 timed steps | kernel of record so far: stieltjes/triton_stieltjes.py at 55569fb (e002) until the e004 gate reports | spent 1.91 of 15 GPU-h
 2026-11-16 07:34  e004 done: tile skipping in the windowed forward, wstieltjes_q3_d2_xs lr 1.2e-3 seed 1337 step resumed from the trained checkpoint 8.95 -> 7.76 s (-13.3 %; aswstieltjes_q3_d2_zi_xs 9.20 -> 8.00), from scratch 8.92 -> 8.44 (-5.4 %), against 13.69 frozen baseline / 9.88 ASEntmax / 6.26 softmax; forward kernel on trained q/k 10.18 -> 6.42 ms (12-layer mean, FineWeb N=2048), 79.8 -> 47.4 ms at 16k; ArXiv 16k eval 16,376 -> 26,524 tok/s (baseline 7,644); gate PASS, bit-identical to the e002 kernel and the frozen baseline on 72 real + 38 random + 480 skipcheck cases and both e2e evals (jobs 8614519, 8614520, 0.82 GPU-h); 11 of 13 predictions hit; both pre-profile predictions (>= 20 %, below ASEntmax) met | e005 submitted 8614758 (ks_time PLAN=ab_trained CMP=cand_nobskip) 8614759 (ks_gate), debug-nextgen, sha eb2ea77: tile skipping in the three backward kernels from the forward's flags at the final lambda (SKIP_BWD), exact by the same margin argument | smoke 8614747 (0.06 GPU-h, tier 2 after tier-1 desktop checks: 480 of 480 skipcheck cases with gradients, test_attn_paths, 38 random equivalence cases) passed: forward + backward on trained q/k 12.34 -> 10.79 ms (layer 0) and 9.60 -> 7.42 ms (layer 11), dq/dk/dv bit-identical to the e004 kernel and the frozen baseline; resumed step 7.3-7.7 -> 6.6-6.9 s on 2 timed steps | kernel of record so far: stieltjes/triton_stieltjes.py at 4d26cd9 (e004) until the e005 gate reports | spent 2.80 of 15 GPU-h
 2026-11-16 08:38  e005 done: tile skipping in the three backward kernels, wstieltjes_q3_d2_xs lr 1.2e-3 seed 1337 step resumed from the trained checkpoint 7.72 -> 6.96 s (-9.8 %; aswstieltjes_q3_d2_zi_xs 7.97 -> 7.21), from scratch 8.41 -> 7.82 (-7.0 %), against 13.69 frozen baseline / 9.88 ASEntmax / 6.26 softmax; forward + backward on trained q/k 9.88 -> 7.79 ms (12-layer mean, FineWeb N=2048), 72.9 -> 55.5 ms at 16k; ArXiv 16k eval 27,691 tok/s; gate PASS, dq/dk/dv bit-identical to the e004 kernel and the frozen baseline on 72 real + 38 random + 480 skipcheck cases and both e2e evals (jobs 8614758, 8614759, 1.03 GPU-h); 9 of 10 predictions hit | e006 submitted 8615023 (ks_time PLAN=ab_trained CMP=cand_noexit) 8615182 (ks_gate), debug-nextgen, sha 9a9e809: exact early exit from the Newton loop (a 64-row block stops once every row's lambda repeats with period 1 or 2 and takes the value sweep 15 would end on; no tolerance, num_iter unchanged) | smoke 8615008 (0.05 GPU-h, tier 2 after tier-1 desktop checks: 352 of 352 quick skipcheck cases, test_attn_paths, 38 random equivalence cases) passed: forward on trained q/k 8.45 -> 5.82 ms (layer 0) and 5.90 -> 4.12 ms (layer 11), 8.2-8.3 of 15 sweeps run at N=2048 and 8.7-10.7 at 16k, bit-identical to the e005 kernel and the frozen baseline; resumed step 6.6-6.9 -> 5.9-6.1 s on 2 timed steps | found on the desktop: triton 3.6 does not carry a name that aliases another before a loop and is re-bound by plain assignment (first draft of e006 exited on period-3 rows); fixed with a value of its own, `bench_kernel.py aliascheck` added to both job scripts; second smoke 8615021 ran it on the A100: triton 3.1.0 carries every pattern, so the e004 / e005 `lam_hw` guard is live there (its quick skipcheck part still running at submission, verdict to be read next wake) | kernel of record so far: stieltjes/triton_stieltjes.py at eb2ea77 (e005) until the e006 gate reports | spent 3.88 of 15 GPU-h before the e006 jobs
+2026-11-16 09:15  e006 done: exact cycle exit from the Newton loop (a 64-row block stops once every row's lambda repeats with period 1 or 2), wstieltjes_q3_d2_xs lr 1.2e-3 seed 1337 step resumed from the trained checkpoint 6.96 -> 6.15 s (-11.7 %; aswstieltjes_q3_d2_zi_xs 7.22 -> 6.39), from scratch 7.83 -> 7.01 (-10.4 %), against 13.69 frozen baseline / 9.88 ASEntmax / 6.26 softmax (e001, other node): the trained Stieltjes step is level with softmax's; forward kernel on trained q/k 6.22 -> 4.24 ms (12-layer mean, FineWeb N=2048; 8.3 of 15 sweeps run, 91 % of blocks leave early), forward + backward 7.89 -> 5.91 ms (SDPA softmax + bias 7.24), 16k forward 45.6 -> 36.6 ms; ArXiv 16k eval 27,691 -> 33,771 tok/s (baseline 7,651); gate PASS, bit-identical to the e005 kernel and the frozen baseline on 72 real + 38 random + 592 skipcheck cases and both e2e evals (jobs 8615023, 8615182, 0.84 GPU-h); 11 of 11 predictions hit | smoke 8615021 TIMEOUT at 20 min (0.34 GPU-h): aliascheck OK, quick skipcheck still compiling on a cold cache and its log was on $TMPDIR, no verdict; superseded by the gate's full skipcheck, not retried | e007 submitted 8615586 (ks_time PLAN=ab_trained CMP=cand_copy REAL=0 TIMED=1, debug-nextgen, sha 47f8ea6): no copies around the kernels (q/k/v read as the c_attn views, O and dQ/dK/dV written in the views' memory order, dO read through strides; kernels untouched, exact by construction), plus the trained step with synchronised timers on the current kernel | smoke 8615534 (0.03 GPU-h, tier 2 after tier-1 desktop checks: viewcheck 192 of 192, test_attn_paths, 38 random equivalence cases, quick skipcheck 352 of 352) passed: viewcheck 96 of 96 on the A100, but no step difference on 2 timed steps (5.81 / 6.09 s against 5.83 / 6.09 s), so the gate job is held back: it is submitted next wake only if the 20-step pair shows >= 1 %, otherwise e007 is reverted and counts as the first strike of the stop rule | kernel of record: stieltjes/triton_stieltjes.py at 9a9e809 (e006; the kernels are unchanged since 834ba22) | spent 5.10 of 15 GPU-h before the e007 job
