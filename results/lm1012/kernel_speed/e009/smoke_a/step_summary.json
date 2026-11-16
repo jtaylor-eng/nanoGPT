@@ -1,0 +1,44 @@
+{
+ "asentmax_scratch": {
+  "steps": 0,
+  "s_per_step": null,
+  "peak_alloc_gb": 17.305058479309082,
+  "peak_reserved_gb": 22.380859375
+ },
+ "asentmax_trained": {
+  "steps": 0,
+  "s_per_step": null,
+  "peak_alloc_gb": 17.763439655303955,
+  "peak_reserved_gb": 23.6328125
+ },
+ "softmax_mb16": {
+  "steps": 0,
+  "s_per_step": null,
+  "peak_alloc_gb": 31.37716007232666,
+  "peak_reserved_gb": 38.2109375
+ },
+ "wst_q3d2_scratch_cand": {
+  "steps": 0,
+  "s_per_step": null,
+  "peak_alloc_gb": 16.18868350982666,
+  "peak_reserved_gb": 19.3203125
+ },
+ "wst_q3d2_scratch_ref": {
+  "steps": 0,
+  "s_per_step": null,
+  "peak_alloc_gb": 16.18648624420166,
+  "peak_reserved_gb": 19.31640625
+ },
+ "wst_q3d2_trained_cand": {
+  "steps": 0,
+  "s_per_step": null,
+  "peak_alloc_gb": 16.64175844192505,
+  "peak_reserved_gb": 22.521484375
+ },
+ "wst_q3d2_trained_ref": {
+  "steps": 0,
+  "s_per_step": null,
+  "peak_alloc_gb": 16.63956117630005,
+  "peak_reserved_gb": 22.51953125
+ }
+}
