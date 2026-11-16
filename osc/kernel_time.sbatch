@@ -23,8 +23,12 @@
 #                          e004 kernel) instead of cand_noskip (forward and backward skipping off, the e002 kernel).
 #                          CMP=cand_noexit (e006): the comparator is the candidate with the Newton cycle exit off (the e005 kernel).
 #                          CMP=cand_copy (e007): the comparator is the candidate with ZERO_COPY off and q/k/v copied at the
-#                          call site (the e006 kernel and call site). REAL=0 skips bench_kernel.py real (kernel-level
-#                          timings on captured, contiguous q/k: not what e007 changes).
+#                          call site (the e006 kernel and call site; reverted, the switch is gone). REAL=0 skips
+#                          bench_kernel.py real (kernel-level timings on captured q/k).
+#                          CMP=cand_nocache (e008): the comparator is the candidate with CACHE_SMEM off (the e006 wrapper).
+#                          MB=1 (e008): after the pairs, softmax_xs at mb 8 x 32 and 16 x 16 (same-node reference, and
+#                          what the micro-batch split costs outside the kernels) and the trained wstieltjes_q3_d2_xs
+#                          step at mb 16 x 16 with the candidate.
 set -uo pipefail
 export SCRATCH=/fs/scratch/PAS2836/$USER
 export REPO=$SCRATCH/wt/nanogpt/stieltjes-kernel-speed VENV=$SCRATCH/venvs/nanogpt DATA_SRC=$SCRATCH/nanogpt_data/fineweb25B
@@ -38,9 +42,6 @@ echo "commit $(git -C $REPO rev-parse HEAD) job $SLURM_JOB_ID host $(hostname) $
 echo "== aliascheck $(date '+%T')"
 python $REPO/bench_kernel.py aliascheck
 echo "== aliascheck rc=$? $(date '+%T')"
-echo "== viewcheck $(date '+%T')"
-python $REPO/bench_kernel.py viewcheck --quick | tail -3
-echo "== viewcheck rc=${PIPESTATUS[0]} $(date '+%T')"
 
 echo "== micro $(date '+%T')"
 python $REPO/bench_kernel.py micro $([ "$QUICK" = 1 ] && echo --small) --out=$OUT/micro.json 2>&1 | tee $OUT/micro.log
@@ -61,14 +62,14 @@ step() {  # name row steps timers kernel [extra train.py args]
 }
 CK=$LM_RESULTS/125m_fw25_rng
 rstep() {  # name row kernel [timers]: STEPS steps resumed from the trained checkpoint (a copy: the run dirs are read-only here)
-  local name=$1 row=$2 kern=$3 tm=${4:-0} O=$TMPDIR/out_$1
+  local name=$1 row=$2 kern=$3 tm=${4:-0} mb=${5:-$SPARSE} O=$TMPDIR/out_$1
   mkdir -p $O; cp $CK/$row/lr1.2e-3/ckpt.pt $O/ckpt.pt
   local it; it=$(python -c "import torch, sys; print(int(torch.load(sys.argv[1], map_location='cpu', weights_only=False)['iter_num']))" $O/ckpt.pt)
   echo "== step $name (resume at iter $it) $(date '+%T')"
   python $REPO/bench_kernel.py wrap --kernel=$kern --timers=$tm --out=$OUT/step_$name.json -- \
     $REPO/train.py $REPO/config/lm_stieltjes_125m.py --data_root=$FW $(row_args $row) --stieltjes_num_iter=15 \
     --learning_rate=1.2e-3 --min_lr=1.2e-4 --out_dir=$O --init_from=resume --max_iters=$((it + STEPS - 1)) --eval_interval=100000 \
-    --eval_iters=1 --final_eval_iters=0 --log_interval=1 $SPARSE > $OUT/step_$name.log 2>&1
+    --eval_iters=1 --final_eval_iters=0 --log_interval=1 $mb > $OUT/step_$name.log 2>&1
   echo "== step $name rc=$? $(grep -c '^iter ' $OUT/step_$name.log) iters $(date '+%T')"
   rm -rf $O
 }
@@ -90,6 +91,11 @@ if [ "$PLAN" = ab_trained ]; then
     # TIMED=1 (e007), last so that it cannot take the A/B with it: the trained step again with CUDA-synchronised timers
     # around the call site and the Function's forward / backward (as e001's profile, on the current kernel)
     [ "${TIMED:-0}" = 1 ] && rstep wst_q3d2_trained_cand_timed wstieltjes_q3_d2_xs cand 1
+  fi
+  if [ "${MB:-0}" = 1 ]; then
+    step softmax_mb8  softmax_xs $STEPS 0 cand $SPARSE
+    step softmax_mb16 softmax_xs $STEPS 0 cand
+    rstep wst_q3d2_trained_cand_mb16 wstieltjes_q3_d2_xs cand 0 "--batch_size=16 --gradient_accumulation_steps=16"
   fi
 elif [ "$PLAN" = profile ]; then
   step wst_q3d2_cand        wstieltjes_q3_d2_xs 30 0 cand $SPARSE

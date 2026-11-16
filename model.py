@@ -75,8 +75,7 @@ def _entmax_fused(q, k, v, alpha, niter, slopes):
 
 @torch.compiler.disable
 def _stieltjes_fused(q, k, v, sm_scale, sq, num_iter, window, slopes):
-    # q/k/v stay the transposed views of the c_attn output: the kernel reads them through their strides (no copy)
-    return _triton_stieltjes(q, k, v, causal=True, sm_scale=sm_scale,
+    return _triton_stieltjes(q.contiguous(), k.contiguous(), v.contiguous(), causal=True, sm_scale=sm_scale,
                              stieltjes_q=sq, num_iter=num_iter, window=window, alibi_slopes=slopes)
 
 class LayerNorm(nn.Module):

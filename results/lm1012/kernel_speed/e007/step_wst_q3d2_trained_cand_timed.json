@@ -1,0 +1,52 @@
+{
+ "kernel": "cand",
+ "timers": 1,
+ "script": "train.py",
+ "args": [
+  "/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/config/lm_stieltjes_125m.py",
+  "--data_root=/tmp/fw",
+  "--attn_type=stieltjes",
+  "--stieltjes_q=3.0",
+  "--stieltjes_window=2.0",
+  "--nape_slope_type=exp",
+  "--stieltjes_num_iter=15",
+  "--learning_rate=1.2e-3",
+  "--min_lr=1.2e-4",
+  "--out_dir=/tmp/out_wst_q3d2_trained_cand_timed",
+  "--init_from=resume",
+  "--max_iters=4790",
+  "--eval_interval=100000",
+  "--eval_iters=1",
+  "--final_eval_iters=0",
+  "--log_interval=1",
+  "--batch_size=8",
+  "--gradient_accumulation_steps=32"
+ ],
+ "wall_s": 145.160593581968,
+ "peak_alloc_gb": 16.6415753364563,
+ "peak_reserved_gb": 22.521484375,
+ "timers_ms": {
+  "kernel_fwd": {
+   "calls": 7680,
+   "steady_calls": 3839,
+   "median": 6.218493042979389,
+   "mean": 6.887485874787907,
+   "steady_sum_s": 26.441058273310773
+  },
+  "call_fwd": {
+   "calls": 7680,
+   "steady_calls": 3839,
+   "median": 6.265130010433495,
+   "mean": 6.932997200237168,
+   "steady_sum_s": 26.615776251710486
+  },
+  "kernel_bwd": {
+   "calls": 7680,
+   "steady_calls": 3828,
+   "median": 2.0279645395930856,
+   "mean": 2.06102299175051,
+   "steady_sum_s": 7.889596012420952
+  }
+ },
+ "steady_window_s": 68.40556781698251
+}

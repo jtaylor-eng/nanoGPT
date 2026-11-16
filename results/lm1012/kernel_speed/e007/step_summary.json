@@ -1,0 +1,51 @@
+{
+ "aswst_q3d2_trained_cand": {
+  "steps": 17,
+  "s_per_step": 6.381729999999999,
+  "peak_alloc_gb": 16.929932117462158,
+  "peak_reserved_gb": 22.80859375
+ },
+ "aswst_q3d2_trained_copy": {
+  "steps": 17,
+  "s_per_step": 6.39567,
+  "peak_alloc_gb": 17.493347644805908,
+  "peak_reserved_gb": 23.3671875
+ },
+ "wst_q3d2_scratch_cand": {
+  "steps": 17,
+  "s_per_step": 7.011819999999999,
+  "peak_alloc_gb": 16.18581485748291,
+  "peak_reserved_gb": 19.25
+ },
+ "wst_q3d2_scratch_copy": {
+  "steps": 17,
+  "s_per_step": 7.018470000000001,
+  "peak_alloc_gb": 16.18868350982666,
+  "peak_reserved_gb": 19.3203125
+ },
+ "wst_q3d2_trained_cand": {
+  "steps": 17,
+  "s_per_step": 6.151020000000001,
+  "peak_alloc_gb": 16.6415753364563,
+  "peak_reserved_gb": 22.521484375
+ },
+ "wst_q3d2_trained_cand_timed": {
+  "steps": 17,
+  "s_per_step": 6.84582,
+  "peak_alloc_gb": 16.6415753364563,
+  "peak_reserved_gb": 22.521484375,
+  "kernel_fwd_ms": 6.218493042979389,
+  "kernel_bwd_ms": 2.0279645395930856,
+  "call_fwd_ms": 6.265130010433495,
+  "share_call_fwd": 0.38908786376746946,
+  "share_kernel_fwd": 0.3865337152679326,
+  "share_kernel_bwd": 0.11533558252932541,
+  "share_attention": 0.5044234462967949
+ },
+ "wst_q3d2_trained_copy": {
+  "steps": 17,
+  "s_per_step": 6.15141,
+  "peak_alloc_gb": 16.64175844192505,
+  "peak_reserved_gb": 22.521484375
+ }
+}
