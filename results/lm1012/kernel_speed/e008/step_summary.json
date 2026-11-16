@@ -1,0 +1,56 @@
+{
+ "aswst_q3d2_trained_cand": {
+  "steps": 17,
+  "s_per_step": 6.45636,
+  "peak_alloc_gb": 17.493347644805908,
+  "peak_reserved_gb": 23.3671875
+ },
+ "aswst_q3d2_trained_nocache": {
+  "steps": 17,
+  "s_per_step": 6.450609999999999,
+  "peak_alloc_gb": 17.493347644805908,
+  "peak_reserved_gb": 23.3671875
+ },
+ "softmax_mb16": {
+  "steps": 17,
+  "s_per_step": 6.42838,
+  "peak_alloc_gb": 31.37716007232666,
+  "peak_reserved_gb": 38.2109375
+ },
+ "softmax_mb8": {
+  "steps": 17,
+  "s_per_step": 6.68372,
+  "peak_alloc_gb": 17.29824161529541,
+  "peak_reserved_gb": 19.544921875
+ },
+ "wst_q3d2_scratch_cand": {
+  "steps": 17,
+  "s_per_step": 7.084350000000001,
+  "peak_alloc_gb": 16.18868350982666,
+  "peak_reserved_gb": 19.3203125
+ },
+ "wst_q3d2_scratch_nocache": {
+  "steps": 17,
+  "s_per_step": 7.095020000000001,
+  "peak_alloc_gb": 16.18868350982666,
+  "peak_reserved_gb": 19.3203125
+ },
+ "wst_q3d2_trained_cand": {
+  "steps": 17,
+  "s_per_step": 6.20467,
+  "peak_alloc_gb": 16.64175844192505,
+  "peak_reserved_gb": 22.521484375
+ },
+ "wst_q3d2_trained_cand_mb16": {
+  "steps": 17,
+  "s_per_step": 5.9336199999999995,
+  "peak_alloc_gb": 30.7431378364563,
+  "peak_reserved_gb": 36.59375
+ },
+ "wst_q3d2_trained_nocache": {
+  "steps": 17,
+  "s_per_step": 6.19304,
+  "peak_alloc_gb": 16.64175844192505,
+  "peak_reserved_gb": 22.521484375
+ }
+}

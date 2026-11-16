@@ -1,0 +1,830 @@
+commit 73733816d84cd29ffdc1866e9deaaa048dcdd5d8 job 8618411 host a0154.ten.osc.edu NVIDIA A100-PCIE-40GB, 40960 MiB 2026-11-16 11:49:55
+== aliascheck 11:49:55
+triton 3.1.0 torch 2.5.1+cu121 NVIDIA A100-PCIE-40GB
+OK  if-wrapped=False b aliases a: a=1.0 (1) b=2.0 (2) hw=3.0 (3)
+OK  if-wrapped=False b = a + 0.0: a=1.0 (1) b=2.0 (2) hw=3.0 (3)
+OK  if-wrapped=True b aliases a: a=1.0 (1) b=2.0 (2) hw=3.0 (3)
+OK  if-wrapped=True b = a + 0.0: a=1.0 (1) b=2.0 (2) hw=3.0 (3)
+aliascheck: OK
+== aliascheck rc=0 11:49:58
+== attn_paths_linear 11:49:58
+OK  float32  softmax                  T= 64  out 6.1e-07  dW 1.2e-06  dx 1.2e-06
+OK  float32  softmax                  T=300  out 7.6e-07  dW 1.2e-06  dx 1.3e-06
+OK  float32  softmax_as               T= 64  out 6.8e-07  dW 1.8e-06  dx 2.1e-06
+OK  float32  softmax_as               T=300  out 8.2e-07  dW 3.1e-06  dx 4.9e-06
+OK  float32  entmax                   T= 64  out 3.2e-07  dW 6.1e-07  dx 6.1e-07
+OK  float32  entmax                   T=300  out 3.4e-07  dW 6.1e-07  dx 6.3e-07
+OK  float32  asentmax_zi              T= 64  out 2.9e-07  dW 7.0e-07  dx 8.4e-07
+OK  float32  asentmax_zi              T=300  out 7.6e-07  dW 1.3e-06  dx 1.8e-06
+OK  float32  stieltjes_q4             T= 64  out 1.8e-07  dW 5.3e-07  dx 5.3e-07
+OK  float32  stieltjes_q4             T=300  out 2.1e-07  dW 6.1e-07  dx 6.2e-07
+OK  float32  wstieltjes_q4_d2         T= 64  out 1.5e-07  dW 3.4e-07  dx 3.5e-07
+OK  float32  wstieltjes_q4_d2         T=300  out 1.7e-07  dW 3.5e-07  dx 3.6e-07
+OK  float32  aswstieltjes_q2_d4_zi    T= 64  out 1.5e-07  dW 3.6e-07  dx 4.7e-07
+OK  float32  aswstieltjes_q2_d4_zi    T=300  out 1.7e-07  dW 4.9e-07  dx 8.1e-07
+OK  bfloat16 softmax                  T= 64  out 5.0e-03  dW 7.0e-03  dx 7.0e-03
+OK  bfloat16 softmax                  T=300  out 5.9e-03  dW 7.7e-03  dx 7.7e-03
+OK  bfloat16 softmax_as               T= 64  out 5.4e-03  dW 1.0e-02  dx 1.1e-02
+OK  bfloat16 softmax_as               T=300  out 7.1e-03  dW 2.7e-02  dx 2.9e-02
+OK  bfloat16 entmax                   T= 64  out 5.4e-03  dW 1.1e-02  dx 1.2e-02
+OK  bfloat16 entmax                   T=300  out 7.3e-03  dW 1.4e-02  dx 1.4e-02
+OK  bfloat16 asentmax_zi              T= 64  out 6.1e-03  dW 1.4e-02  dx 1.5e-02
+OK  bfloat16 asentmax_zi              T=300  out 1.0e-02  dW 2.5e-02  dx 2.7e-02
+OK  bfloat16 stieltjes_q4             T= 64  out 6.8e-03  dW 1.6e-02  dx 1.6e-02
+OK  bfloat16 stieltjes_q4             T=300  out 8.4e-03  dW 1.8e-02  dx 1.8e-02
+OK  bfloat16 wstieltjes_q4_d2         T= 64  out 7.1e-03  dW 2.0e-02  dx 2.0e-02
+OK  bfloat16 wstieltjes_q4_d2         T=300  out 9.4e-03  dW 3.5e-02  dx 3.5e-02
+OK  bfloat16 aswstieltjes_q2_d4_zi    T= 64  out 6.2e-03  dW 2.3e-02  dx 2.4e-02
+OK  bfloat16 aswstieltjes_q2_d4_zi    T=300  out 7.9e-03  dW 4.6e-02  dx 4.6e-02
+ALL OK
+== attn_paths_linear rc=0 11:51:08
+== attn_paths_exp 11:51:08
+OK  float32  softmax                  T= 64  out 6.9e-07  dW 1.2e-06  dx 1.2e-06
+OK  float32  softmax                  T=300  out 9.2e-07  dW 1.3e-06  dx 1.3e-06
+OK  float32  softmax_as               T= 64  out 7.5e-07  dW 1.8e-06  dx 2.2e-06
+OK  float32  softmax_as               T=300  out 9.7e-07  dW 3.2e-06  dx 5.0e-06
+OK  float32  entmax                   T= 64  out 2.8e-07  dW 5.5e-07  dx 5.5e-07
+OK  float32  entmax                   T=300  out 4.1e-07  dW 7.0e-07  dx 7.2e-07
+OK  float32  asentmax_zi              T= 64  out 3.0e-07  dW 6.6e-07  dx 8.0e-07
+OK  float32  asentmax_zi              T=300  out 8.0e-07  dW 1.3e-06  dx 1.7e-06
+OK  float32  stieltjes_q4             T= 64  out 1.8e-07  dW 5.4e-07  dx 5.4e-07
+OK  float32  stieltjes_q4             T=300  out 2.2e-07  dW 6.2e-07  dx 6.3e-07
+OK  float32  wstieltjes_q4_d2         T= 64  out 1.6e-07  dW 3.2e-07  dx 3.3e-07
+OK  float32  wstieltjes_q4_d2         T=300  out 1.7e-07  dW 3.4e-07  dx 3.6e-07
+OK  float32  aswstieltjes_q2_d4_zi    T= 64  out 1.6e-07  dW 3.4e-07  dx 4.5e-07
+OK  float32  aswstieltjes_q2_d4_zi    T=300  out 1.8e-07  dW 4.8e-07  dx 7.9e-07
+OK  bfloat16 softmax                  T= 64  out 5.5e-03  dW 7.3e-03  dx 7.3e-03
+OK  bfloat16 softmax                  T=300  out 7.1e-03  dW 8.3e-03  dx 8.4e-03
+OK  bfloat16 softmax_as               T= 64  out 5.9e-03  dW 1.1e-02  dx 1.2e-02
+OK  bfloat16 softmax_as               T=300  out 8.3e-03  dW 2.7e-02  dx 2.9e-02
+OK  bfloat16 entmax                   T= 64  out 6.4e-03  dW 1.1e-02  dx 1.1e-02
+OK  bfloat16 entmax                   T=300  out 8.5e-03  dW 1.5e-02  dx 1.5e-02
+OK  bfloat16 asentmax_zi              T= 64  out 6.8e-03  dW 1.5e-02  dx 1.5e-02
+OK  bfloat16 asentmax_zi              T=300  out 1.1e-02  dW 2.4e-02  dx 2.7e-02
+OK  bfloat16 stieltjes_q4             T= 64  out 7.6e-03  dW 1.8e-02  dx 1.8e-02
+OK  bfloat16 stieltjes_q4             T=300  out 1.0e-02  dW 2.1e-02  dx 2.1e-02
+OK  bfloat16 wstieltjes_q4_d2         T= 64  out 7.6e-03  dW 2.4e-02  dx 2.4e-02
+OK  bfloat16 wstieltjes_q4_d2         T=300  out 1.1e-02  dW 4.1e-02  dx 4.1e-02
+OK  bfloat16 aswstieltjes_q2_d4_zi    T= 64  out 6.8e-03  dW 2.2e-02  dx 2.3e-02
+OK  bfloat16 aswstieltjes_q2_d4_zi    T=300  out 9.1e-03  dW 4.6e-02  dx 4.6e-02
+ALL OK
+== attn_paths_exp rc=0 11:52:18
+== equiv_real 11:52:18
+number of parameters: 123.59M
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L0 bf16 cand-vs-eager out 1.3e-03 dq 2.4e-03 dk 2.3e-03 dv 1.9e-03 | ref-vs-eager 1.3e-03 2.4e-03 2.3e-03 1.9e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.8e-05 ref 2.8e-05
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L0 fp32 cand-vs-eager out 1.5e-07 dq 2.8e-06 dk 5.3e-07 dv 2.7e-07 | ref-vs-eager 1.5e-07 2.8e-06 5.3e-07 2.7e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.2e-05 ref 2.2e-05
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L1 bf16 cand-vs-eager out 2.0e-03 dq 2.5e-03 dk 2.4e-03 dv 2.0e-03 | ref-vs-eager 2.0e-03 2.5e-03 2.4e-03 2.0e-03 | cand-vs-ref max 0.0e+00 | resid cand 9.8e-06 ref 9.8e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L1 fp32 cand-vs-eager out 1.7e-07 dq 1.1e-04 dk 1.5e-04 dv 3.6e-07 | ref-vs-eager 1.7e-07 1.1e-04 1.5e-04 3.6e-07 | cand-vs-ref max 0.0e+00 | resid cand 9.4e-06 ref 9.4e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L2 bf16 cand-vs-eager out 1.4e-03 dq 3.0e-03 dk 2.3e-03 dv 2.0e-03 | ref-vs-eager 1.4e-03 3.0e-03 2.3e-03 2.0e-03 | cand-vs-ref max 0.0e+00 | resid cand 6.7e-06 ref 6.7e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L2 fp32 cand-vs-eager out 1.2e-07 dq 7.4e-07 dk 4.3e-07 dv 4.7e-07 | ref-vs-eager 1.2e-07 7.4e-07 4.3e-07 4.7e-07 | cand-vs-ref max 0.0e+00 | resid cand 7.6e-06 ref 7.6e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L3 bf16 cand-vs-eager out 2.1e-03 dq 2.7e-03 dk 2.3e-03 dv 2.2e-03 | ref-vs-eager 2.1e-03 2.7e-03 2.3e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 3.7e-06 ref 3.7e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L3 fp32 cand-vs-eager out 1.8e-07 dq 5.1e-07 dk 4.1e-07 dv 3.5e-07 | ref-vs-eager 1.8e-07 5.1e-07 4.1e-07 3.5e-07 | cand-vs-ref max 0.0e+00 | resid cand 3.8e-06 ref 3.8e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L4 bf16 cand-vs-eager out 2.0e-03 dq 2.8e-03 dk 2.4e-03 dv 2.3e-03 | ref-vs-eager 2.0e-03 2.8e-03 2.4e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 3.5e-06 ref 3.5e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L4 fp32 cand-vs-eager out 1.7e-07 dq 4.0e-07 dk 3.7e-07 dv 3.5e-07 | ref-vs-eager 1.7e-07 4.0e-07 3.7e-07 3.5e-07 | cand-vs-ref max 0.0e+00 | resid cand 4.1e-06 ref 4.1e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L5 bf16 cand-vs-eager out 1.9e-03 dq 2.9e-03 dk 2.3e-03 dv 2.1e-03 | ref-vs-eager 1.9e-03 2.9e-03 2.3e-03 2.1e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.3e-06 ref 2.3e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L5 fp32 cand-vs-eager out 1.5e-07 dq 4.3e-07 dk 3.9e-07 dv 3.0e-07 | ref-vs-eager 1.5e-07 4.3e-07 3.9e-07 3.0e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.2e-06 ref 2.2e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L6 bf16 cand-vs-eager out 2.0e-03 dq 3.0e-03 dk 2.5e-03 dv 2.3e-03 | ref-vs-eager 2.0e-03 3.0e-03 2.5e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 3.0e-06 ref 3.0e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L6 fp32 cand-vs-eager out 1.9e-07 dq 4.8e-07 dk 4.2e-07 dv 3.3e-07 | ref-vs-eager 1.9e-07 4.8e-07 4.2e-07 3.3e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.9e-06 ref 2.9e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L7 bf16 cand-vs-eager out 2.0e-03 dq 3.1e-03 dk 2.3e-03 dv 2.3e-03 | ref-vs-eager 2.0e-03 3.1e-03 2.3e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.6e-06 ref 2.6e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L7 fp32 cand-vs-eager out 2.1e-07 dq 2.2e-04 dk 3.9e-04 dv 3.6e-07 | ref-vs-eager 2.1e-07 2.2e-04 3.9e-04 3.6e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.6e-06 ref 2.6e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L8 bf16 cand-vs-eager out 1.9e-03 dq 3.1e-03 dk 2.4e-03 dv 2.2e-03 | ref-vs-eager 1.9e-03 3.1e-03 2.4e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.9e-06 ref 2.9e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L8 fp32 cand-vs-eager out 1.9e-07 dq 6.7e-04 dk 5.8e-04 dv 3.1e-07 | ref-vs-eager 1.9e-07 6.7e-04 5.8e-04 3.1e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.5e-06 ref 2.5e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L9 bf16 cand-vs-eager out 2.1e-03 dq 3.0e-03 dk 2.3e-03 dv 2.3e-03 | ref-vs-eager 2.1e-03 3.0e-03 2.3e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.6e-06 ref 2.6e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L9 fp32 cand-vs-eager out 1.9e-07 dq 4.8e-07 dk 4.4e-07 dv 3.4e-07 | ref-vs-eager 1.9e-07 4.8e-07 4.4e-07 3.4e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.9e-06 ref 2.9e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L10 bf16 cand-vs-eager out 2.0e-03 dq 2.9e-03 dk 2.3e-03 dv 2.3e-03 | ref-vs-eager 2.0e-03 2.9e-03 2.3e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.3e-06 ref 2.3e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L10 fp32 cand-vs-eager out 2.1e-07 dq 2.1e-03 dk 1.9e-03 dv 3.1e-07 | ref-vs-eager 2.1e-07 2.1e-03 1.9e-03 3.1e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.6e-06 ref 2.6e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L11 bf16 cand-vs-eager out 1.9e-03 dq 2.7e-03 dk 2.3e-03 dv 2.2e-03 | ref-vs-eager 1.9e-03 2.7e-03 2.3e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.0e-06 ref 2.0e-06
+OK  real wstieltjes_q3_d2_xs fineweb N=2048 L11 fp32 cand-vs-eager out 1.8e-07 dq 5.1e-07 dk 4.5e-07 dv 3.1e-07 | ref-vs-eager 1.8e-07 5.1e-07 4.5e-07 3.1e-07 | cand-vs-ref max 0.0e+00 | resid cand 1.9e-06 ref 1.9e-06
+number of parameters: 123.59M
+OK  real wstieltjes_q3_d2_xs arxiv N=16384 L0 bf16 cand-vs-eager out 1.4e-03 dq 2.4e-03 dk 2.5e-03 dv 1.9e-03 | ref-vs-eager 1.4e-03 2.4e-03 2.5e-03 1.9e-03 | cand-vs-ref max 0.0e+00 | resid cand 1.2e-04 ref 1.2e-04
+OK  real wstieltjes_q3_d2_xs arxiv N=16384 L1 bf16 cand-vs-eager out 2.1e-03 dq 2.5e-03 dk 2.3e-03 dv 2.2e-03 | ref-vs-eager 2.1e-03 2.5e-03 2.3e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 1.2e-05 ref 1.2e-05
+OK  real wstieltjes_q3_d2_xs arxiv N=16384 L2 bf16 cand-vs-eager out 1.1e-03 dq 3.0e-03 dk 2.4e-03 dv 1.6e-03 | ref-vs-eager 1.1e-03 3.0e-03 2.4e-03 1.6e-03 | cand-vs-ref max 0.0e+00 | resid cand 9.1e-06 ref 9.1e-06
+OK  real wstieltjes_q3_d2_xs arxiv N=16384 L3 bf16 cand-vs-eager out 1.8e-03 dq 2.4e-03 dk 2.4e-03 dv 2.2e-03 | ref-vs-eager 1.8e-03 2.4e-03 2.4e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 5.6e-06 ref 5.6e-06
+OK  real wstieltjes_q3_d2_xs arxiv N=16384 L4 bf16 cand-vs-eager out 2.0e-03 dq 2.7e-03 dk 2.4e-03 dv 2.2e-03 | ref-vs-eager 2.0e-03 2.7e-03 2.4e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 6.3e-06 ref 6.3e-06
+OK  real wstieltjes_q3_d2_xs arxiv N=16384 L5 bf16 cand-vs-eager out 1.8e-03 dq 3.8e-03 dk 2.4e-03 dv 2.1e-03 | ref-vs-eager 1.8e-03 3.8e-03 2.4e-03 2.1e-03 | cand-vs-ref max 0.0e+00 | resid cand 4.9e-06 ref 4.9e-06
+OK  real wstieltjes_q3_d2_xs arxiv N=16384 L6 bf16 cand-vs-eager out 2.0e-03 dq 3.7e-03 dk 2.4e-03 dv 2.3e-03 | ref-vs-eager 2.0e-03 3.7e-03 2.4e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 5.1e-06 ref 5.1e-06
+OK  real wstieltjes_q3_d2_xs arxiv N=16384 L7 bf16 cand-vs-eager out 1.9e-03 dq 3.4e-03 dk 2.3e-03 dv 2.3e-03 | ref-vs-eager 1.9e-03 3.4e-03 2.3e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 5.8e-06 ref 5.8e-06
+OK  real wstieltjes_q3_d2_xs arxiv N=16384 L8 bf16 cand-vs-eager out 1.9e-03 dq 4.0e-03 dk 2.3e-03 dv 2.3e-03 | ref-vs-eager 1.9e-03 4.0e-03 2.3e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 5.8e-06 ref 5.8e-06
+OK  real wstieltjes_q3_d2_xs arxiv N=16384 L9 bf16 cand-vs-eager out 1.9e-03 dq 4.4e-03 dk 2.5e-03 dv 2.3e-03 | ref-vs-eager 1.9e-03 4.4e-03 2.5e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 4.9e-06 ref 4.9e-06
+OK  real wstieltjes_q3_d2_xs arxiv N=16384 L10 bf16 cand-vs-eager out 1.9e-03 dq 3.4e-03 dk 2.4e-03 dv 2.3e-03 | ref-vs-eager 1.9e-03 3.4e-03 2.4e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 4.4e-06 ref 4.4e-06
+OK  real wstieltjes_q3_d2_xs arxiv N=16384 L11 bf16 cand-vs-eager out 1.8e-03 dq 3.0e-03 dk 2.4e-03 dv 2.2e-03 | ref-vs-eager 1.8e-03 3.0e-03 2.4e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 4.3e-06 ref 4.3e-06
+number of parameters: 123.70M
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L0 bf16 cand-vs-eager out 1.3e-03 dq 2.4e-03 dk 2.3e-03 dv 1.9e-03 | ref-vs-eager 1.3e-03 2.4e-03 2.3e-03 1.9e-03 | cand-vs-ref max 0.0e+00 | resid cand 3.3e-05 ref 3.3e-05
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L0 fp32 cand-vs-eager out 1.9e-07 dq 5.8e-06 dk 5.9e-07 dv 2.6e-07 | ref-vs-eager 1.9e-07 5.8e-06 5.9e-07 2.6e-07 | cand-vs-ref max 0.0e+00 | resid cand 3.3e-05 ref 3.3e-05
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L1 bf16 cand-vs-eager out 2.1e-03 dq 2.6e-03 dk 2.4e-03 dv 2.2e-03 | ref-vs-eager 2.1e-03 2.6e-03 2.4e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 4.5e-05 ref 4.5e-05
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L1 fp32 cand-vs-eager out 1.7e-07 dq 1.3e-06 dk 5.0e-07 dv 6.0e-07 | ref-vs-eager 1.7e-07 1.3e-06 5.0e-07 6.0e-07 | cand-vs-ref max 0.0e+00 | resid cand 4.5e-05 ref 4.5e-05
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L2 bf16 cand-vs-eager out 2.0e-03 dq 2.8e-03 dk 2.5e-03 dv 2.2e-03 | ref-vs-eager 2.0e-03 2.8e-03 2.5e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.1e-05 ref 2.1e-05
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L2 fp32 cand-vs-eager out 1.7e-07 dq 5.6e-07 dk 3.8e-07 dv 4.1e-07 | ref-vs-eager 1.7e-07 5.6e-07 3.8e-07 4.1e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.4e-05 ref 2.4e-05
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L3 bf16 cand-vs-eager out 1.4e-03 dq 2.8e-03 dk 2.4e-03 dv 2.0e-03 | ref-vs-eager 1.4e-03 2.8e-03 2.4e-03 2.0e-03 | cand-vs-ref max 0.0e+00 | resid cand 3.5e-06 ref 3.5e-06
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L3 fp32 cand-vs-eager out 1.2e-07 dq 5.6e-07 dk 4.0e-07 dv 3.2e-07 | ref-vs-eager 1.2e-07 5.6e-07 4.0e-07 3.2e-07 | cand-vs-ref max 0.0e+00 | resid cand 3.5e-06 ref 3.5e-06
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L4 bf16 cand-vs-eager out 2.0e-03 dq 2.9e-03 dk 2.4e-03 dv 2.2e-03 | ref-vs-eager 2.0e-03 2.9e-03 2.4e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.6e-06 ref 2.6e-06
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L4 fp32 cand-vs-eager out 1.5e-07 dq 4.2e-07 dk 4.6e-07 dv 3.4e-07 | ref-vs-eager 1.5e-07 4.2e-07 4.6e-07 3.4e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.4e-06 ref 2.4e-06
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L5 bf16 cand-vs-eager out 1.9e-03 dq 2.9e-03 dk 2.3e-03 dv 2.2e-03 | ref-vs-eager 1.9e-03 2.9e-03 2.3e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.4e-06 ref 2.4e-06
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L5 fp32 cand-vs-eager out 1.5e-07 dq 4.0e-07 dk 4.0e-07 dv 3.1e-07 | ref-vs-eager 1.5e-07 4.0e-07 4.0e-07 3.1e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.6e-06 ref 2.6e-06
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L6 bf16 cand-vs-eager out 2.0e-03 dq 3.2e-03 dk 2.7e-03 dv 2.2e-03 | ref-vs-eager 2.0e-03 3.2e-03 2.7e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.8e-06 ref 2.8e-06
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L6 fp32 cand-vs-eager out 2.1e-07 dq 1.5e-03 dk 1.8e-03 dv 3.5e-07 | ref-vs-eager 2.1e-07 1.5e-03 1.8e-03 3.5e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.6e-06 ref 2.6e-06
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L7 bf16 cand-vs-eager out 2.1e-03 dq 3.0e-03 dk 2.3e-03 dv 2.3e-03 | ref-vs-eager 2.1e-03 3.0e-03 2.3e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.5e-06 ref 2.5e-06
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L7 fp32 cand-vs-eager out 2.0e-07 dq 5.1e-07 dk 4.4e-07 dv 3.5e-07 | ref-vs-eager 2.0e-07 5.1e-07 4.4e-07 3.5e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.7e-06 ref 2.7e-06
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L8 bf16 cand-vs-eager out 2.0e-03 dq 3.0e-03 dk 2.4e-03 dv 2.3e-03 | ref-vs-eager 2.0e-03 3.0e-03 2.4e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.6e-06 ref 2.6e-06
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L8 fp32 cand-vs-eager out 1.9e-07 dq 5.4e-07 dk 4.4e-07 dv 3.2e-07 | ref-vs-eager 1.9e-07 5.4e-07 4.4e-07 3.2e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.5e-06 ref 2.5e-06
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L9 bf16 cand-vs-eager out 2.0e-03 dq 2.9e-03 dk 2.3e-03 dv 2.3e-03 | ref-vs-eager 2.0e-03 2.9e-03 2.3e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.6e-06 ref 2.6e-06
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L9 fp32 cand-vs-eager out 2.1e-07 dq 5.6e-07 dk 4.6e-07 dv 3.3e-07 | ref-vs-eager 2.1e-07 5.6e-07 4.6e-07 3.3e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.6e-06 ref 2.6e-06
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L10 bf16 cand-vs-eager out 1.9e-03 dq 2.8e-03 dk 2.3e-03 dv 2.2e-03 | ref-vs-eager 1.9e-03 2.8e-03 2.3e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.1e-06 ref 2.1e-06
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L10 fp32 cand-vs-eager out 1.9e-07 dq 4.9e-07 dk 4.4e-07 dv 3.1e-07 | ref-vs-eager 1.9e-07 4.9e-07 4.4e-07 3.1e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.1e-06 ref 2.1e-06
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L11 bf16 cand-vs-eager out 2.0e-03 dq 2.8e-03 dk 2.3e-03 dv 2.2e-03 | ref-vs-eager 2.0e-03 2.8e-03 2.3e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.4e-06 ref 2.4e-06
+OK  real aswstieltjes_q3_d2_zi_xs fineweb N=2048 L11 fp32 cand-vs-eager out 1.7e-07 dq 4.9e-07 dk 4.3e-07 dv 3.0e-07 | ref-vs-eager 1.7e-07 4.9e-07 4.3e-07 3.0e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.1e-06 ref 2.1e-06
+number of parameters: 123.70M
+OK  real aswstieltjes_q3_d2_zi_xs arxiv N=16384 L0 bf16 cand-vs-eager out 1.5e-03 dq 2.4e-03 dk 2.4e-03 dv 1.9e-03 | ref-vs-eager 1.5e-03 2.4e-03 2.4e-03 1.9e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.2e-04 ref 2.2e-04
+OK  real aswstieltjes_q3_d2_zi_xs arxiv N=16384 L1 bf16 cand-vs-eager out 2.1e-03 dq 2.6e-03 dk 2.4e-03 dv 2.3e-03 | ref-vs-eager 2.1e-03 2.6e-03 2.4e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 1.8e-05 ref 1.8e-05
+OK  real aswstieltjes_q3_d2_zi_xs arxiv N=16384 L2 bf16 cand-vs-eager out 2.1e-03 dq 2.8e-03 dk 2.4e-03 dv 2.3e-03 | ref-vs-eager 2.1e-03 2.8e-03 2.4e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 8.5e-06 ref 8.5e-06
+OK  real aswstieltjes_q3_d2_zi_xs arxiv N=16384 L3 bf16 cand-vs-eager out 1.1e-03 dq 2.5e-03 dk 2.4e-03 dv 1.7e-03 | ref-vs-eager 1.1e-03 2.5e-03 2.4e-03 1.7e-03 | cand-vs-ref max 0.0e+00 | resid cand 5.5e-06 ref 5.5e-06
+OK  real aswstieltjes_q3_d2_zi_xs arxiv N=16384 L4 bf16 cand-vs-eager out 1.9e-03 dq 3.0e-03 dk 2.4e-03 dv 2.1e-03 | ref-vs-eager 1.9e-03 3.0e-03 2.4e-03 2.1e-03 | cand-vs-ref max 0.0e+00 | resid cand 5.4e-06 ref 5.4e-06
+OK  real aswstieltjes_q3_d2_zi_xs arxiv N=16384 L5 bf16 cand-vs-eager out 1.9e-03 dq 3.0e-03 dk 2.4e-03 dv 2.1e-03 | ref-vs-eager 1.9e-03 3.0e-03 2.4e-03 2.1e-03 | cand-vs-ref max 0.0e+00 | resid cand 4.2e-06 ref 4.2e-06
+OK  real aswstieltjes_q3_d2_zi_xs arxiv N=16384 L6 bf16 cand-vs-eager out 1.9e-03 dq 3.1e-03 dk 2.4e-03 dv 2.3e-03 | ref-vs-eager 1.9e-03 3.1e-03 2.4e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 4.5e-06 ref 4.5e-06
+OK  real aswstieltjes_q3_d2_zi_xs arxiv N=16384 L7 bf16 cand-vs-eager out 1.9e-03 dq 4.1e-03 dk 2.4e-03 dv 2.3e-03 | ref-vs-eager 1.9e-03 4.1e-03 2.4e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 5.1e-06 ref 5.1e-06
+OK  real aswstieltjes_q3_d2_zi_xs arxiv N=16384 L8 bf16 cand-vs-eager out 1.9e-03 dq 3.8e-03 dk 2.3e-03 dv 2.1e-03 | ref-vs-eager 1.9e-03 3.8e-03 2.3e-03 2.1e-03 | cand-vs-ref max 0.0e+00 | resid cand 4.9e-06 ref 4.9e-06
+OK  real aswstieltjes_q3_d2_zi_xs arxiv N=16384 L9 bf16 cand-vs-eager out 1.9e-03 dq 3.3e-03 dk 2.3e-03 dv 2.3e-03 | ref-vs-eager 1.9e-03 3.3e-03 2.3e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 1.6e-05 ref 1.6e-05
+OK  real aswstieltjes_q3_d2_zi_xs arxiv N=16384 L10 bf16 cand-vs-eager out 1.9e-03 dq 3.7e-03 dk 2.4e-03 dv 2.1e-03 | ref-vs-eager 1.9e-03 3.7e-03 2.4e-03 2.1e-03 | cand-vs-ref max 0.0e+00 | resid cand 6.8e-06 ref 6.8e-06
+OK  real aswstieltjes_q3_d2_zi_xs arxiv N=16384 L11 bf16 cand-vs-eager out 1.9e-03 dq 3.3e-03 dk 2.5e-03 dv 2.2e-03 | ref-vs-eager 1.9e-03 3.3e-03 2.5e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 4.6e-06 ref 4.6e-06
+SUMMARY {"cases": 72, "failed": 0, "ref_outside_tol": 0, "max_err_cand": [0.002082244958728552, 0.004369698464870453, 0.0027350832242518663, 0.0023362028878182173], "max_err_ref": [0.002082244958728552, 0.004369698464870453, 0.0027350832242518663, 0.0023362028878182173], "max_ratio": 1.0, "max_cand_vs_ref": 0.0, "max_resid_cand": 0.00021880865097045898, "max_resid_ref": 0.00021880865097045898, "device": "NVIDIA A100-PCIE-40GB", "tiles_bf16": [64, 32], "tiles_fp32": [64, 64]}
+GATE PASS
+== equiv_real rc=0 11:54:41
+== e2e_fw2048_ref 11:54:41
+[bench_kernel wrap] kernel=ref (stieltjes.triton_stieltjes_ref) timers=0 script=/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/eval_lengths.py
+/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/eval_lengths.py:41: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(os.path.join(out_dir, 'ckpt.pt'), map_location=device)
+number of parameters: 123.59M
+L=2048: val loss 3.4027 over 1024 seqs (42s); first/last bucket 3.741/3.378
+wrote /tmp/e2e_ref
+[bench_kernel wrap] {"kernel": "ref", "timers": 0, "script": "eval_lengths.py", "args": ["--out_dir=/tmp/e2e_ref", "--data_dir=/fs/scratch/PAS2836/jacktaylor/nanogpt_data/fineweb25B", "--lengths=2048", "--batch_tokens=16384", "--stats_lengths=", "--out_name=fw2048.json"], "wall_s": 44.98168516898295, "peak_alloc_gb": 9.528181076049805, "peak_reserved_gb": 13.29296875, "timers_ms": {}}
+== e2e_fw2048_ref rc=0 11:55:29
+== e2e_arxiv16k_ref 11:55:29
+[bench_kernel wrap] kernel=ref (stieltjes.triton_stieltjes_ref) timers=0 script=/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/eval_lengths.py
+/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/eval_lengths.py:41: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(os.path.join(out_dir, 'ckpt.pt'), map_location=device)
+number of parameters: 123.59M
+L=16384: val loss 3.6519 over 128 seqs (274s); first/last bucket 4.098/3.581
+wrote /tmp/e2e_ref
+[bench_kernel wrap] {"kernel": "ref", "timers": 0, "script": "eval_lengths.py", "args": ["--out_dir=/tmp/e2e_ref", "--data_file=/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/data/arxiv_long/arxiv_long.bin", "--doc_len=16385", "--lengths=16384", "--batch_tokens=16384", "--stats_lengths=", "--out_name=arxiv16k.json"], "wall_s": 277.07478898903355, "peak_alloc_gb": 9.528165817260742, "peak_reserved_gb": 13.29296875, "timers_ms": {}}
+== e2e_arxiv16k_ref rc=0 12:00:10
+== e2e_fw2048_cand 12:00:10
+[bench_kernel wrap] kernel=cand (stieltjes.triton_stieltjes) timers=0 script=/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/eval_lengths.py
+/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/eval_lengths.py:41: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(os.path.join(out_dir, 'ckpt.pt'), map_location=device)
+number of parameters: 123.59M
+L=2048: val loss 3.4027 over 1024 seqs (14s); first/last bucket 3.741/3.378
+wrote /tmp/e2e_cand
+[bench_kernel wrap] {"kernel": "cand", "timers": 0, "script": "eval_lengths.py", "args": ["--out_dir=/tmp/e2e_cand", "--data_dir=/fs/scratch/PAS2836/jacktaylor/nanogpt_data/fineweb25B", "--lengths=2048", "--batch_tokens=16384", "--stats_lengths=", "--out_name=fw2048.json"], "wall_s": 17.299648082989734, "peak_alloc_gb": 9.528181076049805, "peak_reserved_gb": 13.29296875, "timers_ms": {}}
+== e2e_fw2048_cand rc=0 12:00:30
+== e2e_arxiv16k_cand 12:00:30
+[bench_kernel wrap] kernel=cand (stieltjes.triton_stieltjes) timers=0 script=/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/eval_lengths.py
+/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/eval_lengths.py:41: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(os.path.join(out_dir, 'ckpt.pt'), map_location=device)
+number of parameters: 123.59M
+L=16384: val loss 3.6519 over 128 seqs (62s); first/last bucket 4.098/3.581
+wrote /tmp/e2e_cand
+[bench_kernel wrap] {"kernel": "cand", "timers": 0, "script": "eval_lengths.py", "args": ["--out_dir=/tmp/e2e_cand", "--data_file=/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/data/arxiv_long/arxiv_long.bin", "--doc_len=16385", "--lengths=16384", "--batch_tokens=16384", "--stats_lengths=", "--out_name=arxiv16k.json"], "wall_s": 64.9753489359864, "peak_alloc_gb": 9.528165817260742, "peak_reserved_gb": 13.29296875, "timers_ms": {}}
+== e2e_arxiv16k_cand rc=0 12:01:38
+== e2e_compare 12:01:38
+OK  fw2048 {"loss_ref": 3.402708473532779, "loss_cand": 3.402708473532779, "diff": 0.0, "tok_s_ref": 50121.07406142301, "tok_s_cand": 147779.83346430538}
+OK  arxiv16k {"loss_ref": 3.6519481534210554, "loss_cand": 3.6519481534210554, "diff": 0.0, "tok_s_ref": 7654.663609708076, "tok_s_cand": 33876.85476883285}
+== e2e_compare rc=0 12:01:38
+== skipcheck 12:01:38
+OK  bfloat16  N   64 q3.0 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q4.0 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q4.0 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q4.0 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q4.0 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q4.0 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q4.0 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q4.0 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q4.0 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q4.0 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q4.0 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q4.0 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q4.0 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d1.5 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d1.5 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d1.5 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d1.5 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d1.5 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d1.5 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d1.5 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d1.5 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d1.5 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d1.5 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d1.5 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q3.0 d1.5 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q2.5 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q2.5 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q2.5 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q2.5 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q2.5 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q2.5 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q2.5 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q2.5 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q2.5 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q2.5 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q2.5 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q2.5 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N   64 q4.0 dNone slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N   64 q4.0 dNone slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N   64 q4.0 dNone slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N   64 q4.0 dNone slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N   64 q4.0 dNone slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N   64 q4.0 dNone slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N   64 q4.0 dNone slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N   64 q4.0 dNone slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N   64 q4.0 dNone slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N   64 q4.0 dNone slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N   64 q4.0 dNone slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N   64 q4.0 dNone slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N  300 q3.0 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.979
+OK  bfloat16  N  300 q3.0 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N  300 q3.0 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.967
+OK  bfloat16  N  300 q3.0 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.988
+OK  bfloat16  N  300 q3.0 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.967
+OK  bfloat16  N  300 q3.0 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.967
+OK  bfloat16  N  300 q3.0 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.908
+OK  bfloat16  N  300 q3.0 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.954
+OK  bfloat16  N  300 q3.0 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.95
+OK  bfloat16  N  300 q3.0 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.983
+OK  bfloat16  N  300 q3.0 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.954
+OK  bfloat16  N  300 q3.0 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.954
+OK  bfloat16  N  300 q4.0 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.983
+OK  bfloat16  N  300 q4.0 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N  300 q4.0 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.979
+OK  bfloat16  N  300 q4.0 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.988
+OK  bfloat16  N  300 q4.0 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.971
+OK  bfloat16  N  300 q4.0 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.971
+OK  bfloat16  N  300 q4.0 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.904
+OK  bfloat16  N  300 q4.0 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.954
+OK  bfloat16  N  300 q4.0 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.963
+OK  bfloat16  N  300 q4.0 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.979
+OK  bfloat16  N  300 q4.0 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.971
+OK  bfloat16  N  300 q4.0 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.971
+OK  bfloat16  N  300 q3.0 d1.5 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.979
+OK  bfloat16  N  300 q3.0 d1.5 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.992
+OK  bfloat16  N  300 q3.0 d1.5 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.958
+OK  bfloat16  N  300 q3.0 d1.5 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.983
+OK  bfloat16  N  300 q3.0 d1.5 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.958
+OK  bfloat16  N  300 q3.0 d1.5 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.958
+OK  bfloat16  N  300 q3.0 d1.5 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.883
+OK  bfloat16  N  300 q3.0 d1.5 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.946
+OK  bfloat16  N  300 q3.0 d1.5 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.963
+OK  bfloat16  N  300 q3.0 d1.5 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.975
+OK  bfloat16  N  300 q3.0 d1.5 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.967
+OK  bfloat16  N  300 q3.0 d1.5 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.967
+OK  bfloat16  N  300 q2.5 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.971
+OK  bfloat16  N  300 q2.5 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N  300 q2.5 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.971
+OK  bfloat16  N  300 q2.5 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.988
+OK  bfloat16  N  300 q2.5 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.971
+OK  bfloat16  N  300 q2.5 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.971
+OK  bfloat16  N  300 q2.5 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.908
+OK  bfloat16  N  300 q2.5 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.958
+OK  bfloat16  N  300 q2.5 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.975
+OK  bfloat16  N  300 q2.5 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.988
+OK  bfloat16  N  300 q2.5 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.958
+OK  bfloat16  N  300 q2.5 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.958
+OK  bfloat16  N  300 q4.0 dNone slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N  300 q4.0 dNone slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N  300 q4.0 dNone slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N  300 q4.0 dNone slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N  300 q4.0 dNone slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N  300 q4.0 dNone slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N  300 q4.0 dNone slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N  300 q4.0 dNone slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N  300 q4.0 dNone slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N  300 q4.0 dNone slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N  300 q4.0 dNone slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N  300 q4.0 dNone slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 1000 q3.0 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.988
+OK  bfloat16  N 1000 q3.0 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N 1000 q3.0 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.937
+OK  bfloat16  N 1000 q3.0 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.989
+OK  bfloat16  N 1000 q3.0 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.902
+OK  bfloat16  N 1000 q3.0 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.902
+OK  bfloat16  N 1000 q3.0 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.784
+OK  bfloat16  N 1000 q3.0 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.84
+OK  bfloat16  N 1000 q3.0 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.825
+OK  bfloat16  N 1000 q3.0 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.887
+OK  bfloat16  N 1000 q3.0 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.898
+OK  bfloat16  N 1000 q3.0 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.898
+OK  bfloat16  N 1000 q4.0 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.985
+OK  bfloat16  N 1000 q4.0 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N 1000 q4.0 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.944
+OK  bfloat16  N 1000 q4.0 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.992
+OK  bfloat16  N 1000 q4.0 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.898
+OK  bfloat16  N 1000 q4.0 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.898
+OK  bfloat16  N 1000 q4.0 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.793
+OK  bfloat16  N 1000 q4.0 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.842
+OK  bfloat16  N 1000 q4.0 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.827
+OK  bfloat16  N 1000 q4.0 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.889
+OK  bfloat16  N 1000 q4.0 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.902
+OK  bfloat16  N 1000 q4.0 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.902
+OK  bfloat16  N 1000 q3.0 d1.5 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.965
+OK  bfloat16  N 1000 q3.0 d1.5 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.998
+OK  bfloat16  N 1000 q3.0 d1.5 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.92
+OK  bfloat16  N 1000 q3.0 d1.5 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.986
+OK  bfloat16  N 1000 q3.0 d1.5 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.901
+OK  bfloat16  N 1000 q3.0 d1.5 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.902
+OK  bfloat16  N 1000 q3.0 d1.5 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.77
+OK  bfloat16  N 1000 q3.0 d1.5 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.831
+OK  bfloat16  N 1000 q3.0 d1.5 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.812
+OK  bfloat16  N 1000 q3.0 d1.5 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.874
+OK  bfloat16  N 1000 q3.0 d1.5 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.906
+OK  bfloat16  N 1000 q3.0 d1.5 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.906
+OK  bfloat16  N 1000 q2.5 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.988
+OK  bfloat16  N 1000 q2.5 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N 1000 q2.5 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.943
+OK  bfloat16  N 1000 q2.5 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.993
+OK  bfloat16  N 1000 q2.5 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.905
+OK  bfloat16  N 1000 q2.5 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.905
+OK  bfloat16  N 1000 q2.5 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.791
+OK  bfloat16  N 1000 q2.5 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.84
+OK  bfloat16  N 1000 q2.5 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.825
+OK  bfloat16  N 1000 q2.5 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.887
+OK  bfloat16  N 1000 q2.5 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.911
+OK  bfloat16  N 1000 q2.5 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.911
+OK  bfloat16  N 1000 q4.0 dNone slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 1000 q4.0 dNone slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 1000 q4.0 dNone slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 1000 q4.0 dNone slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 1000 q4.0 dNone slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 1000 q4.0 dNone slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 1000 q4.0 dNone slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 1000 q4.0 dNone slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 1000 q4.0 dNone slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 1000 q4.0 dNone slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 1000 q4.0 dNone slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 1000 q4.0 dNone slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 2048 q3.0 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.964
+OK  bfloat16  N 2048 q3.0 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N 2048 q3.0 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.838
+OK  bfloat16  N 2048 q3.0 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.987
+OK  bfloat16  N 2048 q3.0 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.771
+OK  bfloat16  N 2048 q3.0 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.772
+OK  bfloat16  N 2048 q3.0 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.682
+OK  bfloat16  N 2048 q3.0 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.795
+OK  bfloat16  N 2048 q3.0 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.686
+OK  bfloat16  N 2048 q3.0 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.816
+OK  bfloat16  N 2048 q3.0 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.768
+OK  bfloat16  N 2048 q3.0 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.768
+OK  bfloat16  N 2048 q4.0 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.966
+OK  bfloat16  N 2048 q4.0 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N 2048 q4.0 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.84
+OK  bfloat16  N 2048 q4.0 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.986
+OK  bfloat16  N 2048 q4.0 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.764
+OK  bfloat16  N 2048 q4.0 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.765
+OK  bfloat16  N 2048 q4.0 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.681
+OK  bfloat16  N 2048 q4.0 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.795
+OK  bfloat16  N 2048 q4.0 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.682
+OK  bfloat16  N 2048 q4.0 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.818
+OK  bfloat16  N 2048 q4.0 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.775
+OK  bfloat16  N 2048 q4.0 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.775
+OK  bfloat16  N 2048 q3.0 d1.5 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.907
+OK  bfloat16  N 2048 q3.0 d1.5 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N 2048 q3.0 d1.5 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.812
+OK  bfloat16  N 2048 q3.0 d1.5 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.962
+OK  bfloat16  N 2048 q3.0 d1.5 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.772
+OK  bfloat16  N 2048 q3.0 d1.5 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.772
+OK  bfloat16  N 2048 q3.0 d1.5 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.637
+OK  bfloat16  N 2048 q3.0 d1.5 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.772
+OK  bfloat16  N 2048 q3.0 d1.5 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.666
+OK  bfloat16  N 2048 q3.0 d1.5 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.791
+OK  bfloat16  N 2048 q3.0 d1.5 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.764
+OK  bfloat16  N 2048 q3.0 d1.5 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.764
+OK  bfloat16  N 2048 q2.5 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.964
+OK  bfloat16  N 2048 q2.5 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  bfloat16  N 2048 q2.5 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.846
+OK  bfloat16  N 2048 q2.5 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.988
+OK  bfloat16  N 2048 q2.5 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.765
+OK  bfloat16  N 2048 q2.5 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.765
+OK  bfloat16  N 2048 q2.5 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.68
+OK  bfloat16  N 2048 q2.5 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.794
+OK  bfloat16  N 2048 q2.5 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.685
+OK  bfloat16  N 2048 q2.5 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.817
+OK  bfloat16  N 2048 q2.5 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.767
+OK  bfloat16  N 2048 q2.5 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.767
+OK  bfloat16  N 2048 q4.0 dNone slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 2048 q4.0 dNone slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 2048 q4.0 dNone slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 2048 q4.0 dNone slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 2048 q4.0 dNone slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 2048 q4.0 dNone slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 2048 q4.0 dNone slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 2048 q4.0 dNone slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 2048 q4.0 dNone slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 2048 q4.0 dNone slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 2048 q4.0 dNone slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N 2048 q4.0 dNone slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N   64 q3.0 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q4.0 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q4.0 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q4.0 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q4.0 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q4.0 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q4.0 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q4.0 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q4.0 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q4.0 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q4.0 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q4.0 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q4.0 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d1.5 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d1.5 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d1.5 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d1.5 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d1.5 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d1.5 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d1.5 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d1.5 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d1.5 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d1.5 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d1.5 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q3.0 d1.5 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q2.5 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q2.5 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q2.5 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q2.5 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q2.5 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q2.5 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q2.5 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q2.5 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q2.5 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q2.5 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q2.5 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q2.5 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N   64 q4.0 dNone slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N   64 q4.0 dNone slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N   64 q4.0 dNone slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N   64 q4.0 dNone slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N   64 q4.0 dNone slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N   64 q4.0 dNone slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N   64 q4.0 dNone slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N   64 q4.0 dNone slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N   64 q4.0 dNone slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N   64 q4.0 dNone slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N   64 q4.0 dNone slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N   64 q4.0 dNone slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N  300 q3.0 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q3.0 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q3.0 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q3.0 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q3.0 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q3.0 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q3.0 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.925
+OK  float32   N  300 q3.0 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.958
+OK  float32   N  300 q3.0 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q3.0 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q3.0 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q3.0 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q4.0 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q4.0 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q4.0 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q4.0 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q4.0 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q4.0 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q4.0 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.908
+OK  float32   N  300 q4.0 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.967
+OK  float32   N  300 q4.0 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q4.0 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q4.0 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.992
+OK  float32   N  300 q4.0 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.992
+OK  float32   N  300 q3.0 d1.5 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q3.0 d1.5 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q3.0 d1.5 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q3.0 d1.5 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q3.0 d1.5 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q3.0 d1.5 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q3.0 d1.5 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.917
+OK  float32   N  300 q3.0 d1.5 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.95
+OK  float32   N  300 q3.0 d1.5 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q3.0 d1.5 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q3.0 d1.5 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q3.0 d1.5 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q2.5 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q2.5 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q2.5 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q2.5 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q2.5 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q2.5 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q2.5 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.925
+OK  float32   N  300 q2.5 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.983
+OK  float32   N  300 q2.5 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.992
+OK  float32   N  300 q2.5 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q2.5 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q2.5 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N  300 q4.0 dNone slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N  300 q4.0 dNone slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N  300 q4.0 dNone slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N  300 q4.0 dNone slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N  300 q4.0 dNone slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N  300 q4.0 dNone slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N  300 q4.0 dNone slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N  300 q4.0 dNone slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N  300 q4.0 dNone slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N  300 q4.0 dNone slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N  300 q4.0 dNone slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N  300 q4.0 dNone slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 1000 q3.0 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.999
+OK  float32   N 1000 q3.0 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N 1000 q3.0 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.992
+OK  float32   N 1000 q3.0 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.999
+OK  float32   N 1000 q3.0 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.981
+OK  float32   N 1000 q3.0 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.981
+OK  float32   N 1000 q3.0 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.818
+OK  float32   N 1000 q3.0 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.844
+OK  float32   N 1000 q3.0 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.877
+OK  float32   N 1000 q3.0 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.901
+OK  float32   N 1000 q3.0 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.983
+OK  float32   N 1000 q3.0 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.983
+OK  float32   N 1000 q4.0 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N 1000 q4.0 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N 1000 q4.0 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.994
+OK  float32   N 1000 q4.0 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.999
+OK  float32   N 1000 q4.0 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.983
+OK  float32   N 1000 q4.0 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.983
+OK  float32   N 1000 q4.0 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.814
+OK  float32   N 1000 q4.0 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.847
+OK  float32   N 1000 q4.0 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.879
+OK  float32   N 1000 q4.0 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.905
+OK  float32   N 1000 q4.0 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.986
+OK  float32   N 1000 q4.0 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.986
+OK  float32   N 1000 q3.0 d1.5 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.994
+OK  float32   N 1000 q3.0 d1.5 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N 1000 q3.0 d1.5 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.988
+OK  float32   N 1000 q3.0 d1.5 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.998
+OK  float32   N 1000 q3.0 d1.5 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.983
+OK  float32   N 1000 q3.0 d1.5 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.983
+OK  float32   N 1000 q3.0 d1.5 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.805
+OK  float32   N 1000 q3.0 d1.5 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.835
+OK  float32   N 1000 q3.0 d1.5 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.871
+OK  float32   N 1000 q3.0 d1.5 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.898
+OK  float32   N 1000 q3.0 d1.5 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.985
+OK  float32   N 1000 q3.0 d1.5 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.985
+OK  float32   N 1000 q2.5 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.998
+OK  float32   N 1000 q2.5 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N 1000 q2.5 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.994
+OK  float32   N 1000 q2.5 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N 1000 q2.5 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.982
+OK  float32   N 1000 q2.5 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.982
+OK  float32   N 1000 q2.5 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.819
+OK  float32   N 1000 q2.5 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.848
+OK  float32   N 1000 q2.5 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.879
+OK  float32   N 1000 q2.5 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.904
+OK  float32   N 1000 q2.5 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.977
+OK  float32   N 1000 q2.5 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.977
+OK  float32   N 1000 q4.0 dNone slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 1000 q4.0 dNone slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 1000 q4.0 dNone slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 1000 q4.0 dNone slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 1000 q4.0 dNone slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 1000 q4.0 dNone slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 1000 q4.0 dNone slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 1000 q4.0 dNone slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 1000 q4.0 dNone slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 1000 q4.0 dNone slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 1000 q4.0 dNone slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 1000 q4.0 dNone slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 2048 q3.0 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.998
+OK  float32   N 2048 q3.0 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N 2048 q3.0 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.97
+OK  float32   N 2048 q3.0 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N 2048 q3.0 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.932
+OK  float32   N 2048 q3.0 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.932
+OK  float32   N 2048 q3.0 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.725
+OK  float32   N 2048 q3.0 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.802
+OK  float32   N 2048 q3.0 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.792
+OK  float32   N 2048 q3.0 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.836
+OK  float32   N 2048 q3.0 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.934
+OK  float32   N 2048 q3.0 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.934
+OK  float32   N 2048 q4.0 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.998
+OK  float32   N 2048 q4.0 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N 2048 q4.0 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.965
+OK  float32   N 2048 q4.0 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N 2048 q4.0 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.932
+OK  float32   N 2048 q4.0 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.932
+OK  float32   N 2048 q4.0 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.719
+OK  float32   N 2048 q4.0 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.803
+OK  float32   N 2048 q4.0 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.787
+OK  float32   N 2048 q4.0 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.836
+OK  float32   N 2048 q4.0 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.931
+OK  float32   N 2048 q4.0 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.931
+OK  float32   N 2048 q3.0 d1.5 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.988
+OK  float32   N 2048 q3.0 d1.5 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N 2048 q3.0 d1.5 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.953
+OK  float32   N 2048 q3.0 d1.5 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.998
+OK  float32   N 2048 q3.0 d1.5 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.933
+OK  float32   N 2048 q3.0 d1.5 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.934
+OK  float32   N 2048 q3.0 d1.5 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.702
+OK  float32   N 2048 q3.0 d1.5 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.784
+OK  float32   N 2048 q3.0 d1.5 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.785
+OK  float32   N 2048 q3.0 d1.5 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.83
+OK  float32   N 2048 q3.0 d1.5 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.931
+OK  float32   N 2048 q3.0 d1.5 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.931
+OK  float32   N 2048 q2.5 d2.0 slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.999
+OK  float32   N 2048 q2.5 d2.0 slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N 2048 q2.5 d2.0 slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.97
+OK  float32   N 2048 q2.5 d2.0 slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=1.0
+OK  float32   N 2048 q2.5 d2.0 slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.932
+OK  float32   N 2048 q2.5 d2.0 slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.932
+OK  float32   N 2048 q2.5 d2.0 slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.717
+OK  float32   N 2048 q2.5 d2.0 slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.801
+OK  float32   N 2048 q2.5 d2.0 slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.795
+OK  float32   N 2048 q2.5 d2.0 slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.836
+OK  float32   N 2048 q2.5 d2.0 slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.939
+OK  float32   N 2048 q2.5 d2.0 slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=0.939
+OK  float32   N 2048 q4.0 dNone slopes0 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 2048 q4.0 dNone slopes0 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 2048 q4.0 dNone slopes0 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 2048 q4.0 dNone slopes0 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 2048 q4.0 dNone slopes0 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 2048 q4.0 dNone slopes0 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 2048 q4.0 dNone slopes1 qs      3 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 2048 q4.0 dNone slopes1 qs      3 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 2048 q4.0 dNone slopes1 qs     12 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 2048 q4.0 dNone slopes1 qs     12 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 2048 q4.0 dNone slopes1 qs  20000 trust    identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  float32   N 2048 q4.0 dNone slopes1 qs  20000 notrust  identical(o,lam,S)=[True, True, True] (dq,dk,dv)=[True, True, True] live_at_exit=None
+OK  bfloat16  N   64 q3.0 d2.0 qs      3 num_iter  1 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q3.0 d2.0 qs      3 num_iter  2 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q3.0 d2.0 qs      3 num_iter  3 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q3.0 d2.0 qs      3 num_iter  4 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q3.0 d2.0 qs      3 num_iter  7 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q3.0 d2.0 qs      3 num_iter  8 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q3.0 d2.0 qs      3 num_iter 14 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q3.0 d2.0 qs     12 num_iter  1 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q3.0 d2.0 qs     12 num_iter  2 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q3.0 d2.0 qs     12 num_iter  3 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q3.0 d2.0 qs     12 num_iter  4 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q3.0 d2.0 qs     12 num_iter  7 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q3.0 d2.0 qs     12 num_iter  8 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q3.0 d2.0 qs     12 num_iter 14 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q4.0 dNone qs      3 num_iter  1 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q4.0 dNone qs      3 num_iter  2 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q4.0 dNone qs      3 num_iter  3 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q4.0 dNone qs      3 num_iter  4 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q4.0 dNone qs      3 num_iter  7 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q4.0 dNone qs      3 num_iter  8 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q4.0 dNone qs      3 num_iter 14 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q4.0 dNone qs     12 num_iter  1 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q4.0 dNone qs     12 num_iter  2 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q4.0 dNone qs     12 num_iter  3 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q4.0 dNone qs     12 num_iter  4 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q4.0 dNone qs     12 num_iter  7 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q4.0 dNone qs     12 num_iter  8 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N   64 q4.0 dNone qs     12 num_iter 14 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q3.0 d2.0 qs      3 num_iter  1 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q3.0 d2.0 qs      3 num_iter  2 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q3.0 d2.0 qs      3 num_iter  3 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q3.0 d2.0 qs      3 num_iter  4 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q3.0 d2.0 qs      3 num_iter  7 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q3.0 d2.0 qs      3 num_iter  8 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q3.0 d2.0 qs      3 num_iter 14 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q3.0 d2.0 qs     12 num_iter  1 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q3.0 d2.0 qs     12 num_iter  2 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q3.0 d2.0 qs     12 num_iter  3 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q3.0 d2.0 qs     12 num_iter  4 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q3.0 d2.0 qs     12 num_iter  7 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q3.0 d2.0 qs     12 num_iter  8 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q3.0 d2.0 qs     12 num_iter 14 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q4.0 dNone qs      3 num_iter  1 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q4.0 dNone qs      3 num_iter  2 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q4.0 dNone qs      3 num_iter  3 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q4.0 dNone qs      3 num_iter  4 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q4.0 dNone qs      3 num_iter  7 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q4.0 dNone qs      3 num_iter  8 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q4.0 dNone qs      3 num_iter 14 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q4.0 dNone qs     12 num_iter  1 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q4.0 dNone qs     12 num_iter  2 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q4.0 dNone qs     12 num_iter  3 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q4.0 dNone qs     12 num_iter  4 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q4.0 dNone qs     12 num_iter  7 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q4.0 dNone qs     12 num_iter  8 exit     identical(o,lam,S)=[True, True, True]
+OK  bfloat16  N  300 q4.0 dNone qs     12 num_iter 14 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q3.0 d2.0 qs      3 num_iter  1 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q3.0 d2.0 qs      3 num_iter  2 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q3.0 d2.0 qs      3 num_iter  3 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q3.0 d2.0 qs      3 num_iter  4 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q3.0 d2.0 qs      3 num_iter  7 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q3.0 d2.0 qs      3 num_iter  8 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q3.0 d2.0 qs      3 num_iter 14 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q3.0 d2.0 qs     12 num_iter  1 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q3.0 d2.0 qs     12 num_iter  2 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q3.0 d2.0 qs     12 num_iter  3 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q3.0 d2.0 qs     12 num_iter  4 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q3.0 d2.0 qs     12 num_iter  7 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q3.0 d2.0 qs     12 num_iter  8 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q3.0 d2.0 qs     12 num_iter 14 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q4.0 dNone qs      3 num_iter  1 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q4.0 dNone qs      3 num_iter  2 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q4.0 dNone qs      3 num_iter  3 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q4.0 dNone qs      3 num_iter  4 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q4.0 dNone qs      3 num_iter  7 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q4.0 dNone qs      3 num_iter  8 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q4.0 dNone qs      3 num_iter 14 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q4.0 dNone qs     12 num_iter  1 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q4.0 dNone qs     12 num_iter  2 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q4.0 dNone qs     12 num_iter  3 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q4.0 dNone qs     12 num_iter  4 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q4.0 dNone qs     12 num_iter  7 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q4.0 dNone qs     12 num_iter  8 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N   64 q4.0 dNone qs     12 num_iter 14 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q3.0 d2.0 qs      3 num_iter  1 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q3.0 d2.0 qs      3 num_iter  2 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q3.0 d2.0 qs      3 num_iter  3 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q3.0 d2.0 qs      3 num_iter  4 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q3.0 d2.0 qs      3 num_iter  7 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q3.0 d2.0 qs      3 num_iter  8 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q3.0 d2.0 qs      3 num_iter 14 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q3.0 d2.0 qs     12 num_iter  1 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q3.0 d2.0 qs     12 num_iter  2 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q3.0 d2.0 qs     12 num_iter  3 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q3.0 d2.0 qs     12 num_iter  4 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q3.0 d2.0 qs     12 num_iter  7 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q3.0 d2.0 qs     12 num_iter  8 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q3.0 d2.0 qs     12 num_iter 14 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q4.0 dNone qs      3 num_iter  1 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q4.0 dNone qs      3 num_iter  2 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q4.0 dNone qs      3 num_iter  3 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q4.0 dNone qs      3 num_iter  4 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q4.0 dNone qs      3 num_iter  7 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q4.0 dNone qs      3 num_iter  8 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q4.0 dNone qs      3 num_iter 14 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q4.0 dNone qs     12 num_iter  1 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q4.0 dNone qs     12 num_iter  2 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q4.0 dNone qs     12 num_iter  3 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q4.0 dNone qs     12 num_iter  4 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q4.0 dNone qs     12 num_iter  7 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q4.0 dNone qs     12 num_iter  8 exit     identical(o,lam,S)=[True, True, True]
+OK  float32   N  300 q4.0 dNone qs     12 num_iter 14 exit     identical(o,lam,S)=[True, True, True]
+skipcheck: 592 of 592 OK
+== skipcheck rc=0 12:02:09
+== equiv_random 12:02:09
+OK  rand w_q3_d2 nape float32 N=64 it=15         cand-vs-eager out 6.6e-08 dq 2.6e-07 dk 2.5e-07 dv 7.6e-08 | ref-vs-eager 6.6e-08 2.6e-07 2.5e-07 7.6e-08 | cand-vs-ref max 0.0e+00 | resid cand 1.4e-06 ref 1.4e-06
+OK  rand w_q3_d2 nape float32 N=300 it=15        cand-vs-eager out 7.9e-08 dq 2.6e-07 dk 2.5e-07 dv 9.5e-08 | ref-vs-eager 7.9e-08 2.6e-07 2.5e-07 9.5e-08 | cand-vs-ref max 0.0e+00 | resid cand 2.0e-06 ref 2.0e-06
+OK  rand w_q3_d2 nape float32 N=300 it=30        cand-vs-eager out 7.9e-08 dq 2.7e-07 dk 2.6e-07 dv 9.5e-08 | ref-vs-eager 7.9e-08 2.7e-07 2.6e-07 9.5e-08 | cand-vs-ref max 0.0e+00 | resid cand 1.8e-06 ref 1.8e-06
+OK  rand w_q3_d2 nape float32 N=2048 it=15       cand-vs-eager out 9.5e-08 dq 2.9e-07 dk 2.9e-07 dv 1.1e-07 | ref-vs-eager 9.5e-08 2.9e-07 2.9e-07 1.1e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.1e-06 ref 2.1e-06
+OK  rand w_q3_d2 nape float32 N=4096 it=15       cand-vs-eager out 1.0e-07 dq 3.1e-07 dk 3.0e-07 dv 1.2e-07 | ref-vs-eager 1.0e-07 3.1e-07 3.0e-07 1.2e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.1e-06 ref 2.1e-06
+OK  rand dense_q4 nape float32 N=64 it=30        cand-vs-eager out 9.8e-08 dq 5.5e-07 dk 5.3e-07 dv 1.1e-07 | ref-vs-eager 9.8e-08 5.5e-07 5.3e-07 1.1e-07 | cand-vs-ref max 0.0e+00 | resid cand 1.9e-06 ref 1.9e-06
+OK  rand dense_q4 nape float32 N=300 it=30       cand-vs-eager out 1.3e-07 dq 5.7e-07 dk 6.1e-07 dv 1.4e-07 | ref-vs-eager 1.3e-07 5.7e-07 6.1e-07 1.4e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.0e-06 ref 2.0e-06
+OK  rand dense_q4 nape float32 N=2048 it=30      cand-vs-eager out 1.9e-07 dq 8.1e-07 dk 1.0e-06 dv 2.0e-07 | ref-vs-eager 1.9e-07 8.1e-07 1.0e-06 2.0e-07 | cand-vs-ref max 0.0e+00 | resid cand 2.7e-06 ref 2.7e-06
+OK  rand dense_q4 nape float32 N=4096 it=30      cand-vs-eager out 5.1e-07 dq 7.4e-07 dk 7.3e-07 dv 1.0e-06 | ref-vs-eager 5.1e-07 7.4e-07 7.3e-07 1.0e-06 | cand-vs-ref max 0.0e+00 | resid cand 3.5e-06 ref 3.5e-06
+OK  rand w_q3_d2 nape bfloat16 N=64 it=15        cand-vs-eager out 1.4e-03 dq 2.3e-03 dk 2.3e-03 dv 1.9e-03 | ref-vs-eager 1.4e-03 2.3e-03 2.3e-03 1.9e-03 | cand-vs-ref max 0.0e+00 | resid cand 1.7e-06 ref 1.7e-06
+OK  rand w_q3_d2 nape bfloat16 N=300 it=15       cand-vs-eager out 1.5e-03 dq 2.4e-03 dk 2.4e-03 dv 1.9e-03 | ref-vs-eager 1.5e-03 2.4e-03 2.4e-03 1.9e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.0e-06 ref 2.0e-06
+OK  rand w_q3_d2 nape bfloat16 N=300 it=30       cand-vs-eager out 1.5e-03 dq 2.4e-03 dk 2.4e-03 dv 1.9e-03 | ref-vs-eager 1.5e-03 2.4e-03 2.4e-03 1.9e-03 | cand-vs-ref max 0.0e+00 | resid cand 1.9e-06 ref 1.9e-06
+OK  rand w_q3_d2 nape bfloat16 N=2048 it=15      cand-vs-eager out 1.6e-03 dq 2.4e-03 dk 2.3e-03 dv 1.9e-03 | ref-vs-eager 1.6e-03 2.4e-03 2.3e-03 1.9e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.0e-06 ref 2.0e-06
+OK  rand w_q3_d2 nape bfloat16 N=4096 it=15      cand-vs-eager out 1.6e-03 dq 2.4e-03 dk 2.3e-03 dv 1.9e-03 | ref-vs-eager 1.6e-03 2.4e-03 2.3e-03 1.9e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.1e-06 ref 2.1e-06
+OK  rand w_q3_d2 nopos bfloat16 N=64 it=15       cand-vs-eager out 1.3e-03 dq 2.4e-03 dk 2.3e-03 dv 1.8e-03 | ref-vs-eager 1.3e-03 2.4e-03 2.3e-03 1.8e-03 | cand-vs-ref max 0.0e+00 | resid cand 1.7e-06 ref 1.7e-06
+OK  rand w_q3_d2 nopos bfloat16 N=300 it=15      cand-vs-eager out 1.5e-03 dq 2.4e-03 dk 2.4e-03 dv 1.9e-03 | ref-vs-eager 1.5e-03 2.4e-03 2.4e-03 1.9e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.0e-06 ref 2.0e-06
+OK  rand w_q3_d2 nopos bfloat16 N=2048 it=15     cand-vs-eager out 1.7e-03 dq 2.4e-03 dk 2.3e-03 dv 2.0e-03 | ref-vs-eager 1.7e-03 2.4e-03 2.3e-03 2.0e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.0e-06 ref 2.0e-06
+OK  rand w_q3_d2 nopos bfloat16 N=4096 it=15     cand-vs-eager out 1.7e-03 dq 2.4e-03 dk 2.3e-03 dv 2.0e-03 | ref-vs-eager 1.7e-03 2.4e-03 2.3e-03 2.0e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.1e-06 ref 2.1e-06
+OK  rand w_q4_d2 nape bfloat16 N=64 it=15        cand-vs-eager out 1.3e-03 dq 2.4e-03 dk 2.4e-03 dv 1.8e-03 | ref-vs-eager 1.3e-03 2.4e-03 2.4e-03 1.8e-03 | cand-vs-ref max 0.0e+00 | resid cand 1.9e-06 ref 1.9e-06
+OK  rand w_q4_d2 nape bfloat16 N=300 it=15       cand-vs-eager out 1.5e-03 dq 2.4e-03 dk 2.3e-03 dv 1.9e-03 | ref-vs-eager 1.5e-03 2.4e-03 2.3e-03 1.9e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.3e-06 ref 2.3e-06
+OK  rand w_q4_d2 nape bfloat16 N=2048 it=15      cand-vs-eager out 1.6e-03 dq 2.4e-03 dk 2.4e-03 dv 1.9e-03 | ref-vs-eager 1.6e-03 2.4e-03 2.4e-03 1.9e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.7e-06 ref 2.7e-06
+OK  rand w_q4_d2 nape bfloat16 N=4096 it=15      cand-vs-eager out 1.6e-03 dq 2.4e-03 dk 2.3e-03 dv 1.9e-03 | ref-vs-eager 1.6e-03 2.4e-03 2.3e-03 1.9e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.7e-06 ref 2.7e-06
+OK  rand w_q3_d1.5 nape bfloat16 N=64 it=15      cand-vs-eager out 1.0e-03 dq 2.2e-03 dk 2.3e-03 dv 1.7e-03 | ref-vs-eager 1.0e-03 2.2e-03 2.3e-03 1.7e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.0e-06 ref 2.0e-06
+OK  rand w_q3_d1.5 nape bfloat16 N=300 it=15     cand-vs-eager out 1.2e-03 dq 2.4e-03 dk 2.3e-03 dv 1.8e-03 | ref-vs-eager 1.2e-03 2.4e-03 2.3e-03 1.8e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.6e-06 ref 2.6e-06
+OK  rand w_q3_d1.5 nape bfloat16 N=2048 it=15    cand-vs-eager out 1.3e-03 dq 2.4e-03 dk 2.3e-03 dv 1.8e-03 | ref-vs-eager 1.3e-03 2.4e-03 2.3e-03 1.8e-03 | cand-vs-ref max 0.0e+00 | resid cand 3.2e-06 ref 3.2e-06
+OK  rand w_q3_d1.5 nape bfloat16 N=4096 it=15    cand-vs-eager out 1.3e-03 dq 2.4e-03 dk 2.4e-03 dv 1.8e-03 | ref-vs-eager 1.3e-03 2.4e-03 2.4e-03 1.8e-03 | cand-vs-ref max 0.0e+00 | resid cand 4.3e-06 ref 4.3e-06
+OK  rand dense_q4 nape bfloat16 N=64 it=30       cand-vs-eager out 2.1e-03 dq 2.4e-03 dk 2.3e-03 dv 2.1e-03 | ref-vs-eager 2.1e-03 2.4e-03 2.3e-03 2.1e-03 | cand-vs-ref max 0.0e+00 | resid cand 1.8e-06 ref 1.8e-06
+OK  rand dense_q4 nape bfloat16 N=300 it=30      cand-vs-eager out 2.2e-03 dq 2.4e-03 dk 2.4e-03 dv 2.2e-03 | ref-vs-eager 2.2e-03 2.4e-03 2.4e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.0e-06 ref 2.0e-06
+OK  rand dense_q4 nape bfloat16 N=2048 it=30     cand-vs-eager out 2.2e-03 dq 2.4e-03 dk 2.4e-03 dv 2.2e-03 | ref-vs-eager 2.2e-03 2.4e-03 2.4e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 3.5e-06 ref 3.5e-06
+OK  rand dense_q4 nape bfloat16 N=4096 it=30     cand-vs-eager out 2.2e-03 dq 2.4e-03 dk 2.3e-03 dv 2.2e-03 | ref-vs-eager 2.2e-03 2.4e-03 2.3e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 3.7e-06 ref 3.7e-06
+OK  rand dense_q4 nopos bfloat16 N=64 it=30      cand-vs-eager out 2.1e-03 dq 2.3e-03 dk 2.3e-03 dv 2.1e-03 | ref-vs-eager 2.1e-03 2.3e-03 2.3e-03 2.1e-03 | cand-vs-ref max 0.0e+00 | resid cand 1.9e-06 ref 1.9e-06
+OK  rand dense_q4 nopos bfloat16 N=300 it=30     cand-vs-eager out 2.2e-03 dq 2.4e-03 dk 2.3e-03 dv 2.2e-03 | ref-vs-eager 2.2e-03 2.4e-03 2.3e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 3.3e-06 ref 3.3e-06
+OK  rand dense_q4 nopos bfloat16 N=2048 it=30    cand-vs-eager out 2.2e-03 dq 2.4e-03 dk 2.3e-03 dv 2.2e-03 | ref-vs-eager 2.2e-03 2.4e-03 2.3e-03 2.2e-03 | cand-vs-ref max 0.0e+00 | resid cand 3.0e-06 ref 3.0e-06
+OK  rand dense_q4 nopos bfloat16 N=4096 it=30    cand-vs-eager out 2.3e-03 dq 2.4e-03 dk 2.3e-03 dv 2.3e-03 | ref-vs-eager 2.3e-03 2.4e-03 2.3e-03 2.3e-03 | cand-vs-ref max 0.0e+00 | resid cand 3.6e-06 ref 3.6e-06
+OK  rand w_q2.5_d2 nape bfloat16 N=64 it=15      cand-vs-eager out 1.4e-03 dq 2.3e-03 dk 2.3e-03 dv 1.8e-03 | ref-vs-eager 1.4e-03 2.3e-03 2.3e-03 1.8e-03 | cand-vs-ref max 0.0e+00 | resid cand 1.5e-06 ref 1.5e-06
+OK  rand w_q2.5_d2 nape bfloat16 N=300 it=15     cand-vs-eager out 1.5e-03 dq 2.3e-03 dk 2.3e-03 dv 1.9e-03 | ref-vs-eager 1.5e-03 2.3e-03 2.3e-03 1.9e-03 | cand-vs-ref max 0.0e+00 | resid cand 1.8e-06 ref 1.8e-06
+OK  rand w_q2.5_d2 nape bfloat16 N=2048 it=15    cand-vs-eager out 1.6e-03 dq 2.4e-03 dk 2.4e-03 dv 2.0e-03 | ref-vs-eager 1.6e-03 2.4e-03 2.4e-03 2.0e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.4e-06 ref 2.4e-06
+OK  rand w_q2.5_d2 nape bfloat16 N=4096 it=15    cand-vs-eager out 1.6e-03 dq 2.4e-03 dk 2.4e-03 dv 2.0e-03 | ref-vs-eager 1.6e-03 2.4e-03 2.4e-03 2.0e-03 | cand-vs-ref max 0.0e+00 | resid cand 2.4e-06 ref 2.4e-06
+SUMMARY {"cases": 38, "failed": 0, "ref_outside_tol": 0, "max_err_cand": [0.0022723120637238026, 0.002435623900964856, 0.0023975141812115908, 0.0022758175618946552], "max_err_ref": [0.0022723120637238026, 0.002435623900964856, 0.0023975141812115908, 0.0022758175618946552], "max_ratio": 1.0, "max_cand_vs_ref": 0.0, "max_resid_cand": 4.291534423828125e-06, "max_resid_ref": 4.291534423828125e-06, "device": "NVIDIA A100-PCIE-40GB", "tiles_bf16": [64, 32], "tiles_fp32": [64, 64]}
+GATE PASS
+== equiv_random rc=0 12:02:19
+GATE PASS e008
+DONE 12:02:19

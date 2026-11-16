@@ -29,6 +29,13 @@
 #                          MB=1 (e008): after the pairs, softmax_xs at mb 8 x 32 and 16 x 16 (same-node reference, and
 #                          what the micro-batch split costs outside the kernels) and the trained wstieltjes_q3_d2_xs
 #                          step at mb 16 x 16 with the candidate.
+#     PLAN=final (e009):   end-to-end confirmation, the final kernel against the frozen baseline, STEPS steps each, in two
+#                          jobs (the full set is 58 min at STEPS=30; every pair stays inside one job). TAG=e009/<part>.
+#                          PART=a (the chart rows on one node): wstieltjes_q3_d2_xs trained ref / cand, softmax_xs 16 x 16,
+#                          asentmax_zi_xs trained, wstieltjes_q3_d2_xs from scratch ref / cand, asentmax_zi_xs from scratch.
+#                          PART=b: aswstieltjes_q3_d2_zi_xs trained ref / cand, wstieltjes_q3_d1.5_xs trained ref / cand,
+#                          wstieltjes_q4_d2_xs from scratch ref / cand (no trained q4 checkpoint exists), and the trained
+#                          aswstieltjes_q3_d2_zi_xs step at mb 16 x 16 with the candidate (does the AS row fit 40 GB?).
 set -uo pipefail
 export SCRATCH=/fs/scratch/PAS2836/$USER
 export REPO=$SCRATCH/wt/nanogpt/stieltjes-kernel-speed VENV=$SCRATCH/venvs/nanogpt DATA_SRC=$SCRATCH/nanogpt_data/fineweb25B
@@ -96,6 +103,22 @@ if [ "$PLAN" = ab_trained ]; then
     step softmax_mb8  softmax_xs $STEPS 0 cand $SPARSE
     step softmax_mb16 softmax_xs $STEPS 0 cand
     rstep wst_q3d2_trained_cand_mb16 wstieltjes_q3_d2_xs cand 0 "--batch_size=16 --gradient_accumulation_steps=16"
+  fi
+elif [ "$PLAN" = final ]; then
+  PART=${PART:?set PART=a|b}
+  pair() { rstep ${1}_trained_ref $2 ref; rstep ${1}_trained_cand $2 cand; }                 # name row
+  spair() { step ${1}_scratch_ref $2 $STEPS 0 ref $SPARSE; step ${1}_scratch_cand $2 $STEPS 0 cand $SPARSE; }
+  if [ "$PART" = a ]; then
+    pair wst_q3d2 wstieltjes_q3_d2_xs
+    step softmax_mb16 softmax_xs $STEPS 0 cand
+    rstep asentmax_trained asentmax_zi_xs cand
+    spair wst_q3d2 wstieltjes_q3_d2_xs
+    step asentmax_scratch asentmax_zi_xs $STEPS 0 cand $SPARSE
+  else
+    pair aswst_q3d2 aswstieltjes_q3_d2_zi_xs
+    pair wst_q3d1.5 wstieltjes_q3_d1.5_xs
+    spair wst_q4d2 wstieltjes_q4_d2_xs
+    rstep aswst_q3d2_trained_cand_mb16 aswstieltjes_q3_d2_zi_xs cand 0 "--batch_size=16 --gradient_accumulation_steps=16"
   fi
 elif [ "$PLAN" = profile ]; then
   step wst_q3d2_cand        wstieltjes_q3_d2_xs 30 0 cand $SPARSE

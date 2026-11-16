@@ -1,0 +1,79 @@
+[bench_kernel wrap] kernel=cand (stieltjes.triton_stieltjes) timers=0 script=/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/train.py
+/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/train.py:219: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+  scaler = torch.cuda.amp.GradScaler(enabled=(dtype == 'float16'))
+Overriding config with /fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/config/lm_stieltjes_125m.py:
+# Stage 4: 125M (GPT-2 small shape), T=2048, 2.5B FineWeb tokens (20 tok/param), NAPE exp slopes on 6 of 12 heads.
+# 0.5M tokens per step (16 x 2048 x 16 accum); 4770 steps. Same optimizer settings as the 51M runs.
+dataset = 'fineweb10B'
+n_layer = 12
+n_head = 12
+n_embd = 768
+block_size = 2048
+bias = False
+dropout = 0.0
+pos_emb = 'nape'
+batch_size = 16
+gradient_accumulation_steps = 16
+max_iters = 4770
+lr_decay_iters = 4770
+warmup_iters = 250
+learning_rate = 1.2e-3     # overridden per job
+min_lr = 1.2e-4            # overridden per job (= lr / 10)
+beta1 = 0.9
+beta2 = 0.95
+weight_decay = 0.1
+grad_clip = 1.0
+eval_interval = 250
+eval_iters = 12                   # 12 x 16 x 2048 = 393k val tokens per periodic eval
+final_eval_iters = 100            # 3.3M val tokens for the selection number
+log_interval = 10
+always_save_checkpoint = True
+compile = True
+wandb_log = False
+
+Overriding: data_root = /tmp/fw
+Overriding: attn_type = stieltjes
+Overriding: stieltjes_q = 3.0
+Overriding: stieltjes_window = 2.0
+Overriding: nape_slope_type = exp
+Overriding: stieltjes_num_iter = 15
+Overriding: learning_rate = 0.0012
+Overriding: min_lr = 0.00012
+Overriding: out_dir = /tmp/out_wst_q3d2_scratch_cand
+Overriding: max_iters = 19
+Overriding: eval_interval = 100000
+Overriding: eval_iters = 1
+Overriding: final_eval_iters = 0
+Overriding: log_interval = 1
+Overriding: batch_size = 8
+Overriding: gradient_accumulation_steps = 32
+tokens per iteration will be: 524,288
+Initializing a new model from scratch
+defaulting to vocab_size of GPT-2 to 50304 (50257 rounded up for efficiency)
+number of parameters: 123.59M
+num decayed parameter tensors: 49, with 123,568,128 parameters
+num non-decayed parameter tensors: 25, with 19,200 parameters
+using fused AdamW: True
+compiling the model... (takes a ~minute)
+step 0: train loss 10.9258, val loss 10.9418
+iter 0: loss 10.9531, time 10953.79ms, mfu -100.00%
+iter 1: loss 10.7032, time 6773.23ms, mfu -100.00%
+iter 2: loss 10.4280, time 7049.76ms, mfu -100.00%
+iter 3: loss 10.1962, time 7069.98ms, mfu -100.00%
+iter 4: loss 9.9829, time 7081.60ms, mfu -100.00%
+iter 5: loss 9.7849, time 7092.19ms, mfu 22.94%
+iter 6: loss 9.7060, time 7098.80ms, mfu 22.93%
+iter 7: loss 9.5875, time 7115.87ms, mfu 22.93%
+iter 8: loss 9.5974, time 7115.84ms, mfu 22.92%
+iter 9: loss 9.5783, time 7116.48ms, mfu 22.91%
+iter 10: loss 9.4071, time 7104.91ms, mfu 22.91%
+iter 11: loss 9.4922, time 7109.21ms, mfu 22.91%
+iter 12: loss 9.2968, time 7098.13ms, mfu 22.91%
+iter 13: loss 9.2520, time 7084.35ms, mfu 22.91%
+iter 14: loss 9.2312, time 7077.99ms, mfu 22.92%
+iter 15: loss 9.0012, time 7070.70ms, mfu 22.93%
+iter 16: loss 8.9492, time 7058.10ms, mfu 22.94%
+iter 17: loss 8.9257, time 7069.50ms, mfu 22.95%
+iter 18: loss 8.7882, time 7058.76ms, mfu 22.96%
+iter 19: loss 8.6703, time 7060.08ms, mfu 22.97%
+[bench_kernel wrap] {"kernel": "cand", "timers": 0, "script": "train.py", "args": ["/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/config/lm_stieltjes_125m.py", "--data_root=/tmp/fw", "--attn_type=stieltjes", "--stieltjes_q=3.0", "--stieltjes_window=2.0", "--nape_slope_type=exp", "--stieltjes_num_iter=15", "--learning_rate=1.2e-3", "--min_lr=1.2e-4", "--out_dir=/tmp/out_wst_q3d2_scratch_cand", "--max_iters=19", "--eval_interval=100000", "--eval_iters=1", "--final_eval_iters=0", "--log_interval=1", "--batch_size=8", "--gradient_accumulation_steps=32"], "wall_s": 149.99532064399682, "peak_alloc_gb": 16.18868350982666, "peak_reserved_gb": 19.3203125, "timers_ms": {}}
