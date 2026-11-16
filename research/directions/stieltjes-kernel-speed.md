@@ -9,11 +9,9 @@ cluster: ascend
 status: active
 wake: on_jobs
 budget_gpu_hours: 15
-spent_gpu_hours: 2.8
+spent_gpu_hours: 3.83
 max_jobs_in_flight: 4
-jobs:
-- 8614758
-- 8614759
+jobs: []
 jobs_archived:
 - 8603546
 - 8603935
@@ -27,13 +25,15 @@ jobs_archived:
 - 8614519
 - 8614520
 - 8614747
-last_wake: '2026-11-16T07:34:37-05:00'
+- 8614758
+- 8614759
+last_wake: '2026-11-16T07:20:01-05:00'
 next_id: 6
 model: claude-fable-5-2
 effort: high
 max_turns: 120
 timeout_minutes: 60
-wakes: 6
+wakes: 7
 ---
 # How fast can the fused windowed-Stieltjes attention kernel run at 125M / T=2048 on an A100 with unchanged outputs and gradients? (profile, then optimise the Triton kernel)
 

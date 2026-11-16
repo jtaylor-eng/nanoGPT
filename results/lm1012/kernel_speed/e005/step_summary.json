@@ -1,0 +1,38 @@
+{
+ "aswst_q3d2_trained_cand": {
+  "steps": 17,
+  "s_per_step": 7.212140000000001,
+  "peak_alloc_gb": 17.493347644805908,
+  "peak_reserved_gb": 23.3671875
+ },
+ "aswst_q3d2_trained_nobskip": {
+  "steps": 17,
+  "s_per_step": 7.96734,
+  "peak_alloc_gb": 17.491150379180908,
+  "peak_reserved_gb": 23.36328125
+ },
+ "wst_q3d2_scratch_cand": {
+  "steps": 17,
+  "s_per_step": 7.8217,
+  "peak_alloc_gb": 16.18868350982666,
+  "peak_reserved_gb": 19.3203125
+ },
+ "wst_q3d2_scratch_nobskip": {
+  "steps": 17,
+  "s_per_step": 8.41003,
+  "peak_alloc_gb": 16.18648624420166,
+  "peak_reserved_gb": 19.31640625
+ },
+ "wst_q3d2_trained_cand": {
+  "steps": 17,
+  "s_per_step": 6.96255,
+  "peak_alloc_gb": 16.64175844192505,
+  "peak_reserved_gb": 22.521484375
+ },
+ "wst_q3d2_trained_nobskip": {
+  "steps": 17,
+  "s_per_step": 7.72108,
+  "peak_alloc_gb": 16.63956117630005,
+  "peak_reserved_gb": 22.51953125
+ }
+}
