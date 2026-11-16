@@ -60,12 +60,12 @@ step() {  # name row steps timers kernel [extra train.py args]
   rm -rf $TMPDIR/out_$name
 }
 CK=$LM_RESULTS/125m_fw25_rng
-rstep() {  # name row kernel: STEPS steps resumed from the trained checkpoint (a copy: the run dirs are read-only here)
-  local name=$1 row=$2 kern=$3 O=$TMPDIR/out_$1
+rstep() {  # name row kernel [timers]: STEPS steps resumed from the trained checkpoint (a copy: the run dirs are read-only here)
+  local name=$1 row=$2 kern=$3 tm=${4:-0} O=$TMPDIR/out_$1
   mkdir -p $O; cp $CK/$row/lr1.2e-3/ckpt.pt $O/ckpt.pt
   local it; it=$(python -c "import torch, sys; print(int(torch.load(sys.argv[1], map_location='cpu', weights_only=False)['iter_num']))" $O/ckpt.pt)
   echo "== step $name (resume at iter $it) $(date '+%T')"
-  python $REPO/bench_kernel.py wrap --kernel=$kern --timers=0 --out=$OUT/step_$name.json -- \
+  python $REPO/bench_kernel.py wrap --kernel=$kern --timers=$tm --out=$OUT/step_$name.json -- \
     $REPO/train.py $REPO/config/lm_stieltjes_125m.py --data_root=$FW $(row_args $row) --stieltjes_num_iter=15 \
     --learning_rate=1.2e-3 --min_lr=1.2e-4 --out_dir=$O --init_from=resume --max_iters=$((it + STEPS - 1)) --eval_interval=100000 \
     --eval_iters=1 --final_eval_iters=0 --log_interval=1 $SPARSE > $OUT/step_$name.log 2>&1
@@ -87,6 +87,9 @@ if [ "$PLAN" = ab_trained ]; then
     rstep aswst_q3d2_trained_cand   aswstieltjes_q3_d2_zi_xs cand
     step wst_q3d2_scratch_$CS wstieltjes_q3_d2_xs $STEPS 0 $CMP $SPARSE
     step wst_q3d2_scratch_cand   wstieltjes_q3_d2_xs $STEPS 0 cand        $SPARSE
+    # TIMED=1 (e007), last so that it cannot take the A/B with it: the trained step again with CUDA-synchronised timers
+    # around the call site and the Function's forward / backward (as e001's profile, on the current kernel)
+    [ "${TIMED:-0}" = 1 ] && rstep wst_q3d2_trained_cand_timed wstieltjes_q3_d2_xs cand 1
   fi
 elif [ "$PLAN" = profile ]; then
   step wst_q3d2_cand        wstieltjes_q3_d2_xs 30 0 cand $SPARSE
