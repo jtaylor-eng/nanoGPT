@@ -1,0 +1,62 @@
+commit 55569fb2eea3f42e98d8a92d5e9f04379d886801 job 8612640 host a0152.ten.osc.edu NVIDIA A100-PCIE-40GB, 40960 MiB plan=ab 2026-11-16 01:07:28
+== micro 01:07:28
+{'device': 'NVIDIA A100-PCIE-40GB', 'max_shared_mem': 166912, 'torch': '2.5.1+cu121', 'triton': '3.1.0', 'tiles_bf16': [64, 32], 'rows': {}}
+ref fwd kernel it=0 B8 H12 N2048                          1.75 ms
+ref fwd kernel it=0 compiled                         {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 71474, 'cubin_bytes': 91616}
+ref fwd kernel it=5 B8 H12 N2048                          4.67 ms
+ref fwd kernel it=5 compiled                         {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 221567, 'cubin_bytes': 302048}
+ref fwd kernel it=15 B8 H12 N2048                        22.69 ms
+ref fwd kernel it=15 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 521092, 'cubin_bytes': 719968}
+ref fwd kernel it=30 B8 H12 N2048                        63.36 ms
+ref fwd kernel it=30 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 993621, 'cubin_bytes': 1372384}
+ref bwd delta kernel B8 H12 N2048                         0.87 ms
+ref bwd dkdv kernel B8 H12 N2048                          1.46 ms
+ref bwd dq kernel B8 H12 N2048                            1.04 ms
+ref bwd (autograd, 3 kernels) B8 H12 N2048                3.45 ms
+ref fwd+bwd it=15 B8 H12 N2048                           25.84 ms
+cand fwd kernel it=0 B8 H12 N2048                         1.50 ms
+cand fwd kernel it=0 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 71439, 'cubin_bytes': 91616}
+cand fwd kernel it=5 B8 H12 N2048                         4.10 ms
+cand fwd kernel it=5 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 104242, 'cubin_bytes': 137056}
+cand fwd kernel it=15 B8 H12 N2048                       10.00 ms
+cand fwd kernel it=15 compiled                       {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 104244, 'cubin_bytes': 137056}
+cand fwd kernel it=30 B8 H12 N2048                       19.18 ms
+cand fwd kernel it=30 compiled                       {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 104244, 'cubin_bytes': 137056}
+cand bwd delta kernel B8 H12 N2048                        0.88 ms
+cand bwd dkdv kernel B8 H12 N2048                         1.48 ms
+cand bwd dq kernel B8 H12 N2048                           1.06 ms
+cand bwd (autograd, 3 kernels) B8 H12 N2048               3.47 ms
+cand fwd+bwd it=15 B8 H12 N2048                          13.67 ms
+cand call site fwd (views + contiguous) B8 H12 N2048     10.32 ms
+cand call site fwd+bwd (views) B8 H12 N2048              14.25 ms
+entmax fwd niter=10 B8 H12 N2048                         12.32 ms
+entmax fwd+bwd niter=10 B8 H12 N2048                     15.75 ms
+softmax SDPA+bias fwd B8 H12 N2048                        2.12 ms
+softmax SDPA+bias fwd+bwd B8 H12 N2048                    7.20 ms
+softmax SDPA+bias fwd+bwd B16 H12 N2048                  14.24 ms
+ref fwd kernel it=15 B1 H12 N16384                      174.33 ms
+cand fwd kernel it=15 B1 H12 N16384                      79.45 ms
+entmax fwd niter=10 B1 H12 N16384                        94.29 ms
+cand fwd wrapper it=0 B1 H12 N64 (launch overhead)        1.15 ms
+ref fwd wrapper it=0 B1 H12 N64 (launch overhead)         1.70 ms
+cand _pick_blocks (device query)                          1.02 ms
+== micro rc=0 01:08:22
+== step wstieltjes_q3_d2_xs_ref 01:08:26
+== step wstieltjes_q3_d2_xs_ref rc=0 20 iters 01:13:15
+== step wstieltjes_q3_d2_xs_cand 01:13:15
+== step wstieltjes_q3_d2_xs_cand rc=0 20 iters 01:16:27
+== step aswstieltjes_q3_d2_zi_xs_ref 01:16:27
+== step aswstieltjes_q3_d2_zi_xs_ref rc=0 20 iters 01:21:20
+== step aswstieltjes_q3_d2_zi_xs_cand 01:21:20
+== step aswstieltjes_q3_d2_zi_xs_cand rc=0 20 iters 01:24:38
+== step wstieltjes_q4_d2_xs_ref 01:24:38
+== step wstieltjes_q4_d2_xs_ref rc=0 20 iters 01:29:25
+== step wstieltjes_q4_d2_xs_cand 01:29:26
+== step wstieltjes_q4_d2_xs_cand rc=0 20 iters 01:32:38
+aswstieltjes_q3_d2_zi_xs_cand {"steps": 17, "s_per_step": 9.156139999999999, "peak_alloc_gb": 17.030877113342285, "peak_reserved_gb": 22.390625}
+aswstieltjes_q3_d2_zi_xs_ref {"steps": 17, "s_per_step": 13.92756, "peak_alloc_gb": 17.030877113342285, "peak_reserved_gb": 22.390625}
+wstieltjes_q3_d2_xs_cand {"steps": 17, "s_per_step": 8.9121, "peak_alloc_gb": 16.18648624420166, "peak_reserved_gb": 19.31640625}
+wstieltjes_q3_d2_xs_ref {"steps": 17, "s_per_step": 13.690479999999999, "peak_alloc_gb": 16.18648624420166, "peak_reserved_gb": 19.31640625}
+wstieltjes_q4_d2_xs_cand {"steps": 17, "s_per_step": 8.85819, "peak_alloc_gb": 16.18648624420166, "peak_reserved_gb": 19.31640625}
+wstieltjes_q4_d2_xs_ref {"steps": 17, "s_per_step": 13.66718, "peak_alloc_gb": 16.18648624420166, "peak_reserved_gb": 19.31640625}
+DONE 01:32:40

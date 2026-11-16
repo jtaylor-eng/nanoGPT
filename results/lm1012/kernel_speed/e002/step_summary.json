@@ -1,0 +1,38 @@
+{
+ "aswstieltjes_q3_d2_zi_xs_cand": {
+  "steps": 17,
+  "s_per_step": 9.156139999999999,
+  "peak_alloc_gb": 17.030877113342285,
+  "peak_reserved_gb": 22.390625
+ },
+ "aswstieltjes_q3_d2_zi_xs_ref": {
+  "steps": 17,
+  "s_per_step": 13.92756,
+  "peak_alloc_gb": 17.030877113342285,
+  "peak_reserved_gb": 22.390625
+ },
+ "wstieltjes_q3_d2_xs_cand": {
+  "steps": 17,
+  "s_per_step": 8.9121,
+  "peak_alloc_gb": 16.18648624420166,
+  "peak_reserved_gb": 19.31640625
+ },
+ "wstieltjes_q3_d2_xs_ref": {
+  "steps": 17,
+  "s_per_step": 13.690479999999999,
+  "peak_alloc_gb": 16.18648624420166,
+  "peak_reserved_gb": 19.31640625
+ },
+ "wstieltjes_q4_d2_xs_cand": {
+  "steps": 17,
+  "s_per_step": 8.85819,
+  "peak_alloc_gb": 16.18648624420166,
+  "peak_reserved_gb": 19.31640625
+ },
+ "wstieltjes_q4_d2_xs_ref": {
+  "steps": 17,
+  "s_per_step": 13.66718,
+  "peak_alloc_gb": 16.18648624420166,
+  "peak_reserved_gb": 19.31640625
+ }
+}

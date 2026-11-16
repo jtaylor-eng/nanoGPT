@@ -10,6 +10,15 @@
       CUDA-synchronised timers around the attention call site and the autograd Function forward/backward.
   python bench_kernel.py summary <dir>
       Table from <dir>/micro.json, step_*.log, step_*.json.
+  python bench_kernel.py sweep [--out=sweep.json] [--small]
+      Launch parameters of the candidate's four kernels at the training shape: tile sizes, num_warps, num_stages, each
+      variant timed and compared bit for bit with the default launch (64x32 tiles, 4 warps, 3 stages). No kernel edit:
+      the kernels are launched directly with other constexpr tiles / Triton launch options.
+  python bench_kernel.py tiles --ckpts=<run>/ckpt.pt[,..] --fineweb_val=<val.bin> --arxiv=<arxiv_long.bin> [--out=tiles.json]
+      [--layers=0,5,11] [--n_long=16384] [--heads_long=0,2,5,6,8,11] [--selftest]
+      On q/k captured from trained checkpoints: the fraction of (query block, key tile) tiles that hold any key of any
+      row's support at each Newton sweep and at the final lambda (what tile skipping could save), sweeps until lambda
+      stops changing, and whether a dead tile ever comes back. fp32 emulation of the kernel's Newton loop, no kernel run.
 """
 import os, sys, json, time, glob, re, statistics, runpy
 from collections import defaultdict
@@ -267,8 +276,309 @@ def summary(argv):
         json.dump(out, f, indent=1)
 
 
+def sweep(argv):
+    import triton
+    import model
+    import stieltjes.triton_stieltjes as cand
+    fl, _ = _flags(argv, out='', small=False)
+    dev = 'cuda'
+    torch.manual_seed(0)
+    small = fl['small']
+    B, H, N, D = (2, 12, 512, 64) if small else (8, 12, 2048, 64)
+    NL = 2048 if small else 16384
+    sq, window, NI = 3.0, 2.0, 15
+    sm, c = D ** -0.5, cand.window_c(sq, window)
+    lam0 = (1.0 + c) ** (-1.0 / sq)
+    slopes = model.nape_slopes(H, 'exp').reshape(-1).to(device=dev, dtype=torch.float32).contiguous()
+    st = cand._strides
+    DEF = (64, 32, 4, 3)
+    res = dict(device=torch.cuda.get_device_name(), torch=torch.__version__, triton=triton.__version__,
+               shape=[B, H, N, D], long_shape=[1, H, NL, D], default=list(DEF), rows=[])
+    print({k: v for k, v in res.items() if k != 'rows'}, flush=True)
+
+    def mk(B_, N_):
+        q = (torch.randn(B_, H, N_, D, device=dev) * 3).to(torch.bfloat16)
+        return q, torch.randn(B_, H, N_, D, device=dev).to(torch.bfloat16), torch.randn(B_, H, N_, D, device=dev).to(torch.bfloat16)
+
+    def launch(kern, q, k, v, do, lam, coef, delta, outs, BM, BN, W, S):
+        Bq, _, Nq, _ = q.shape
+        common = dict(sq=sq, EPS=1e-6, HEAD_DIM=D, BLOCK_M=BM, BLOCK_N=BN, CAUSAL=True, USE_ALIBI=True, num_warps=W, num_stages=S)
+        gm, gn = (triton.cdiv(Nq, BM), Bq * H), (triton.cdiv(Nq, BN), Bq * H)
+        if kern == 'fwd':
+            o, lam_o, S_o = outs
+            return lambda: cand._fwd_kernel[gm](q, k, v, o, lam_o, S_o, slopes, *st(q), *st(k), *st(v), *st(o),
+                                                sm, c, lam0, Nq, H, NUM_ITER=NI, **common)
+        if kern == 'delta':
+            return lambda: cand._bwd_delta_kernel[gm](q, k, v, do, lam, outs[0], slopes, *st(q), *st(k), *st(v), *st(do),
+                                                      sm, c, Nq, H, **common)
+        if kern == 'dkdv':
+            return lambda: cand._bwd_dkdv_kernel[gn](q, k, v, do, lam, coef, delta, slopes, outs[0], outs[1], *st(q), *st(k), *st(v),
+                                                     *st(do), *st(outs[0]), *st(outs[1]), sm, c, Nq, H, **common)
+        return lambda: cand._bwd_dq_kernel[gm](q, k, v, do, lam, coef, delta, slopes, outs[0], *st(q), *st(k), *st(v), *st(do),
+                                               *st(outs[0]), sm, c, Nq, H, **common)
+
+    def new_outs(kern, q):
+        Bq, _, Nq, _ = q.shape
+        if kern == 'fwd':
+            return [torch.empty_like(q), torch.empty((Bq * H, Nq), device=dev), torch.empty((Bq * H, Nq), device=dev)]
+        if kern == 'delta':
+            return [torch.empty((Bq * H, Nq), device=dev)]
+        return [torch.empty_like(q), torch.empty_like(q)] if kern == 'dkdv' else [torch.empty_like(q)]
+
+    q, k, v = mk(B, N)
+    do = torch.randn_like(q)
+    base = {}                   # kern -> outputs of the default launch (the bit-identity reference)
+    for kern in ('fwd', 'delta', 'dkdv', 'dq'):
+        outs = new_outs(kern, q)
+        if kern == 'fwd':
+            launch(kern, q, k, v, do, None, None, None, outs, *DEF)()
+            lam, coef = outs[1], (sq / outs[2].clamp(min=1e-6)).contiguous()
+        else:
+            launch(kern, q, k, v, do, lam, coef, base['delta'][0] if 'delta' in base else None, outs, *DEF)()
+        torch.cuda.synchronize()
+        base[kern] = outs
+    delta = base['delta'][0]
+
+    def run(kern, cfg, tag, repeats=3, target_s=0.4):
+        BM, BN, W, S = cfg
+        row = dict(kern=kern, tag=tag, BM=BM, BN=BN, num_warps=W, num_stages=S)
+        outs = new_outs(kern, q)
+        try:
+            t = time.perf_counter()
+            fn = launch(kern, q, k, v, do, lam, coef, delta, outs, BM, BN, W, S)
+            fn(); torch.cuda.synchronize()
+            row['first_call_s'] = time.perf_counter() - t           # compile (or cache load) + one run
+            row['identical'] = [bool(torch.equal(a, b)) for a, b in zip(outs, base[kern])]   # fwd: o, lam, S; dkdv: dk, dv
+            row['bit_identical'] = all(row['identical'])
+            row['max_abs_diff'] = max((a.float() - b.float()).abs().max().item() for a, b in zip(outs, base[kern]))
+            row['ms'] = bench(fn, repeats=repeats, target_s=target_s)
+        except Exception as e:       # tiles too large for shared memory, unsupported option: recorded, never fatal
+            row['error'] = repr(e)[:300]
+        res['rows'].append(row)
+        print(json.dumps(row), flush=True)
+        if fl['out']:
+            with open(fl['out'], 'w') as f:
+                json.dump(res, f, indent=1)
+        return row
+
+    ok = lambda rows: sorted([r for r in rows if 'ms' in r], key=lambda r: r['ms'])
+    cfg_of = lambda r: (r['BM'], r['BN'], r['num_warps'], r['num_stages'])
+    # forward (num_iter 15): tiles at the default options, then warps x stages on the fastest tiles
+    f_tiles = [(64, 32), (32, 32)] if small else [(bm, bn) for bm in (32, 64, 128) for bn in (16, 32, 64, 128)]
+    rows = [run('fwd', (bm, bn, 4, 3), 'tiles') for bm, bn in f_tiles]
+    top = ok(rows)[:1 if small else 3]
+    for r in top:
+        for W in ((4, 8) if small else (2, 4, 8)):
+            for S in ((2, 3) if small else (1, 2, 3, 4)):
+                if (W, S) != (4, 3):
+                    rows.append(run('fwd', (r['BM'], r['BN'], W, S), 'opts'))
+    best_fwd = [cfg_of(r) for r in ok(rows)[:4]]
+    # backward kernels: tiles x warps (each kernel has its own grid: nothing ties its tiles to the forward's)
+    b_tiles = [(64, 32), (32, 32)] if small else [(bm, bn) for bm in (32, 64, 128) for bn in (32, 64)]
+    best_bwd = {}
+    for kern in ('delta', 'dkdv', 'dq'):
+        rows = [run(kern, (bm, bn, W, 3), 'tiles') for bm, bn in b_tiles for W in ((4,) if small else (4, 8))]
+        r0 = ok(rows)[0]
+        rows += [run(kern, (r0['BM'], r0['BN'], r0['num_warps'], S), 'opts') for S in ((2,) if small else (1, 2, 4))]
+        best_bwd[kern] = [cfg_of(r) for r in ok(rows)[:2]]
+    # confirmation: default and the best variants again, 5 repeats, back to back
+    for cfg in [DEF] + [x for x in best_fwd if x != DEF]:
+        run('fwd', cfg, 'confirm', repeats=5, target_s=0.6)
+    for kern in ('delta', 'dkdv', 'dq'):
+        for cfg in [DEF] + [x for x in best_bwd[kern] if x != DEF]:
+            run(kern, cfg, 'confirm', repeats=5, target_s=0.6)
+    # long-context forward for the same forward variants
+    del q, k, v, do
+    torch.cuda.empty_cache()
+    q, k, v = mk(1, NL)
+    do = lam = coef = delta = None
+    outs = new_outs('fwd', q)
+    launch('fwd', q, k, v, None, None, None, None, outs, *DEF)(); torch.cuda.synchronize()
+    base['fwd'] = outs
+    for cfg in [DEF] + [x for x in best_fwd if x != DEF]:
+        run('fwd', cfg, f'long N={NL}', repeats=3, target_s=0.6)
+    res['best_fwd'], res['best_bwd'] = best_fwd, best_bwd
+    if fl['out']:
+        with open(fl['out'], 'w') as f:
+            json.dump(res, f, indent=1)
+
+
+def _capture(ckpt_path, tokens, dev='cuda'):
+    """Per layer (q, k) of a trained model on `tokens` (B, N), q after the AS scale (as tests/test_kernel_equiv.py)."""
+    from model import GPTConfig, GPT
+    ck = torch.load(ckpt_path, map_location=dev, weights_only=False)
+    a = ck['model_args']
+    m = GPT(GPTConfig(**a))
+    m.load_state_dict({kk.removeprefix('_orig_mod.'): vv for kk, vv in ck['model'].items()})
+    m.to(dev).eval()
+    for b in m.transformer.h:
+        b.attn.capture_qk = True
+    with torch.no_grad(), torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
+        m(tokens, return_all_logits=True)
+    out = [tuple(t.contiguous() for t in b.attn.last_qk) for b in m.transformer.h]
+    slopes = m.transformer.h[0].attn.nape_slopes.to(dev) if a['pos_emb'] == 'nape' else None
+    window = None if a['stieltjes_window'] <= 0 else float(a['stieltjes_window'])
+    del m, ck
+    torch.cuda.empty_cache()
+    return out, float(a['stieltjes_q']), window, slopes
+
+
+TILE_SHAPES = ((64, 32), (32, 32), (32, 16), (64, 64))
+
+
+def _tile_stats(q, k, slopes, sq, window, num_iter, heads):
+    """Sums over (batch, heads) for one layer. lam[t] is the lambda sweep t uses (t < num_iter); lam[num_iter] is the
+    final one (output sweep, backward). A tile is live at t when any causal (row, key) in it has w > 0, i.e.
+    s > lam[t] - d. `cons0`: live by the test a row-max sweep could do for free (tile max > min lam[0] of the block - d)."""
+    B, H, N, D = q.shape
+    dev = q.device
+    c = window ** -sq
+    lam0 = (1.0 + c) ** (-1.0 / sq)
+    i = torch.arange(N, device=dev)
+    dist = (i[None, :] - i[:, None]).clamp(max=0).float()
+    upper = torch.ones(N, N, dtype=torch.bool, device=dev).triu(1)
+    T = num_iter + 1
+    A = dict(pairs=0, live={sh: [0] * T for sh in TILE_SHAPES}, total={sh: 0 for sh in TILE_SHAPES}, cons0={sh: 0 for sh in TILE_SHAPES},
+             resurrected=0, support0=0.0, support_final=0.0, rows=0, lam_decrease_rows=0, max_lam_decrease=0.0,
+             fix_hist=[0] * (T + 1), resid_max=0.0)
+    for b in range(B):
+        for h in heads:
+            s = (q[b, h].float() @ k[b, h].float().T) * D ** -0.5
+            if slopes is not None:
+                s = s + slopes[h].float() * dist
+            s.masked_fill_(upper, -1e30)
+            lam = s.amax(1) + lam0
+            lams = [lam]
+            for _ in range(num_iter):
+                r = 1.0 / (lam[:, None] - s).clamp_min(1e-6)
+                iq = r * r * r if sq == 3.0 else ((r * r) * (r * r) if sq == 4.0 else r ** sq)
+                w = iq - c
+                on = w > 0
+                f = torch.where(on, w, 0.0).sum(1)
+                fp = torch.where(on, iq * r, 0.0).sum(1)
+                lam = lam + (f - 1.0) / (sq * fp.clamp_min(1e-30))
+                lams.append(lam)
+            del r, iq, w, on
+            L = torch.stack(lams)                                   # (T, N)
+            dl = L[1:] - L[:-1]
+            A['lam_decrease_rows'] += int((dl < 0).any(0).sum()); A['max_lam_decrease'] = max(A['max_lam_decrease'], float((-dl).max()))
+            # sweeps until lambda stops changing, per 64-row block (the unit that could exit early): first t with dl[t:] == 0
+            moving = (dl != 0).view(num_iter, N // 64, 64).any(2)   # (num_iter, blocks)
+            last = torch.where(moving.any(0), num_iter - moving.flip(0).float().argmax(0), torch.zeros_like(moving[0], dtype=torch.float))
+            for x in last.long().tolist():
+                A['fix_hist'][x] += 1                               # x = number of sweeps that changed lambda (num_iter = never settled)
+            prev = None
+            for t in range(T):
+                live = s > (L[t][:, None] - window)
+                if t == 0:
+                    A['support0'] += float(live.sum())
+                if t == T - 1:
+                    A['support_final'] += float(live.sum())
+                    wf = (1.0 / (L[t][:, None] - s).clamp_min(1e-6)) ** sq - c
+                    A['resid_max'] = max(A['resid_max'], float((torch.where(wf > 0, wf, 0.0).sum(1) - 1).abs().max()))
+                    del wf
+                for (BM, BN) in TILE_SHAPES:
+                    lt = live.view(N // BM, BM, N // BN, BN).any(3).any(1)
+                    A['live'][(BM, BN)][t] += int(lt.sum())
+                    if (BM, BN) == (64, 32):
+                        if prev is not None:
+                            A['resurrected'] += int((lt & ~prev).sum())
+                        prev = lt
+                del live
+            for (BM, BN) in TILE_SHAPES:
+                nb = N // BM
+                A['total'][(BM, BN)] += sum(-(-min((m + 1) * BM, N) // BN) for m in range(nb))
+                tmax = s.view(nb, BM, N // BN, BN).amax(3).amax(1)
+                A['cons0'][(BM, BN)] += int((tmax > (L[0].view(nb, BM).amin(1)[:, None] - window)).sum())
+            A['rows'] += N; A['pairs'] += 1
+            del s, L, dl
+    return A
+
+
+def _tile_row(A, num_iter):
+    out = dict(rows=A['rows'], support0=A['support0'] / A['rows'], support_final=A['support_final'] / A['rows'],
+               resurrected=A['resurrected'], lam_decrease_rows=A['lam_decrease_rows'], max_lam_decrease=A['max_lam_decrease'],
+               fix_hist=A['fix_hist'], resid_max=A['resid_max'])
+    nblk = max(sum(A['fix_hist']), 1)
+    out['mean_sweeps_until_fixed'] = sum(i * n for i, n in enumerate(A['fix_hist'])) / nblk
+    for sh in TILE_SHAPES:
+        f = [x / A['total'][sh] for x in A['live'][sh]]
+        key = f"{sh[0]}x{sh[1]}"
+        # forward with a mask carried from the previous sweep: row max (1) + first Newton sweep (1) + Newton sweeps
+        # 1..num_iter-1 at f[t-1] + output sweep at f[num_iter-1]; the backward sweeps run at f[num_iter]
+        out[key] = dict(live=f, cons0=A['cons0'][sh] / A['total'][sh], fwd_sweep_equiv=2 + sum(f[:num_iter]), fwd_sweeps=num_iter + 2,
+                        bwd_frac=f[num_iter])
+    return out
+
+
+def tiles(argv):
+    import numpy as np
+    import model
+    fl, _ = _flags(argv, out='', ckpts='', fineweb_val='', arxiv='', layers='', n_long=16384, heads_long='0,2,5,6,8,11',
+                   num_iter=15, selftest=False)
+    dev = 'cuda'
+    torch.manual_seed(0)
+    NI = fl['num_iter']
+    res = dict(num_iter=NI, tile_shapes=[list(x) for x in TILE_SHAPES], cases=[])
+
+    def emit(tag, layer, A):
+        row = dict(tag=tag, layer=layer, **_tile_row(A, NI))
+        res['cases'].append(row)
+        t = row['64x32']
+        print(f"{tag:46s} L{layer:<2d} support {row['support0']:7.1f} -> {row['support_final']:6.1f} | 64x32 live t0 {t['live'][0]:.3f} "
+              f"t1 {t['live'][1]:.3f} t4 {t['live'][4]:.3f} final {t['live'][NI]:.3f} cons0 {t['cons0']:.3f} | fwd sweeps "
+              f"{t['fwd_sweep_equiv']:.2f}/{t['fwd_sweeps']} | 32x16 final {row['32x16']['live'][NI]:.3f} | settled after "
+              f"{row['mean_sweeps_until_fixed']:.1f} sweeps | resurrected {row['resurrected']} lam-dec rows {row['lam_decrease_rows']} "
+              f"resid {row['resid_max']:.1e}", flush=True)
+        if fl['out']:
+            with open(fl['out'], 'w') as f:
+                json.dump(res, f, indent=1)
+
+    if fl['selftest']:           # random logits, no checkpoint: exercises everything but the capture
+        H, N, D = 4, 512, 64
+        q = (torch.randn(1, H, N, D, device=dev) * 3).to(torch.bfloat16); k = torch.randn(1, H, N, D, device=dev).to(torch.bfloat16)
+        emit('selftest random w_q3_d2 N=512', 0, _tile_stats(q, k, model.nape_slopes(H, 'exp').to(dev), 3.0, 2.0, NI, list(range(H))))
+        return
+    fw = np.memmap(fl['fineweb_val'], dtype=np.uint16, mode='r')
+    ax = np.memmap(fl['arxiv'], dtype=np.uint16, mode='r')
+    NLg = fl['n_long']
+    tok_fw = torch.from_numpy(np.stack([fw[i * 2049: i * 2049 + 2048].astype(np.int64) for i in range(2)])).to(dev)
+    tok_ax = torch.from_numpy(ax[:NLg].astype(np.int64))[None].to(dev)
+    for path in [x for x in fl['ckpts'].split(',') if x]:
+        row = os.path.basename(os.path.dirname(os.path.dirname(path)))
+        for name, tok, heads in (('fineweb N=2048', tok_fw, None), (f'arxiv N={NLg}', tok_ax, fl['heads_long'])):
+            qk, sq, window, slopes = _capture(path, tok)
+            H = qk[0][0].shape[1]
+            hs = list(range(H)) if not heads or heads == 'all' else [int(x) for x in heads.split(',')]
+            layers = [int(x) for x in fl['layers'].split(',')] if fl['layers'] else list(range(len(qk)))
+            for li in layers:
+                with torch.no_grad():
+                    emit(f"{row} {name}", li, _tile_stats(qk[li][0], qk[li][1], slopes, sq, window, NI, hs))
+            del qk
+            torch.cuda.empty_cache()
+    # layer means per (row, dataset): each layer costs the same in the step
+    agg = {}
+    for cse in res['cases']:
+        agg.setdefault(cse['tag'], []).append(cse)
+    res['mean'] = {}
+    for tag, lst in agg.items():
+        m = dict(layers=len(lst), support_final=statistics.fmean(x['support_final'] for x in lst),
+                 mean_sweeps_until_fixed=statistics.fmean(x['mean_sweeps_until_fixed'] for x in lst),
+                 resurrected=sum(x['resurrected'] for x in lst), lam_decrease_rows=sum(x['lam_decrease_rows'] for x in lst))
+        for sh in TILE_SHAPES:
+            key = f"{sh[0]}x{sh[1]}"
+            m[key] = dict(live_t0=statistics.fmean(x[key]['live'][0] for x in lst), live_final=statistics.fmean(x[key]['live'][NI] for x in lst),
+                          cons0=statistics.fmean(x[key]['cons0'] for x in lst),
+                          fwd_sweep_equiv=statistics.fmean(x[key]['fwd_sweep_equiv'] for x in lst), fwd_sweeps=NI + 2)
+        res['mean'][tag] = m
+        print('MEAN', tag, json.dumps(m), flush=True)
+    if fl['out']:
+        with open(fl['out'], 'w') as f:
+            json.dump(res, f, indent=1)
+
+
 if __name__ == '__main__':
     mode = sys.argv[1] if len(sys.argv) > 1 else ''
-    if mode not in ('micro', 'wrap', 'summary'):
+    if mode not in ('micro', 'wrap', 'summary', 'sweep', 'tiles'):
         print(__doc__); sys.exit(2)
-    {'micro': micro, 'wrap': wrap, 'summary': summary}[mode](sys.argv[2:])
+    {'micro': micro, 'wrap': wrap, 'summary': summary, 'sweep': sweep, 'tiles': tiles}[mode](sys.argv[2:])
