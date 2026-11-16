@@ -1,0 +1,85 @@
+[bench_kernel wrap] kernel=cand (stieltjes.triton_stieltjes) timers=0 script=/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/train.py
+/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/train.py:219: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+  scaler = torch.cuda.amp.GradScaler(enabled=(dtype == 'float16'))
+Overriding config with /fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/config/lm_stieltjes_125m.py:
+# Stage 4: 125M (GPT-2 small shape), T=2048, 2.5B FineWeb tokens (20 tok/param), NAPE exp slopes on 6 of 12 heads.
+# 0.5M tokens per step (16 x 2048 x 16 accum); 4770 steps. Same optimizer settings as the 51M runs.
+dataset = 'fineweb10B'
+n_layer = 12
+n_head = 12
+n_embd = 768
+block_size = 2048
+bias = False
+dropout = 0.0
+pos_emb = 'nape'
+batch_size = 16
+gradient_accumulation_steps = 16
+max_iters = 4770
+lr_decay_iters = 4770
+warmup_iters = 250
+learning_rate = 1.2e-3     # overridden per job
+min_lr = 1.2e-4            # overridden per job (= lr / 10)
+beta1 = 0.9
+beta2 = 0.95
+weight_decay = 0.1
+grad_clip = 1.0
+eval_interval = 250
+eval_iters = 12                   # 12 x 16 x 2048 = 393k val tokens per periodic eval
+final_eval_iters = 100            # 3.3M val tokens for the selection number
+log_interval = 10
+always_save_checkpoint = True
+compile = True
+wandb_log = False
+
+Overriding: data_root = /tmp/fw
+Overriding: attn_type = softmax
+Overriding: nape_slope_type = exp
+Overriding: stieltjes_num_iter = 15
+Overriding: learning_rate = 0.0012
+Overriding: min_lr = 0.00012
+Overriding: out_dir = /tmp/out_softmax_mb16
+Overriding: max_iters = 29
+Overriding: eval_interval = 100000
+Overriding: eval_iters = 1
+Overriding: final_eval_iters = 0
+Overriding: log_interval = 1
+tokens per iteration will be: 524,288
+Initializing a new model from scratch
+defaulting to vocab_size of GPT-2 to 50304 (50257 rounded up for efficiency)
+number of parameters: 123.59M
+num decayed parameter tensors: 49, with 123,568,128 parameters
+num non-decayed parameter tensors: 25, with 19,200 parameters
+using fused AdamW: True
+compiling the model... (takes a ~minute)
+step 0: train loss 10.9329, val loss 10.9189
+iter 0: loss 10.9314, time 11288.46ms, mfu -100.00%
+iter 1: loss 10.6949, time 5990.36ms, mfu -100.00%
+iter 2: loss 10.3634, time 6283.62ms, mfu -100.00%
+iter 3: loss 10.1030, time 6277.28ms, mfu -100.00%
+iter 4: loss 9.9175, time 6276.57ms, mfu -100.00%
+iter 5: loss 9.7371, time 6279.61ms, mfu 25.90%
+iter 6: loss 9.6566, time 6279.63ms, mfu 25.90%
+iter 7: loss 9.6416, time 6280.01ms, mfu 25.90%
+iter 8: loss 9.6039, time 6282.55ms, mfu 25.90%
+iter 9: loss 9.4892, time 6285.10ms, mfu 25.90%
+iter 10: loss 9.4099, time 6284.92ms, mfu 25.90%
+iter 11: loss 9.3037, time 6289.64ms, mfu 25.89%
+iter 12: loss 9.3049, time 6292.92ms, mfu 25.89%
+iter 13: loss 9.2832, time 6296.51ms, mfu 25.88%
+iter 14: loss 9.1513, time 6296.37ms, mfu 25.88%
+iter 15: loss 9.0925, time 6290.27ms, mfu 25.88%
+iter 16: loss 9.0418, time 6290.12ms, mfu 25.88%
+iter 17: loss 8.9875, time 6289.85ms, mfu 25.87%
+iter 18: loss 8.8359, time 6298.33ms, mfu 25.87%
+iter 19: loss 8.7494, time 6291.25ms, mfu 25.87%
+iter 20: loss 8.7334, time 6292.53ms, mfu 25.87%
+iter 21: loss 8.6287, time 6298.50ms, mfu 25.86%
+iter 22: loss 8.5828, time 6294.15ms, mfu 25.86%
+iter 23: loss 8.4337, time 6290.55ms, mfu 25.86%
+iter 24: loss 8.3568, time 6298.12ms, mfu 25.86%
+iter 25: loss 8.2107, time 6298.68ms, mfu 25.85%
+iter 26: loss 8.2264, time 6298.46ms, mfu 25.85%
+iter 27: loss 8.0834, time 6291.09ms, mfu 25.85%
+iter 28: loss 7.9243, time 6299.66ms, mfu 25.85%
+iter 29: loss 7.9565, time 6293.06ms, mfu 25.85%
+[bench_kernel wrap] {"kernel": "cand", "timers": 0, "script": "train.py", "args": ["/fs/scratch/PAS2836/jacktaylor/wt/nanogpt/stieltjes-kernel-speed/config/lm_stieltjes_125m.py", "--data_root=/tmp/fw", "--attn_type=softmax", "--nape_slope_type=exp", "--stieltjes_num_iter=15", "--learning_rate=1.2e-3", "--min_lr=1.2e-4", "--out_dir=/tmp/out_softmax_mb16", "--max_iters=29", "--eval_interval=100000", "--eval_iters=1", "--final_eval_iters=0", "--log_interval=1"], "wall_s": 198.05167934391648, "peak_alloc_gb": 31.37716007232666, "peak_reserved_gb": 38.2109375, "timers_ms": {}}

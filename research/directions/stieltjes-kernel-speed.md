@@ -6,14 +6,12 @@ title: How fast can the fused windowed-Stieltjes attention kernel run at 125M / 
 project: nanogpt
 type: direction
 cluster: ascend
-status: active
+status: done
 wake: on_jobs
 budget_gpu_hours: 15
-spent_gpu_hours: 6.23
+spent_gpu_hours: 7.44
 max_jobs_in_flight: 4
-jobs:
-- 8619198
-- 8619199
+jobs: []
 jobs_archived:
 - 8603546
 - 8603935
@@ -40,13 +38,15 @@ jobs_archived:
 - 8618411
 - 8619044
 - 8619045
-last_wake: '2026-11-16T12:35:00-05:00'
+- 8619198
+- 8619199
+last_wake: '2026-11-16T13:25:00-05:00'
 next_id: 10
 model: claude-fable-5-2
 effort: high
 max_turns: 120
 timeout_minutes: 60
-wakes: 11
+wakes: 12
 ---
 # How fast can the fused windowed-Stieltjes attention kernel run at 125M / T=2048 on an A100 with unchanged outputs and gradients? (profile, then optimise the Triton kernel)
 
@@ -160,6 +160,47 @@ precision that fails the tolerance), or changing num_iter / q / d defaults of th
   PG-19 eval sets as in `osc/eval_arxiv.sbatch`. Outputs to `$LM_RESULTS/kernel_speed/`, copied into
   `results/lm1012/kernel_speed/` on this branch.
 
+## Result (2026-11-16, direction done)
+Final kernel: `stieltjes/triton_stieltjes.py` at commit 7373381 (blob 6a11c30, unchanged at the branch head; `model.py`
+is unchanged from the branch base, so the file is a drop-in). Outputs and gradients are bit-identical to the frozen
+baseline (`stieltjes/triton_stieltjes_ref.py` = asentmax c7093f0) on 72 real + 38 random + 592 skipcheck cases and both
+e2e evals (gate job 8618411). Figure: `research/experiments/stieltjes-kernel-speed/figures/kernel_speed.png`.
+
+Same job, same node (e009, job 8619198, a0139; 125M, T=2048, 524,288 tokens per step, bf16, compile on, num_iter 15,
+lr 1.2e-3, seed 1337, median of 27 steps, sd 0.01-0.02 s):
+
+| row | state | mb | baseline s/step | final s/step | change | GPU-h per 4770 steps, baseline -> final |
+|---|---|---|---|---|---|---|
+| wstieltjes_q3_d2_xs | trained (iter 4771) | 8 x 32 | 13.636 | 6.083 | -55.4 % (2.24x) | 18.1 -> 8.1 |
+| wstieltjes_q3_d2_xs | from scratch | 8 x 32 | 13.608 | 6.920 | -49.1 % (1.97x) | 18.0 -> 9.2 |
+| asentmax_zi_xs | trained / from scratch | 8 x 32 | | 9.918 / 9.905 | | 13.1 |
+| softmax_xs | from scratch | 16 x 16 | | 6.291 | | 8.3 |
+
+Other rows (e009, job 8619199, a0314): aswstieltjes_q3_d2_zi_xs trained 13.879 -> 6.323 (-54.4 %; 6.016 at mb 16 x 16,
+32.4 GB allocated, 38.3 reserved); wstieltjes_q3_d1.5_xs trained 13.617 -> 5.492 (-59.7 %); wstieltjes_q4_d2_xs from
+scratch 13.593 -> 6.945 (-48.9 %). Same loss at every step in all five pairs. A real run starts at the from-scratch rate
+and ends at the trained one; the path between was not measured.
+
+Per candidate (`wstieltjes_q3_d2_xs`, lr 1.2e-3, seed 1337; kernel ms at (8, 12, 2048, 64) bf16, forward on trained q/k
+as the 12-layer FineWeb mean, backward on random inputs; each s/step is from its own job, node spread up to 2 %, so read
+the steps down a column as a trend and take the total from the table above):
+
+| kernel | commit | fwd ms (trained q/k) | bwd ms (3 kernels) | s/step trained | s/step from scratch | ArXiv 16k eval tok/s | max rel err vs eager (bf16) | max residual | gate |
+|---|---|---|---|---|---|---|---|---|---|
+| frozen baseline | asentmax c7093f0 | 22.78 | 3.43 | 13.64 | 13.61 | 7,660 | 0.0044 | 2.2e-4 | pass |
+| e002 runtime Newton loop | 55569fb | 10.18 | 3.47 | 8.95 | 8.91 | 16,376 | 0.0044 | 2.2e-4 | pass, bit-identical |
+| e004 forward tile skipping | 4d26cd9 | 6.42 | 3.49 | 7.76 | 8.44 | 26,524 | 0.0044 | 2.2e-4 | pass, bit-identical |
+| e005 backward tile skipping | eb2ea77 | 6.11 | 2.55 | 6.96 | 7.82 | 27,691 | 0.0044 | 2.2e-4 | pass, bit-identical |
+| e006 cycle exit from the Newton loop | 9a9e809 | 4.24 | 2.56 | 6.15 | 7.01 | 33,771 | 0.0044 | 2.2e-4 | pass, bit-identical |
+| e007 zero-copy call site (reverted) | 47f8ea6 | | | 6.15 | 7.01 | | | | not run, 0.0 % |
+| e008 cached device query = final | 7373381 | 4.24 (kernels unchanged) | 2.57 | 6.21 (6.08 in e009) | 7.08 (6.92 in e009) | 33,877 | 0.0044 | 2.2e-4 | pass, bit-identical |
+
+e003 was measurement only (launch parameters exhausted, tile liveness). Pre-profile predictions: >= 20 % lower s/step
+with the gate passed (55 %): hit; reaching ASEntmax's 10.0 s/step (30 %): hit. Spent 7.44 of 15 GPU-h.
+Left for the user: copy the kernel back to asentmax; the micro-batch split of the sparse rows in `osc/run_lm.sh`
+(16 x 16 fits and is 4.4-4.9 % faster, under 2 GB of reserved headroom for the AS row); the "Measured costs" table in
+the repo `CLAUDE.md` still describes the old kernel; the 350M step with this kernel was not measured.
+
 ## Log
 One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobids> | eNNN done <metric> | paused: <reason>`
 2026-11-15 13:30  e001 submitted 8603935 (ks_time: micro + 125M step profile) 8603936 (ks_gate: attn_paths, real-input and random equivalence, e2e eval), debug-nextgen, sha 4773794 | smoke 8603546 cancelled after 17 min (0.29 GPU-h): all stages passed except bench micro (Triton backward needs a CUDA context in the autograd thread; fixed in the harness) | no kernel change yet | desktop venv is torch 2.10 / triton 3.6, not the OSC 2.5.1 / 3.1.0: gate verdicts are taken on the A100 only
@@ -171,3 +212,4 @@ One line per wake, newest last. Format: `YYYY-MM-DD HH:MM  eNNN submitted <jobid
 2026-11-16 09:15  e006 done: exact cycle exit from the Newton loop (a 64-row block stops once every row's lambda repeats with period 1 or 2), wstieltjes_q3_d2_xs lr 1.2e-3 seed 1337 step resumed from the trained checkpoint 6.96 -> 6.15 s (-11.7 %; aswstieltjes_q3_d2_zi_xs 7.22 -> 6.39), from scratch 7.83 -> 7.01 (-10.4 %), against 13.69 frozen baseline / 9.88 ASEntmax / 6.26 softmax (e001, other node): the trained Stieltjes step is level with softmax's; forward kernel on trained q/k 6.22 -> 4.24 ms (12-layer mean, FineWeb N=2048; 8.3 of 15 sweeps run, 91 % of blocks leave early), forward + backward 7.89 -> 5.91 ms (SDPA softmax + bias 7.24), 16k forward 45.6 -> 36.6 ms; ArXiv 16k eval 27,691 -> 33,771 tok/s (baseline 7,651); gate PASS, bit-identical to the e005 kernel and the frozen baseline on 72 real + 38 random + 592 skipcheck cases and both e2e evals (jobs 8615023, 8615182, 0.84 GPU-h); 11 of 11 predictions hit | smoke 8615021 TIMEOUT at 20 min (0.34 GPU-h): aliascheck OK, quick skipcheck still compiling on a cold cache and its log was on $TMPDIR, no verdict; superseded by the gate's full skipcheck, not retried | e007 submitted 8615586 (ks_time PLAN=ab_trained CMP=cand_copy REAL=0 TIMED=1, debug-nextgen, sha 47f8ea6): no copies around the kernels (q/k/v read as the c_attn views, O and dQ/dK/dV written in the views' memory order, dO read through strides; kernels untouched, exact by construction), plus the trained step with synchronised timers on the current kernel | smoke 8615534 (0.03 GPU-h, tier 2 after tier-1 desktop checks: viewcheck 192 of 192, test_attn_paths, 38 random equivalence cases, quick skipcheck 352 of 352) passed: viewcheck 96 of 96 on the A100, but no step difference on 2 timed steps (5.81 / 6.09 s against 5.83 / 6.09 s), so the gate job is held back: it is submitted next wake only if the 20-step pair shows >= 1 %, otherwise e007 is reverted and counts as the first strike of the stop rule | kernel of record: stieltjes/triton_stieltjes.py at 9a9e809 (e006; the kernels are unchanged since 834ba22) | spent 5.10 of 15 GPU-h before the e007 job
 2026-11-16 11:52  e007 done, reverted: the zero-copy call site changes the trained wstieltjes_q3_d2_xs lr 1.2e-3 seed 1337 step by 0.0 % (6.151 -> 6.151 s, sd 0.019 over 17 steps; aswstieltjes_q3_d2_zi_xs 6.396 -> 6.382, from scratch 7.018 -> 7.012), micro call site forward + backward 8.21 -> 7.84 ms because the forward kernel on strided views is 15 % slower (5.19 against 4.50 ms); 3 of 9 scored predictions hit; no gate run; kernel file and model.py back at 9a9e809 byte for byte; first strike of the stop rule (job 8615586, 0.31 GPU-h) | timed trained step on the current kernel: forward Function 2.64 s, backward 0.79 s, call site outside it 0.02 s, everything else 3.39 s of a 6.85 s synchronised step (6.15 unsynchronised); the forward call is 6.22 ms in the step against 4.24 ms on captured q/k | e008 submitted 8618410 (ks_time PLAN=ab_trained CMP=cand_nocache REAL=0 MB=1) 8618411 (ks_gate), debug-nextgen, sha 7373381: the wrapper's `_pick_blocks` driver query (1.0 ms of CPU per forward call) cached per device, exact; same job measures softmax_xs at mb 8 x 32 and 16 x 16 and the trained Stieltjes step at 16 x 16 on one node | smoke 8618119 (0.05 GPU-h, tier 2; tier 1 refused, desktop GPU in use) passed: forward call at the toy shape 1.11 -> 0.28 ms, no step difference on 2 timed steps (5.70 / 5.98 against 5.74 / 6.00 s); trained Stieltjes at mb 16 x 16 fits (30.7 GB allocated) at 5.32 / 5.78 s | if e008 is under 3 % on the trained step it is the second strike: next wake runs the end-to-end confirmation (backlog item 3), final table and figure, then done | kernel of record: stieltjes/triton_stieltjes.py at 9a9e809 (e006) until the e008 gate reports | spent 5.44 of 15 GPU-h before the e008 jobs
 2026-11-16 12:35  e008 done, kept: the cached device query changes the trained wstieltjes_q3_d2_xs lr 1.2e-3 seed 1337 step by +0.2 % (6.193 -> 6.205 s, sd 0.02 over 17 steps; aswstieltjes_q3_d2_zi_xs 6.451 -> 6.456, from scratch 7.095 -> 7.084): the 1.07 ms of CPU per forward call is hidden behind queued GPU work; gate PASS, bit-identical to the frozen baseline on 72 real + 38 random + 592 skipcheck cases and both e2e evals, ArXiv 16k eval 33,877 tok/s (baseline 7,655); 10 of 16 predictions hit; second strike of the stop rule, the optimisation loop is over (jobs 8618410, 8618411, 0.59 GPU-h) | same node (a0145), mb split: softmax_xs 6.684 s at 8 x 32 and 6.428 at 16 x 16 (-3.8 %), trained wstieltjes_q3_d2_xs 6.205 and 5.934 (-4.4 %, 30.7 GB allocated, 36.6 reserved): the trained Stieltjes step is 7.2-7.7 % below softmax_xs at the same split, from scratch 6.0 % above (8 x 32); the split of the sparse rows is a protocol decision for the user (`osc/run_lm.sh` not touched) | e009 submitted 8619198 (ks_time PLAN=final PART=a) 8619199 (PART=b), debug-nextgen, sha 918d9f3, 30 steps: backlog item 3, the final kernel against the frozen baseline in the same job (wstieltjes_q3_d2_xs trained and from scratch with softmax_xs and asentmax_zi_xs on the same node; aswstieltjes_q3_d2_zi_xs and wstieltjes_q3_d1.5_xs trained, wstieltjes_q4_d2_xs from scratch, the AS row at 16 x 16), no kernel change, no gate job | smokes 8619044, 8619045 (0.19 GPU-h, tier 2; the rows need the cluster's checkpoints) passed: every stage rc 0, same loss in all five ref / cand pairs, the AS row fits at 16 x 16 (32.4 GB allocated, 38.3 reserved) | next wake: score e009, final table, figures/kernel_speed.png, status done | kernel of record: stieltjes/triton_stieltjes.py at 7373381 (e006 kernels + e008 cached device query; the four kernels are unchanged since 9a9e809) | spent 6.23 of 15 GPU-h before the e009 jobs
+2026-11-16 13:25  e009 done: final kernel against the frozen baseline in the same job on the same node (a0139, 27 steps), wstieltjes_q3_d2_xs lr 1.2e-3 seed 1337 trained 13.636 -> 6.083 s/step (-55.4 %), from scratch 13.608 -> 6.920 (-49.1 %), with asentmax_zi_xs 9.918 trained / 9.905 from scratch and softmax_xs 6.291 (16 x 16) on that node; on a0314 aswstieltjes_q3_d2_zi_xs trained 13.879 -> 6.323 (6.016 at 16 x 16, 32.4 GB allocated, 38.3 reserved), wstieltjes_q3_d1.5_xs trained 13.617 -> 5.492, wstieltjes_q4_d2_xs from scratch 13.593 -> 6.945; same loss at every step in all five pairs; 14 of 18 predictions hit (the 4 misses are absolute ranges missed by 0.01-0.03 s on the fast side, nodes 2 % faster than e008's); both pre-profile predictions hit (jobs 8619198, 8619199, 1.20 GPU-h) | final table in `## Result`, figures/kernel_speed.png written | status done: stop rule (e007 0.0 %, e008 +0.2 %) and item 3 confirmed, nothing submitted, no jobs pending | final kernel: stieltjes/triton_stieltjes.py at commit 7373381 (blob 6a11c30, base asentmax c7093f0, model.py unchanged from the branch base); for the user to copy back to asentmax, not pushed there | open for the user: mb split of the sparse rows in osc/run_lm.sh, the stale "Measured costs" table in the repo CLAUDE.md, the 350M step with this kernel | spent 7.44 of 15 GPU-h

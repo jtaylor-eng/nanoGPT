@@ -1,0 +1,80 @@
+commit 918d9f3aca0a1c8982ffb173b256900ae9ca41db job 8619198 host a0139.ten.osc.edu NVIDIA A100-PCIE-40GB, 40960 MiB plan=final 2026-11-16 12:31:51
+== aliascheck 12:31:51
+triton 3.1.0 torch 2.5.1+cu121 NVIDIA A100-PCIE-40GB
+OK  if-wrapped=False b aliases a: a=1.0 (1) b=2.0 (2) hw=3.0 (3)
+OK  if-wrapped=False b = a + 0.0: a=1.0 (1) b=2.0 (2) hw=3.0 (3)
+OK  if-wrapped=True b aliases a: a=1.0 (1) b=2.0 (2) hw=3.0 (3)
+OK  if-wrapped=True b = a + 0.0: a=1.0 (1) b=2.0 (2) hw=3.0 (3)
+aliascheck: OK
+== aliascheck rc=0 12:31:55
+== micro 12:31:55
+{'device': 'NVIDIA A100-PCIE-40GB', 'max_shared_mem': 166912, 'torch': '2.5.1+cu121', 'triton': '3.1.0', 'tiles_bf16': [64, 32], 'rows': {}}
+ref fwd kernel it=0 B8 H12 N2048                          2.11 ms
+ref fwd kernel it=0 compiled                         {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 71474, 'cubin_bytes': 91616}
+ref fwd kernel it=5 B8 H12 N2048                          4.68 ms
+ref fwd kernel it=5 compiled                         {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 221567, 'cubin_bytes': 302048}
+ref fwd kernel it=15 B8 H12 N2048                        22.74 ms
+ref fwd kernel it=15 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 521092, 'cubin_bytes': 719968}
+ref fwd kernel it=30 B8 H12 N2048                        63.51 ms
+ref fwd kernel it=30 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 993621, 'cubin_bytes': 1372384}
+ref bwd delta kernel B8 H12 N2048                         0.86 ms
+ref bwd dkdv kernel B8 H12 N2048                          1.46 ms
+ref bwd dq kernel B8 H12 N2048                            1.04 ms
+ref bwd (autograd, 3 kernels) B8 H12 N2048                3.42 ms
+ref fwd+bwd it=15 B8 H12 N2048                           25.99 ms
+cand fwd kernel it=0 B8 H12 N2048                         1.06 ms
+cand fwd kernel it=0 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 71616, 'cubin_bytes': 92000}
+cand fwd kernel it=5 B8 H12 N2048                         3.89 ms
+cand fwd kernel it=5 compiled                        {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 112352, 'cubin_bytes': 147552}
+cand fwd kernel it=15 B8 H12 N2048                        4.46 ms
+cand fwd kernel it=15 compiled                       {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 112353, 'cubin_bytes': 147552}
+cand fwd kernel it=30 B8 H12 N2048                        4.48 ms
+cand fwd kernel it=30 compiled                       {'shared_bytes': 25600, 'num_warps': 4, 'ptx_chars': 112378, 'cubin_bytes': 147552}
+cand bwd delta kernel B8 H12 N2048                        0.63 ms
+cand bwd dkdv kernel B8 H12 N2048                         1.12 ms
+cand bwd dq kernel B8 H12 N2048                           0.73 ms
+cand bwd (autograd, 3 kernels) B8 H12 N2048               2.53 ms
+cand fwd+bwd it=15 B8 H12 N2048                           7.04 ms
+cand noskip fwd kernel it=15 B8 H12 N2048                 4.67 ms
+cand nobskip bwd (autograd, 3 kernels) B8 H12 N2048       3.42 ms
+cand nobskip fwd+bwd it=15 B8 H12 N2048                   7.93 ms
+cand noexit fwd kernel it=15 B8 H12 N2048                 8.97 ms
+cand noexit fwd+bwd it=15 B8 H12 N2048                   11.53 ms
+cand nocache fwd kernel it=15 B8 H12 N2048                4.50 ms
+cand nocache fwd+bwd it=15 B8 H12 N2048                   7.09 ms
+entmax fwd niter=10 B8 H12 N2048                         12.31 ms
+entmax fwd+bwd niter=10 B8 H12 N2048                     15.70 ms
+softmax SDPA+bias fwd B8 H12 N2048                        2.10 ms
+softmax SDPA+bias fwd+bwd B8 H12 N2048                    7.19 ms
+softmax SDPA+bias fwd+bwd B16 H12 N2048                  14.12 ms
+ref fwd kernel it=15 B1 H12 N16384                      173.75 ms
+cand fwd kernel it=15 B1 H12 N16384                      20.08 ms
+entmax fwd niter=10 B1 H12 N16384                        93.52 ms
+cand fwd wrapper it=0 B1 H12 N64 (launch overhead)        0.07 ms
+ref fwd wrapper it=0 B1 H12 N64 (launch overhead)         1.29 ms
+cand _pick_blocks                                         0.00 ms
+cand nocache fwd wrapper it=0 B1 H12 N64 (launch overhead)      0.98 ms
+cand nocache _pick_blocks (device query)                  0.98 ms
+== micro rc=0 12:32:49
+== step wst_q3d2_trained_ref (resume at iter 4771) 12:32:57
+== step wst_q3d2_trained_ref rc=0 30 iters 12:39:59
+== step wst_q3d2_trained_cand (resume at iter 4771) 12:40:03
+== step wst_q3d2_trained_cand rc=0 30 iters 12:43:19
+== step softmax_mb16 12:43:19
+== step softmax_mb16 rc=0 30 iters 12:46:42
+== step asentmax_trained (resume at iter 4771) 12:46:47
+== step asentmax_trained rc=0 30 iters 12:51:58
+== step wst_q3d2_scratch_ref 12:51:58
+== step wst_q3d2_scratch_ref rc=0 30 iters 12:59:01
+== step wst_q3d2_scratch_cand 12:59:02
+== step wst_q3d2_scratch_cand rc=0 30 iters 13:02:45
+== step asentmax_scratch 13:02:45
+== step asentmax_scratch rc=0 30 iters 13:08:00
+asentmax_scratch {"steps": 27, "s_per_step": 9.9046, "peak_alloc_gb": 17.305546760559082, "peak_reserved_gb": 22.380859375}
+asentmax_trained {"steps": 27, "s_per_step": 9.91802, "peak_alloc_gb": 17.763439655303955, "peak_reserved_gb": 23.6328125}
+softmax_mb16 {"steps": 27, "s_per_step": 6.2910900000000005, "peak_alloc_gb": 31.37716007232666, "peak_reserved_gb": 38.2109375}
+wst_q3d2_scratch_cand {"steps": 27, "s_per_step": 6.91985, "peak_alloc_gb": 16.18868350982666, "peak_reserved_gb": 19.3203125}
+wst_q3d2_scratch_ref {"steps": 27, "s_per_step": 13.60768, "peak_alloc_gb": 16.18648624420166, "peak_reserved_gb": 19.31640625}
+wst_q3d2_trained_cand {"steps": 27, "s_per_step": 6.08312, "peak_alloc_gb": 16.64175844192505, "peak_reserved_gb": 22.521484375}
+wst_q3d2_trained_ref {"steps": 27, "s_per_step": 13.636479999999999, "peak_alloc_gb": 16.63956117630005, "peak_reserved_gb": 22.51953125}
+DONE 13:08:03
