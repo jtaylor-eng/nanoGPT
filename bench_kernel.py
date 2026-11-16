@@ -78,6 +78,24 @@ def micro(argv):
         v = torch.randn(B_, H, N_, D, device=dev).to(torch.bfloat16).requires_grad_(True)
         return q, k, v
 
+    seen = set()
+    res['compiled'] = {}
+    def kinfo(tag, jitfn):
+        # what the compiler produced for the variant just run: shared memory per block bounds how many blocks an SM
+        # can hold at once, PTX size tracks the unrolling. Optional (Triton internals), never fatal.
+        try:
+            for dc in jitfn.cache.values():
+                for kern in dc.values():
+                    if id(kern) in seen:
+                        continue
+                    seen.add(id(kern))
+                    info = dict(shared_bytes=int(kern.metadata.shared), num_warps=int(kern.metadata.num_warps),
+                                ptx_chars=len(kern.asm.get('ptx', '')), cubin_bytes=len(kern.asm.get('cubin', b'')))
+                    res['compiled'][tag] = info
+                    print(f"{tag:52s} {info}", flush=True)
+        except Exception as e:
+            print(f"{tag}: compiled-kernel info skipped ({e!r})", flush=True)
+
     q, k, v = mk(B, N)
     do = torch.randn_like(q)
     shape = f"B{B} H{H} N{N}"
@@ -86,6 +104,7 @@ def micro(argv):
         for ni in (0, 5, 15, 30):
             with torch.no_grad():
                 put(f"{name} fwd kernel it={ni} {shape}", bench(lambda: mod._forward(q, k, v, True, sm, sq, ni, c, slopes)))
+            kinfo(f"{name} fwd kernel it={ni} compiled", mod._fwd_kernel)
         try:   # per-kernel backward: valid while the module keeps the three-kernel backward of the baseline
             with torch.no_grad():
                 o, lam, S, sl, BM, BN = mod._forward(q, k, v, True, sm, sq, NI, c, slopes)

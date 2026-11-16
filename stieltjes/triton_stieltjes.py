@@ -1,4 +1,4 @@
-# Vendored verbatim from jtaylor-eng/asentmax@c7093f0 synthetic/src/kernels/adasplash/triton_stieltjes.py -- edit there, re-copy here.
+# Direction stieltjes-kernel-speed CANDIDATE. Base: jtaylor-eng/asentmax@c7093f0 synthetic/src/kernels/adasplash/triton_stieltjes.py (frozen copy: triton_stieltjes_ref.py). Diverges: e002 Newton loop is a runtime loop (tl.range), not unrolled (tl.static_range).
 """
 Fused (flash-style) Stieltjes attention, dense or windowed. Triton.
 
@@ -11,7 +11,7 @@ c = 0 is the dense map (window d = inf). Same semantics as
 
 Forward = 3 kinds of sweeps over K (never materialises N x N):
     1. row max            (1 sweep)
-    2. Newton for λ       (NUM_ITER sweeps)  f(λ) = Σ w - 1 is convex, decreasing;
+    2. Newton for λ       (NUM_ITER sweeps, one runtime loop)  f(λ) = Σ w - 1 is convex, decreasing;
                                              started left of the root (λ = (1+c)^{-1/q}
                                              after centring) Newton is monotone.
     3. P V, S             (1 sweep)
@@ -126,7 +126,9 @@ def _fwd_kernel(
 
     # 2) Newton for λ (absolute), from the left of the root
     lam = row_max + lam0
-    for _it in tl.static_range(NUM_ITER):
+    # runtime loop: ONE copy of the sweep body. tl.static_range unrolled NUM_ITER copies into the kernel and the
+    # cost per sweep grew with NUM_ITER (A100, job 8603935: 0.5 / 1.3 / 2.0 ms per sweep at NUM_ITER 5 / 15 / 30).
+    for _it in tl.range(0, NUM_ITER):
         f = tl.zeros([BLOCK_M], dtype=tl.float32)
         fp = tl.zeros([BLOCK_M], dtype=tl.float32)
         for start_n in tl.range(0, hi, BLOCK_N):
