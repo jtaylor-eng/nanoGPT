@@ -12,7 +12,8 @@
 #   1. tests/test_attn_paths.py, SLOPES=linear and exp
 #   2. tests/test_kernel_equiv.py --part=real  (trained wstieltjes_q3_d2_xs and aswstieltjes_q3_d2_zi_xs, 12 layers)
 #   3. eval_lengths.py with the baseline and the candidate: FineWeb 2048 and ArXiv 16384, |d loss| < 1e-3
-#   4. tests/test_kernel_equiv.py --part=random
+#   4. bench_kernel.py skipcheck  (e004: tile flags trusted / never trusted / trust failing, bit for bit)
+#   5. tests/test_kernel_equiv.py --part=random
 # Checkpoints are read through symlinks in $TMPDIR (the run dirs are read-only for this direction).
 set -uo pipefail
 export SCRATCH=/fs/scratch/PAS2836/$USER
@@ -54,6 +55,7 @@ for name, L in (('fw2048', '2048'), ('arxiv16k', '16384')):
 json.dump(res, open(f'{d}/e2e.json', 'w'), indent=1)
 sys.exit(0 if ok else 1)
 PY
+step skipcheck python $REPO/bench_kernel.py skipcheck
 # last: the most compile-heavy part (cold cache), so a walltime kill cannot take the real-input and e2e results with it
 step equiv_random python $REPO/tests/test_kernel_equiv.py --part=random --out=$OUT/equiv_random.json
 [ $fail -eq 0 ] && echo "GATE PASS $TAG" || echo "GATE FAIL $TAG"

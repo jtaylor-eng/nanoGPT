@@ -14,18 +14,23 @@
 #     PLAN=profile (e001): wstieltjes_q3_d2_xs 30 steps + 10 with synced timers, softmax_xs 30, asentmax_zi_xs 20 + 8 timed,
 #                          wstieltjes micro-batch 16 x 16 (does it fit 40 GB?) 4 steps
 #     PLAN=ab:             wstieltjes_q3_d2_xs, aswstieltjes_q3_d2_zi_xs, wstieltjes_q4_d2_xs: baseline then candidate, 20 steps each
+#     PLAN=ab_trained (e004): bench_kernel.py real (forward kernel on trained q/k), then the candidate without tile skipping
+#                          (the e002 kernel) against the candidate, STEPS steps each: wstieltjes_q3_d2_xs and
+#                          aswstieltjes_q3_d2_zi_xs RESUMED from the trained checkpoints (tile skipping depends on how
+#                          sparse the heads are; at initialisation nothing is dead), then wstieltjes_q3_d2_xs from scratch.
+#                          QUICK=1 STEPS=3: the pre-submit smoke of this plan (small micro, 2 layers, one resumed row).
 set -uo pipefail
 export SCRATCH=/fs/scratch/PAS2836/$USER
 export REPO=$SCRATCH/wt/nanogpt/stieltjes-kernel-speed VENV=$SCRATCH/venvs/nanogpt DATA_SRC=$SCRATCH/nanogpt_data/fineweb25B
 source $REPO/osc/env.sh; source $REPO/osc/rows.sh; source $VENV/bin/activate
-TAG=${TAG:?set TAG=e00N}; PLAN=${PLAN:-profile}; OUT=$LM_RESULTS/kernel_speed/$TAG; mkdir -p $OUT
+TAG=${TAG:?set TAG=e00N}; PLAN=${PLAN:-profile}; STEPS=${STEPS:-20}; QUICK=${QUICK:-0}; OUT=$LM_RESULTS/kernel_speed/$TAG; mkdir -p $OUT
 [ -z "$(git -C $REPO status --porcelain)" ] || { echo "dirty tree in $REPO"; exit 2; }
 # Triton/inductor caches: env.sh defaults on scratch (persistent, keyed by source hash: the frozen kernel compiles once)
 cd $TMPDIR
 echo "commit $(git -C $REPO rev-parse HEAD) job $SLURM_JOB_ID host $(hostname) $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader) plan=$PLAN $(date '+%F %T')"
 
 echo "== micro $(date '+%T')"
-python $REPO/bench_kernel.py micro --out=$OUT/micro.json 2>&1 | tee $OUT/micro.log
+python $REPO/bench_kernel.py micro $([ "$QUICK" = 1 ] && echo --small) --out=$OUT/micro.json 2>&1 | tee $OUT/micro.log
 echo "== micro rc=${PIPESTATUS[0]} $(date '+%T')"
 
 # real FineWeb batches from node-local disk: the first 4 GB (2B tokens) of train.bin is enough for a timing probe
@@ -41,7 +46,34 @@ step() {  # name row steps timers kernel [extra train.py args]
   echo "== step $name rc=$? $(grep -c '^iter ' $OUT/step_$name.log) iters $(date '+%T')"
   rm -rf $TMPDIR/out_$name
 }
-if [ "$PLAN" = profile ]; then
+CK=$LM_RESULTS/125m_fw25_rng
+rstep() {  # name row kernel: STEPS steps resumed from the trained checkpoint (a copy: the run dirs are read-only here)
+  local name=$1 row=$2 kern=$3 O=$TMPDIR/out_$1
+  mkdir -p $O; cp $CK/$row/lr1.2e-3/ckpt.pt $O/ckpt.pt
+  local it; it=$(python -c "import torch, sys; print(int(torch.load(sys.argv[1], map_location='cpu', weights_only=False)['iter_num']))" $O/ckpt.pt)
+  echo "== step $name (resume at iter $it) $(date '+%T')"
+  python $REPO/bench_kernel.py wrap --kernel=$kern --timers=0 --out=$OUT/step_$name.json -- \
+    $REPO/train.py $REPO/config/lm_stieltjes_125m.py --data_root=$FW $(row_args $row) --stieltjes_num_iter=15 \
+    --learning_rate=1.2e-3 --min_lr=1.2e-4 --out_dir=$O --init_from=resume --max_iters=$((it + STEPS - 1)) --eval_interval=100000 \
+    --eval_iters=1 --final_eval_iters=0 --log_interval=1 $SPARSE > $OUT/step_$name.log 2>&1
+  echo "== step $name rc=$? $(grep -c '^iter ' $OUT/step_$name.log) iters $(date '+%T')"
+  rm -rf $O
+}
+if [ "$PLAN" = ab_trained ]; then
+  echo "== real $(date '+%T')"
+  if [ "$QUICK" = 1 ]; then RA="--ckpts=$CK/wstieltjes_q3_d2_xs/lr1.2e-3/ckpt.pt --layers=0,11"
+  else RA="--ckpts=$CK/wstieltjes_q3_d2_xs/lr1.2e-3/ckpt.pt,$CK/aswstieltjes_q3_d2_zi_xs/lr1.2e-3/ckpt.pt"; fi
+  python $REPO/bench_kernel.py real $RA --fineweb_val=$DATA_SRC/val.bin --arxiv=$REPO/data/arxiv_long/arxiv_long.bin --out=$OUT/real.json 2>&1 | tee $OUT/real.log
+  echo "== real rc=${PIPESTATUS[0]} $(date '+%T')"
+  rstep wst_q3d2_trained_noskip wstieltjes_q3_d2_xs cand_noskip
+  rstep wst_q3d2_trained_cand   wstieltjes_q3_d2_xs cand
+  if [ "$QUICK" != 1 ]; then
+    rstep aswst_q3d2_trained_noskip aswstieltjes_q3_d2_zi_xs cand_noskip
+    rstep aswst_q3d2_trained_cand   aswstieltjes_q3_d2_zi_xs cand
+    step wst_q3d2_scratch_noskip wstieltjes_q3_d2_xs $STEPS 0 cand_noskip $SPARSE
+    step wst_q3d2_scratch_cand   wstieltjes_q3_d2_xs $STEPS 0 cand        $SPARSE
+  fi
+elif [ "$PLAN" = profile ]; then
   step wst_q3d2_cand        wstieltjes_q3_d2_xs 30 0 cand $SPARSE
   step wst_q3d2_cand_timed  wstieltjes_q3_d2_xs 10 1 cand $SPARSE
   step softmax              softmax_xs          30 0 cand

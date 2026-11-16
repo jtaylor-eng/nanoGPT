@@ -1,4 +1,4 @@
-# Direction stieltjes-kernel-speed CANDIDATE. Base: jtaylor-eng/asentmax@c7093f0 synthetic/src/kernels/adasplash/triton_stieltjes.py (frozen copy: triton_stieltjes_ref.py). Diverges: e002 Newton loop is a runtime loop (tl.range), not unrolled (tl.static_range).
+# Direction stieltjes-kernel-speed CANDIDATE. Base: jtaylor-eng/asentmax@c7093f0 synthetic/src/kernels/adasplash/triton_stieltjes.py (frozen copy: triton_stieltjes_ref.py). Diverges: e002 Newton loop is a runtime loop (tl.range), not unrolled (tl.static_range); e004 windowed forward skips key tiles outside every row's support (SKIP).
 """
 Fused (flash-style) Stieltjes attention, dense or windowed. Triton.
 
@@ -15,6 +15,10 @@ Forward = 3 kinds of sweeps over K (never materialises N x N):
                                              started left of the root (λ = (1+c)^{-1/q}
                                              after centring) Newton is monotone.
     3. P V, S             (1 sweep)
+Windowed map only (SKIP): a (query block, key tile) whose every row is outside the window by a margin is flagged dead
+in Live and skipped by later sweeps; a skipped tile would have added exact zeros to f, f', S and O. The flag is
+trusted in a sweep only while no row's λ is more than μ below its running maximum (λ rises monotonically except for
+rounding), otherwise the block sweeps every tile, so the result does not depend on the flags.
 Backward (implicit-function gradient through Σ_A w = 1 over the support A):
     r_ij = (λ_i - s_ij)^{-q-1} [ij in A],  δ_i = Σ_j dP_ij r_ij / Σ_j r_ij
     dS_ij = (q / S_i) r_ij (dP_ij - δ_i);   dQ = dS K scale,  dK = dS^T Q scale,  dV = P^T dO
@@ -95,9 +99,10 @@ def _fwd_kernel(
     stride_vz, stride_vh, stride_vn, stride_vk,
     stride_oz, stride_oh, stride_om, stride_ok,
     sm_scale, c, lam0, N_CTX, H,
+    Live, NB, NT, dthr2, mu,
     sq: tl.constexpr, NUM_ITER: tl.constexpr, EPS: tl.constexpr,
     HEAD_DIM: tl.constexpr, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr,
-    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr,
+    CAUSAL: tl.constexpr, USE_ALIBI: tl.constexpr, SKIP: tl.constexpr,
 ):
     start_m = tl.program_id(0)
     off_hz = tl.program_id(1)
@@ -126,31 +131,57 @@ def _fwd_kernel(
 
     # 2) Newton for λ (absolute), from the left of the root
     lam = row_max + lam0
+    # SKIP: Live[off_hz, start_m, tile] (uint8, 1 at launch) is set to 0 once every valid row of the tile has
+    # λ - max_j s_ij >= dthr2 = d (1 + 2e-3), i.e. is outside the window (w > 0 <=> λ - s < d) by 2μ. A flag set at
+    # sweep t0 holds at sweep t if λ_t >= λ_t0 - μ on every row, which `trust` checks against the running maximum.
+    # The remaining μ = 1e-3 d covers rounding and FMA differences in the w test by a factor > 1e3.
+    live_base = Live + (off_hz * NB + start_m) * NT
+    row_ok = offs_m < N_CTX
+    lam_hw = lam
     # runtime loop: ONE copy of the sweep body. tl.static_range unrolled NUM_ITER copies into the kernel and the
     # cost per sweep grew with NUM_ITER (A100, job 8603935: 0.5 / 1.3 / 2.0 ms per sweep at NUM_ITER 5 / 15 / 30).
     for _it in tl.range(0, NUM_ITER):
         f = tl.zeros([BLOCK_M], dtype=tl.float32)
         fp = tl.zeros([BLOCK_M], dtype=tl.float32)
+        if SKIP:
+            # NaN / inf λ compare false: no trust, every tile is swept and propagates as in the unskipped kernel
+            trust = tl.min((((lam_hw - lam) <= mu) | (offs_m >= N_CTX)).to(tl.int32), axis=0)
+            lam_hw = tl.maximum(lam_hw, lam)
         for start_n in tl.range(0, hi, BLOCK_N):
-            offs_n = start_n + tl.arange(0, BLOCK_N)
-            k_block = tl.load(k_base + offs_n[:, None] * stride_kn + offs_d[None, :] * stride_kk, mask=offs_n[:, None] < N_CTX, other=0.0)
-            qk = _scores(q_block, k_block, offs_m, offs_n, sm_scale, alibi_slope, N_CTX, CAUSAL, USE_ALIBI)
-            w, r = _weights(qk, lam, c, sq, EPS)
-            f += tl.sum(w, axis=1)
-            fp += tl.sum(r, axis=1)
+            if SKIP:
+                go = (tl.load(live_base + start_n // BLOCK_N) != 0) | (trust == 0)
+            else:
+                go = True
+            if go:
+                offs_n = start_n + tl.arange(0, BLOCK_N)
+                k_block = tl.load(k_base + offs_n[:, None] * stride_kn + offs_d[None, :] * stride_kk, mask=offs_n[:, None] < N_CTX, other=0.0)
+                qk = _scores(q_block, k_block, offs_m, offs_n, sm_scale, alibi_slope, N_CTX, CAUSAL, USE_ALIBI)
+                w, r = _weights(qk, lam, c, sq, EPS)
+                f += tl.sum(w, axis=1)
+                fp += tl.sum(r, axis=1)
+                if SKIP:
+                    alive = tl.max((((lam - tl.max(qk, axis=1)) < dthr2) & row_ok).to(tl.int32), axis=0)
+                    tl.store(live_base + start_n // BLOCK_N, alive.to(tl.uint8))
         lam = lam + (f - 1.0) / (sq * tl.maximum(fp, 1e-30))   # f' = -q Σ r
 
     # 3) O = Σ w v / S
     acc = tl.zeros([BLOCK_M, HEAD_DIM], dtype=tl.float32)
     s_row = tl.zeros([BLOCK_M], dtype=tl.float32)
+    if SKIP:
+        trust = tl.min((((lam_hw - lam) <= mu) | (offs_m >= N_CTX)).to(tl.int32), axis=0)
     for start_n in tl.range(0, hi, BLOCK_N):
-        offs_n = start_n + tl.arange(0, BLOCK_N)
-        k_block = tl.load(k_base + offs_n[:, None] * stride_kn + offs_d[None, :] * stride_kk, mask=offs_n[:, None] < N_CTX, other=0.0)
-        v_block = tl.load(v_base + offs_n[:, None] * stride_vn + offs_d[None, :] * stride_vk, mask=offs_n[:, None] < N_CTX, other=0.0)
-        qk = _scores(q_block, k_block, offs_m, offs_n, sm_scale, alibi_slope, N_CTX, CAUSAL, USE_ALIBI)
-        w, _r = _weights(qk, lam, c, sq, EPS)
-        s_row += tl.sum(w, axis=1)
-        acc += tl.dot(w.to(v_block.dtype), v_block, input_precision="ieee")
+        if SKIP:
+            go = (tl.load(live_base + start_n // BLOCK_N) != 0) | (trust == 0)
+        else:
+            go = True
+        if go:
+            offs_n = start_n + tl.arange(0, BLOCK_N)
+            k_block = tl.load(k_base + offs_n[:, None] * stride_kn + offs_d[None, :] * stride_kk, mask=offs_n[:, None] < N_CTX, other=0.0)
+            v_block = tl.load(v_base + offs_n[:, None] * stride_vn + offs_d[None, :] * stride_vk, mask=offs_n[:, None] < N_CTX, other=0.0)
+            qk = _scores(q_block, k_block, offs_m, offs_n, sm_scale, alibi_slope, N_CTX, CAUSAL, USE_ALIBI)
+            w, _r = _weights(qk, lam, c, sq, EPS)
+            s_row += tl.sum(w, axis=1)
+            acc += tl.dot(w.to(v_block.dtype), v_block, input_precision="ieee")
     acc = acc / tl.maximum(s_row, EPS)[:, None]
 
     o_ptrs = O + off_z * stride_oz + off_h * stride_oh + offs_m[:, None] * stride_om + offs_d[None, :] * stride_ok
@@ -346,8 +377,12 @@ def window_c(q: float, window) -> float:
     return 0.0 if (window is None or window <= 0 or window == float("inf")) else float(window) ** (-q)
 
 
-def _forward(q, k, v, causal, sm_scale, sq, num_iter, c, alibi_slopes):
-    """Launch the forward kernel. Returns (o, λ, S, slopes, BLOCK_M, BLOCK_N)."""
+SKIP_TILES = True       # windowed forward: skip key tiles outside every row's support (False = the e002 kernel)
+SKIP_MU_REL = 1e-3      # μ / d. A negative value never trusts a flag (every tile swept): the test of the fallback path
+
+
+def _forward(q, k, v, causal, sm_scale, sq, num_iter, c, alibi_slopes, return_live=False):
+    """Launch the forward kernel. Returns (o, λ, S, slopes, BLOCK_M, BLOCK_N) [+ the tile flags if return_live]."""
     B, H, N, D = q.shape
     assert k.shape == v.shape == (B, H, N, D)
     assert D in {16, 32, 64, 128, 256}
@@ -364,13 +399,24 @@ def _forward(q, k, v, causal, sm_scale, sq, num_iter, c, alibi_slopes):
         alibi_slopes = lam   # never read (constexpr-eliminated); any valid pointer
     BLOCK_M, BLOCK_N = _pick_blocks(D, q.element_size(), q.device)
     grid = (triton.cdiv(N, BLOCK_M), B * H)
+    NB, NT = triton.cdiv(N, BLOCK_M), triton.cdiv(N, BLOCK_N)
+    skip = bool(SKIP_TILES and c > 0.0 and num_iter > 0)     # dense: every key is in the support, nothing to skip
+    if skip:
+        live = torch.ones((B * H, NB, NT), device=q.device, dtype=torch.uint8)
+        d = c ** (-1.0 / sq)
+        mu, dthr2 = SKIP_MU_REL * d, d * (1.0 + 2.0 * abs(SKIP_MU_REL))
+    else:
+        live, mu, dthr2 = lam, 0.0, 0.0                      # never read (constexpr-eliminated)
     _fwd_kernel[grid](
         q, k, v, o, lam, S, alibi_slopes,
         *_strides(q), *_strides(k), *_strides(v), *_strides(o),
         sm_scale, c, (1.0 + c) ** (-1.0 / sq), N, H,
+        live, NB, NT, dthr2, mu,
         sq=sq, NUM_ITER=num_iter, EPS=1e-6, HEAD_DIM=D,
-        BLOCK_M=BLOCK_M, BLOCK_N=BLOCK_N, CAUSAL=causal, USE_ALIBI=use_alibi,
+        BLOCK_M=BLOCK_M, BLOCK_N=BLOCK_N, CAUSAL=causal, USE_ALIBI=use_alibi, SKIP=skip,
     )
+    if return_live:
+        return o, lam, S, alibi_slopes, BLOCK_M, BLOCK_N, (live if skip else None)
     return o, lam, S, alibi_slopes, BLOCK_M, BLOCK_N
 
 

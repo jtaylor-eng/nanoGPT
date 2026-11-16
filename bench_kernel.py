@@ -5,20 +5,29 @@
       process: fwd kernel at NUM_ITER in {0, 5, 15, 30}, each backward kernel, bwd, fwd+bwd at the 125M training shape
       (8, 12, 2048, 64) bf16 causal + exp NAPE slopes, q3/d2; the model call site (non-contiguous q/k/v views);
       AdaSplash entmax and SDPA softmax at the same shape; forward at (1, 12, 16384, 64).
-  python bench_kernel.py wrap [--kernel=cand|ref] [--timers=0|1] [--out=x.json] -- <script.py> [script args...]
+  python bench_kernel.py wrap [--kernel=cand|cand_noskip|ref] [--timers=0|1] [--out=x.json] -- <script.py> [script args...]
       Run an UNMODIFIED repo script (train.py, eval_lengths.py) with the chosen kernel and, with --timers=1,
       CUDA-synchronised timers around the attention call site and the autograd Function forward/backward.
+      cand_noskip = the candidate with SKIP_TILES off (the e002 kernel).
   python bench_kernel.py summary <dir>
       Table from <dir>/micro.json, step_*.log, step_*.json.
   python bench_kernel.py sweep [--out=sweep.json] [--small]
       Launch parameters of the candidate's four kernels at the training shape: tile sizes, num_warps, num_stages, each
       variant timed and compared bit for bit with the default launch (64x32 tiles, 4 warps, 3 stages). No kernel edit:
-      the kernels are launched directly with other constexpr tiles / Triton launch options.
+      the kernels are launched directly with other constexpr tiles / Triton launch options. Written for the kernel
+      signature at 0b3c77a (e003); the forward launch does not pass the e004 tile-flag arguments.
   python bench_kernel.py tiles --ckpts=<run>/ckpt.pt[,..] --fineweb_val=<val.bin> --arxiv=<arxiv_long.bin> [--out=tiles.json]
       [--layers=0,5,11] [--n_long=16384] [--heads_long=0,2,5,6,8,11] [--selftest]
       On q/k captured from trained checkpoints: the fraction of (query block, key tile) tiles that hold any key of any
       row's support at each Newton sweep and at the final lambda (what tile skipping could save), sweeps until lambda
       stops changing, and whether a dead tile ever comes back. fp32 emulation of the kernel's Newton loop, no kernel run.
+  python bench_kernel.py real --ckpts=<run>/ckpt.pt[,..] --fineweb_val=<val.bin> --arxiv=<arxiv_long.bin> [--out=real.json]
+      [--layers=0,11] [--batch=8] [--n_long=16384]
+      Forward kernel on q/k captured from trained checkpoints (random logits have no dead tiles to speak of): frozen
+      baseline, candidate without tile skipping, candidate; per layer ms, bit identity, live-flag fraction at exit.
+  python bench_kernel.py skipcheck [--quick]
+      Tile skipping is invisible: candidate with flags trusted, never trusted (fallback path) and at logits large
+      enough that the trust test fails by rounding, each bit for bit against the unskipped candidate and the baseline.
 """
 import os, sys, json, time, glob, re, statistics, runpy
 from collections import defaultdict
@@ -139,6 +148,11 @@ def micro(argv):
         del o
         put(f"{name} fwd+bwd it={NI} {shape}", bench(lambda: torch.autograd.grad(mod.stieltjes_attention(q, k, v, **kw) * 1.0, (q, k, v), do)))
 
+    if hasattr(cand, 'SKIP_TILES'):      # the e002 kernel on the same (random) inputs
+        cand.SKIP_TILES = False
+        with torch.no_grad():
+            put(f"cand noskip fwd kernel it={NI} {shape}", bench(lambda: cand._forward(q, k, v, True, sm, sq, NI, cand.window_c(sq, window), slopes)))
+        cand.SKIP_TILES = True
     # call site as in CausalSelfAttention.forward: q/k/v are transposed views of one c_attn output
     x = torch.randn(B, N, 3 * H * D, device=dev).to(torch.bfloat16).requires_grad_(True)
     def views():
@@ -202,6 +216,10 @@ def wrap(argv):
     if fl['kernel'] == 'ref':
         import stieltjes.triton_stieltjes_ref as kmod
         model._triton_stieltjes = kmod.stieltjes_attention     # _stieltjes_fused looks this global up at call time
+    elif fl['kernel'] == 'cand_noskip':
+        kmod.SKIP_TILES = False                                # read by _forward at call time
+    else:
+        assert fl['kernel'] == 'cand', fl['kernel']
     T = defaultdict(list)       # name -> [(t_end, seconds)]
     state = dict(train=True)
     if fl['timers']:
@@ -254,7 +272,7 @@ def summary(argv):
     for log in sorted(glob.glob(os.path.join(d, 'step_*.log'))):
         name = os.path.basename(log)[5:-4]
         ms = [(int(m.group(1)), float(m.group(2))) for m in re.finditer(r"^iter (\d+): loss [\d.naninf]+, time ([\d.]+)ms", open(log).read(), re.M)]
-        ms = [x for i, x in ms if i >= 3]
+        ms = [x for _, x in ms][3:]      # first 3 logged steps (compile, warm-up) dropped by position: resumed runs start at iter ~4770
         row = dict(steps=len(ms), s_per_step=statistics.median(ms) / 1e3 if ms else None)
         js = os.path.join(d, f'step_{name}.json')
         if os.path.exists(js):
@@ -577,8 +595,110 @@ def tiles(argv):
             json.dump(res, f, indent=1)
 
 
+def _live_frac(lv, BM, BN, N):
+    """Fraction of the causal tiles the forward sweeps whose flag is still 1."""
+    NB = lv.shape[1]
+    nt = [-(-min((m + 1) * BM, N) // BN) for m in range(NB)]
+    return float(sum(lv[:, m, :nt[m]].float().sum() for m in range(NB))) / (sum(nt) * lv.shape[0])
+
+
+def real(argv):
+    import numpy as np
+    import triton
+    import stieltjes.triton_stieltjes as cand
+    import stieltjes.triton_stieltjes_ref as ref
+    fl, _ = _flags(argv, out='', ckpts='', fineweb_val='', arxiv='', layers='', n_long=16384, batch=8, num_iter=15)
+    dev = 'cuda'
+    torch.manual_seed(0)
+    NI = fl['num_iter']
+    res = dict(device=torch.cuda.get_device_name(), torch=torch.__version__, triton=triton.__version__, num_iter=NI, batch=fl['batch'], cases=[], mean={})
+    print({k: v for k, v in res.items() if k not in ('cases', 'mean')}, flush=True)
+    fw = np.memmap(fl['fineweb_val'], dtype=np.uint16, mode='r')
+    ax = np.memmap(fl['arxiv'], dtype=np.uint16, mode='r')
+    NLg = fl['n_long']
+    tok_fw = torch.from_numpy(np.stack([fw[i * 2049: i * 2049 + 2048].astype(np.int64) for i in range(fl['batch'])])).to(dev)
+    tok_ax = torch.from_numpy(ax[:NLg].astype(np.int64))[None].to(dev)
+
+    def fwd(mod, skip, q, k, v, sq, c, slopes, **kw):
+        cand.SKIP_TILES = skip
+        return mod._forward(q, k, v, True, q.shape[-1] ** -0.5, sq, NI, c, slopes, **kw)
+
+    for path in [x for x in fl['ckpts'].split(',') if x]:
+        row = os.path.basename(os.path.dirname(os.path.dirname(path)))
+        for name, tok in (('fineweb N=2048', tok_fw), (f'arxiv N={NLg}', tok_ax)):
+            qk, sq, window, slopes = _capture(path, tok)
+            c = cand.window_c(sq, window)
+            layers = [int(x) for x in fl['layers'].split(',')] if fl['layers'] else list(range(len(qk)))
+            rows = []
+            for li in layers:
+                q, k = qk[li]
+                v = torch.randn_like(q)
+                a = (q, k, v, sq, c, slopes)
+                with torch.no_grad():
+                    r = fwd(ref, True, *a); n = fwd(cand, False, *a); x = fwd(cand, True, *a, return_live=True)
+                    cse = dict(tag=f"{row} {name}", layer=li, shape=list(q.shape), dtype=str(q.dtype),
+                               identical_noskip=[bool(torch.equal(x[i], n[i])) for i in range(3)],
+                               identical_ref=[bool(torch.equal(x[i], r[i])) for i in range(3)],
+                               resid_max=float((x[2] - 1).abs().max()), resid_max_ref=float((r[2] - 1).abs().max()),
+                               live_at_exit=_live_frac(x[6], x[4], x[5], q.shape[2]) if x[6] is not None else None)
+                    del r, n, x
+                    cse['ms_ref'] = bench(lambda: fwd(ref, True, *a), repeats=3, target_s=0.3)
+                    cse['ms_noskip'] = bench(lambda: fwd(cand, False, *a), repeats=3, target_s=0.3)
+                    cse['ms_skip'] = bench(lambda: fwd(cand, True, *a), repeats=3, target_s=0.3)
+                rows.append(cse); res['cases'].append(cse)
+                print(json.dumps(cse), flush=True)
+                if fl['out']:
+                    with open(fl['out'], 'w') as f:
+                        json.dump(res, f, indent=1)
+            m = dict(layers=len(rows), ms_ref=statistics.fmean(x['ms_ref'] for x in rows), ms_noskip=statistics.fmean(x['ms_noskip'] for x in rows),
+                     ms_skip=statistics.fmean(x['ms_skip'] for x in rows), live_at_exit=statistics.fmean(x['live_at_exit'] for x in rows),
+                     identical_noskip=all(all(x['identical_noskip']) for x in rows), identical_ref=all(all(x['identical_ref']) for x in rows))
+            res['mean'][f"{row} {name}"] = m
+            print('MEAN', f"{row} {name}", json.dumps(m), flush=True)
+            del qk
+            torch.cuda.empty_cache()
+    cand.SKIP_TILES = True
+    if fl['out']:
+        with open(fl['out'], 'w') as f:
+            json.dump(res, f, indent=1)
+    sys.exit(0 if all(m['identical_noskip'] and m['identical_ref'] for m in res['mean'].values()) else 1)
+
+
+def skipcheck(argv):
+    import model
+    import stieltjes.triton_stieltjes as cand
+    import stieltjes.triton_stieltjes_ref as ref
+    fl, _ = _flags(argv, quick=False)
+    dev = 'cuda'; H, D = 4, 64
+    torch.manual_seed(0)
+    bad = n = 0
+    for dt in (torch.bfloat16, torch.float32):
+        for N in ((64, 300) if fl['quick'] else (64, 300, 1000, 2048)):
+            for (sq, win) in ((3.0, 2.0), (4.0, 2.0), (3.0, 1.5), (2.5, 2.0), (4.0, None)):
+                for sl in (None, model.nape_slopes(H, 'exp').to(dev)):
+                    for qs in (3.0, 12.0, 2e4):      # 2e4: |lambda| > 16384, one ulp of lambda exceeds mu and the trust test fails
+                        q = (torch.randn(2, H, N, D, device=dev) * qs).to(dt); k = torch.randn(2, H, N, D, device=dev).to(dt)
+                        v = torch.randn(2, H, N, D, device=dev).to(dt)
+                        a = (q, k, v, True, D ** -0.5, sq, 15, cand.window_c(sq, win), sl)
+                        with torch.no_grad():
+                            r = ref._forward(*a)
+                            cand.SKIP_TILES = False; base = cand._forward(*a); cand.SKIP_TILES = True
+                            for name, mu in (('trust', 1e-3), ('notrust', -1.0)):
+                                cand.SKIP_MU_REL = mu
+                                x = cand._forward(*a, return_live=True)
+                                cand.SKIP_MU_REL = 1e-3
+                                same = [bool(torch.equal(x[i], base[i])) and bool(torch.equal(x[i], r[i])) for i in range(3)]
+                                fr = _live_frac(x[6], x[4], x[5], N) if x[6] is not None else None
+                                n += 1; bad += not all(same)
+                                print(f"{'OK ' if all(same) else 'BAD'} {str(dt)[6:]:9s} N{N:5d} q{sq} d{win} slopes{int(sl is not None)} qs{qs:7.0f} {name:8s} "
+                                      f"identical(o,lam,S)={same} live_at_exit={fr if fr is None else round(fr, 3)}", flush=True)
+    print(f"skipcheck: {n - bad} of {n} OK")
+    sys.exit(1 if bad else 0)
+
+
 if __name__ == '__main__':
     mode = sys.argv[1] if len(sys.argv) > 1 else ''
-    if mode not in ('micro', 'wrap', 'summary', 'sweep', 'tiles'):
+    modes = {'micro': micro, 'wrap': wrap, 'summary': summary, 'sweep': sweep, 'tiles': tiles, 'real': real, 'skipcheck': skipcheck}
+    if mode not in modes:
         print(__doc__); sys.exit(2)
-    {'micro': micro, 'wrap': wrap, 'summary': summary, 'sweep': sweep, 'tiles': tiles}[mode](sys.argv[2:])
+    modes[mode](sys.argv[2:])
