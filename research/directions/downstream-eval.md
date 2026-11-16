@@ -4,14 +4,12 @@ title: Does the long-document loss advantage show up as retrieval at length and 
   LAMBADA? (needle tasks and lm-eval on the existing 125M checkpoints)
 project: nanogpt
 cluster: ascend
-status: active
+status: done
 wake: on_jobs
 budget_gpu_hours: 50
-spent_gpu_hours: 3.48
+spent_gpu_hours: 4.0
 max_jobs_in_flight: 12
-jobs:
-- 8603968
-- 8603969
+jobs: []
 jobs_archived:
 - 8369321
 - 8369150
@@ -26,11 +24,13 @@ jobs_archived:
 - 8368483
 - 8453350
 - 8453572
-last_wake: '2026-11-15T12:55:00-05:00'
+- 8603968
+- 8603969
+last_wake: '2026-11-16T00:45:00-05:00'
 next_id: 7
 model: null
 effort: null
-wakes: 4
+wakes: 5
 ---
 # Does the long-document loss advantage show up as retrieval at length and on LAMBADA?
 
@@ -136,3 +136,10 @@ retrieval even at 2k, in which case the task is uninformative at this size and b
   debug jobs running). Next wake: if smoke failed, 8603969 never runs: diagnose, fix, resubmit. Else fill e006 (acc,
   ppl with SE; primary table + 3-seed mean/range), copy jsons to results/lm1012/125m_fw25_rng/, figure
   figures/lambada_125m_clean.png, score the user's two predictions, set status done.
+- 2026-11-16 wake 10: e006 done (0.52 GPU-h; smoke 8603968 + full 8603969, 16/16 completed). LAMBADA acc, seed 1337
+  lr 1.2e-3: softmax 22.61, ASEntmax 25.05, wStieltjes q3/d2 21.64, AS-wStieltjes q3/d2 24.74 (SE ~0.6); 3-seed means
+  softmax 22.92 / ASEntmax 24.04 / q3d2 22.53 with seed SD 0.62 / 1.63 / 0.94, so seed noise > item noise and no map
+  ranking (ASEntmax - softmax t ~1.1). LAMBADA ppl 3-seed: ASEntmax 88.3 vs softmax 104.2, q3d2 101.8 (t ~3.1), AS-wSt
+  88.5: suggestive adaptive-scale effect, LR confound open (softmax lr2.4e-3 87.3). HellaSwag 28.7-29.8 everywhere.
+  User predictions 0/2 (spread 3.4 pt; 13/16 in 21-25 %). jsons in results/lm1012/125m_fw25_rng/, figure
+  figures/lambada_125m_clean.png. Status done per the user's reopen instruction. Spent 4.00 / 50 GPU-h.
